@@ -1144,3 +1144,97 @@ pre {
     gap: 5px;
   }
 }
+
+
+/* Update: manuelle Slider-Auswertung */
+.evaluation-stage {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: stretch;
+}
+
+.evaluation-slide {
+  min-height: 170px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  will-change: transform, opacity;
+}
+
+.evaluation-message {
+  align-self: center;
+  justify-self: center;
+  max-width: 740px;
+}
+
+.step-meta {
+  width: 100%;
+}
+
+.evaluation-stage h3,
+.evaluation-stage p {
+  text-align: center;
+}
+
+.stage-next-btn {
+  justify-self: center;
+  min-width: 160px;
+  min-height: 42px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #1e3a8a;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(30, 58, 138, 0.22);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.stage-next-btn:hover,
+.stage-next-btn:focus-visible {
+  background: #172f76;
+  transform: translateY(-1px);
+  outline: 3px solid rgba(30, 58, 138, 0.18);
+}
+
+.stage-next-btn[hidden] {
+  display: none;
+}
+
+.evaluation-slide.slide-out-left {
+  animation: slideOutLeft 0.30s ease forwards;
+}
+
+.evaluation-slide.slide-in-right {
+  animation: slideInRight 0.36s ease forwards;
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-110%); opacity: 0; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(110%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.life-segments.life-low .life-segment.active {
+  background: linear-gradient(180deg, #fb8d8d 0%, #c62828 100%);
+  box-shadow: 0 0 14px rgba(198, 40, 40, 0.45), inset 0 0 0 1px rgba(255,255,255,0.24);
+}
+
+.life-segments.life-mid .life-segment.active {
+  background: linear-gradient(180deg, #fde68a 0%, #d39c12 100%);
+  box-shadow: 0 0 14px rgba(211, 156, 18, 0.42), inset 0 0 0 1px rgba(255,255,255,0.24);
+}
+
+.life-segments.life-high .life-segment.active {
+  background: linear-gradient(180deg, #7ddf9b 0%, #22904d 100%);
+  box-shadow: 0 0 14px rgba(34, 144, 77, 0.42), inset 0 0 0 1px rgba(255,255,255,0.24);
+}

@@ -75,6 +75,8 @@ const overlayCloseBtn = document.getElementById('overlayCloseBtn');
 const evaluationTitle = document.getElementById('evaluationTitle');
 const evaluationStepCounter = document.getElementById('evaluationStepCounter');
 const evaluationStepDelta = document.getElementById('evaluationStepDelta');
+const evaluationSlide = document.getElementById('evaluationSlide');
+const evaluationNextBtn = document.getElementById('evaluationNextBtn');
 const evaluationCurrentText = document.getElementById('evaluationCurrentText');
 const evaluationCurrentDetail = document.getElementById('evaluationCurrentDetail');
 const lifeSegments = document.getElementById('lifeSegments');
@@ -85,6 +87,7 @@ const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle')
 const evaluationOutcomeMessage = document.getElementById('evaluationOutcomeMessage');
 const step2Btn = document.getElementById('step2Btn');
 let evaluationTimers = [];
+let evaluationSession = null;
 
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
@@ -978,6 +981,7 @@ function clearEvaluationTimers() {
 function initLifeSegments() {
   if (!lifeSegments) return;
   lifeSegments.innerHTML = '';
+  lifeSegments.classList.remove('life-low', 'life-mid', 'life-high');
   for (let i = 1; i <= 10; i++) {
     const segment = document.createElement('span');
     segment.className = 'life-segment';
@@ -986,14 +990,23 @@ function initLifeSegments() {
   }
 }
 
+function getLifeTone(clamped) {
+  if (clamped <= 3) return 'life-low';
+  if (clamped <= 6) return 'life-mid';
+  return 'life-high';
+}
+
 function updateLifeBar(rawValue) {
   const clamped = Math.max(0, Math.min(10, Math.round(rawValue)));
   if (lifeSegments) {
+    const tone = getLifeTone(clamped);
+    lifeSegments.classList.remove('life-low', 'life-mid', 'life-high');
+    lifeSegments.classList.add(tone);
     const segments = [...lifeSegments.querySelectorAll('.life-segment')];
     segments.forEach((segment, index) => segment.classList.toggle('active', index < clamped));
-    lifeSegments.setAttribute('aria-label', `${clamped} von 10 Stabilitätsbalken`);
+    lifeSegments.setAttribute('aria-label', `${clamped} von 10 Stabilitätsbalken, rechnerischer Punktestand ${rawValue}`);
   }
-  if (animatedCurrentScore) animatedCurrentScore.textContent = `Punkte aktuell: ${rawValue}`;
+  if (animatedCurrentScore) animatedCurrentScore.textContent = `Punkte aktuell: ${rawValue} · Balken: ${clamped}/10`;
 }
 
 function setStepDelta(delta) {
@@ -1003,44 +1016,93 @@ function setStepDelta(delta) {
   evaluationStepDelta.textContent = delta > 0 ? `+${delta}` : String(delta ?? 0);
 }
 
+function renderEvaluationStep(item, index, total) {
+  const delta = Number(item?.delta || 0);
+  if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt ${index + 1}/${total}`;
+  setStepDelta(delta);
+  if (evaluationCurrentText) evaluationCurrentText.textContent = item?.text || 'Bewertungsschritt';
+  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = item?.detail || 'Keine Zusatzbegründung vorhanden.';
+  if (evaluationNextBtn) {
+    evaluationNextBtn.hidden = false;
+    evaluationNextBtn.disabled = false;
+    evaluationNextBtn.textContent = index + 1 >= total ? 'Auswertung abschließen' : 'Weiter';
+  }
+}
+
+function showSlideTransition(renderCallback) {
+  if (!evaluationSlide) {
+    renderCallback();
+    return;
+  }
+  evaluationSlide.classList.remove('slide-in-right', 'slide-out-left');
+  evaluationSlide.classList.add('slide-out-left');
+  window.setTimeout(() => {
+    renderCallback();
+    evaluationSlide.classList.remove('slide-out-left');
+    evaluationSlide.classList.add('slide-in-right');
+    window.setTimeout(() => {
+      evaluationSlide.classList.remove('slide-in-right');
+    }, 360);
+  }, 300);
+}
+
+function advanceEvaluationStep(useAnimation = true) {
+  if (!evaluationSession || evaluationSession.finalShown) return;
+
+  if (evaluationSession.index >= evaluationSession.steps.length - 1) {
+    evaluationSession.finalShown = true;
+    updateLifeBar(evaluationSession.rawScore);
+    const clamped = Math.max(0, Math.min(10, Math.round(evaluationSession.rawScore)));
+    if (evaluationTitle) evaluationTitle.textContent = `Auswertung abgeschlossen: ${clamped}/10 Balken`;
+    if (animatedFinalScore) animatedFinalScore.textContent = `Endwert: ${evaluationSession.rawScore} Punkte`;
+    if (evaluationStepCounter) evaluationStepCounter.textContent = `Fertig · ${evaluationSession.steps.length}/${evaluationSession.steps.length}`;
+    setStepDelta(0);
+    if (evaluationNextBtn) evaluationNextBtn.hidden = true;
+    showEvaluationOutcome(evaluationSession.rawScore);
+    return;
+  }
+
+  const nextIndex = evaluationSession.index + 1;
+  const item = evaluationSession.steps[nextIndex];
+  evaluationSession.index = nextIndex;
+  evaluationSession.currentRaw += Number(item.delta || 0);
+
+  const render = () => {
+    renderEvaluationStep(item, nextIndex, evaluationSession.steps.length);
+    updateLifeBar(evaluationSession.currentRaw);
+  };
+
+  if (useAnimation) showSlideTransition(render);
+  else render();
+}
+
 function startEvaluationAnimation(feedback, rawScore) {
   clearEvaluationTimers();
   initLifeSegments();
   const steps = feedback.length ? feedback : [{ delta: 0, text: 'Keine Bewertungspunkte vorhanden.', detail: 'Für diese Vorbereitung wurde kein Bewertungsereignis erzeugt.' }];
-  let currentRaw = 0;
-  updateLifeBar(0);
+  evaluationSession = {
+    steps,
+    rawScore,
+    index: -1,
+    currentRaw: 0,
+    finalShown: false
+  };
 
+  updateLifeBar(0);
   if (evaluationTitle) evaluationTitle.textContent = 'Startstabilität wird berechnet';
   if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt 0/${steps.length}`;
   setStepDelta(0);
   if (evaluationCurrentText) evaluationCurrentText.textContent = 'Berechnung startet …';
-  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Die einzelnen Entscheidungen werden nacheinander bewertet.';
+  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Klicke auf „Weiter“, um die Bewertung Schritt für Schritt durchzugehen.';
   if (animatedFinalScore) animatedFinalScore.textContent = 'Endwert: –';
   if (evaluationActionArea) evaluationActionArea.hidden = true;
+  if (evaluationNextBtn) {
+    evaluationNextBtn.hidden = false;
+    evaluationNextBtn.disabled = false;
+    evaluationNextBtn.textContent = 'Weiter';
+  }
 
-  steps.forEach((item, index) => {
-    const timer = window.setTimeout(() => {
-      const delta = Number(item.delta || 0);
-      currentRaw += delta;
-      if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt ${index + 1}/${steps.length}`;
-      setStepDelta(delta);
-      if (evaluationCurrentText) evaluationCurrentText.textContent = item.text || 'Bewertungsschritt';
-      if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = item.detail || 'Keine Zusatzbegründung vorhanden.';
-      updateLifeBar(currentRaw);
-    }, 600 + index * 2000);
-    evaluationTimers.push(timer);
-  });
-
-  const finalTimer = window.setTimeout(() => {
-    updateLifeBar(rawScore);
-    const clamped = Math.max(0, Math.min(10, rawScore));
-    if (evaluationTitle) evaluationTitle.textContent = `Auswertung abgeschlossen: ${clamped}/10 Balken`;
-    if (animatedFinalScore) animatedFinalScore.textContent = `Endwert: ${rawScore} Punkte`;
-    if (evaluationStepCounter) evaluationStepCounter.textContent = `Fertig · ${steps.length}/${steps.length}`;
-    setStepDelta(0);
-    showEvaluationOutcome(rawScore);
-  }, 900 + steps.length * 2000);
-  evaluationTimers.push(finalTimer);
+  advanceEvaluationStep(false);
 }
 
 function showEvaluationOutcome(rawScore) {
@@ -1149,7 +1211,8 @@ function bindGlobalEvents() {
     }
     clearDragState();
   });
-  if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; });
+  if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; evaluationSession = null; });
+  if (evaluationNextBtn) evaluationNextBtn.addEventListener('click', () => advanceEvaluationStep(true));
   if (step2Btn) step2Btn.addEventListener('click', () => {
     window.alert('Schritt 2 ist als nächster Abschnitt vorgesehen: Klassenregeln aufstellen.');
   });

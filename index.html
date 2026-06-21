@@ -35,7 +35,7 @@
 
         <div class="control-group">
           <label>2. Lehrkraft platzieren</label>
-          <p class="hint">Ziehe die Lehrkraft in ein freies Feld oder klicke „Lehrkraft“ an und wähle ein Feld. Die Blickrichtung bestimmt den Sichtbereich.</p>
+          <p class="hint">Ziehe die Lehrkraft in ein freies Feld. Die Blickrichtung bestimmt den Sichtbereich.</p>
           <div class="teacher-tools">
             <div id="teacherToken" class="teacher-token" draggable="true" title="Lehrkraft ziehen">Lehrkraft</div>
             <div class="direction-tools" aria-label="Blickrichtung wählen">
@@ -69,7 +69,7 @@
         <div class="room-header">
           <div>
             <h2>Klassenraum</h2>
-            <p>Ziehe Tische frei in quadratische Rasterfelder. Vor und hinter Tischen bleibt ein Rasterfeld frei; nebeneinander dürfen Tische direkt stehen.</p>
+            <p>Ziehe Tische in freie Felder und setze Schüler*innen auf Tischplätze.</p>
           </div>
           <div class="legend" aria-label="Legende">
             <span><i class="legend-desk"></i> Tisch</span>
@@ -92,12 +92,17 @@
             </div>
 
             <section class="evaluation-stage" aria-live="polite">
-              <div class="step-meta">
-                <span id="evaluationStepCounter">Schritt 0/0</span>
-                <span id="evaluationStepDelta" class="step-delta neutral">0</span>
+              <div id="evaluationSlide" class="evaluation-slide">
+                <div class="step-meta">
+                  <span id="evaluationStepCounter">Schritt 0/0</span>
+                  <span id="evaluationStepDelta" class="step-delta neutral">0</span>
+                </div>
+                <div class="evaluation-message">
+                  <h3 id="evaluationCurrentText">Berechnung startet …</h3>
+                  <p id="evaluationCurrentDetail">Die einzelnen Entscheidungen werden nacheinander bewertet.</p>
+                </div>
               </div>
-              <h3 id="evaluationCurrentText">Berechnung startet …</h3>
-              <p id="evaluationCurrentDetail">Die einzelnen Entscheidungen werden nacheinander bewertet.</p>
+              <button type="button" id="evaluationNextBtn" class="stage-next-btn">Weiter</button>
             </section>
 
             <section class="life-panel" aria-label="Lebensleiste der Unterrichtsstabilität">

@@ -90,3 +90,7 @@ Die Auswertung läuft schrittweise ab. Jeder Bewertungsaspekt wird etwa alle zwe
 - Unter 0 wird die Balkenanzeige nicht weiter reduziert, der rechnerische Punktwert kann aber negativ werden.
 - Bei weniger als 1 Punkt erscheint ein Game-Over-Hinweis.
 - Ab 1 Punkt kann zum nächsten geplanten Schritt übergegangen werden: Klassenregeln aufstellen.
+
+## Update: manuelle Auswertung
+
+Die Auswertung läuft nicht mehr automatisch durch. Nach dem Klick auf „Vorbereitung auswerten“ erscheint eine zentrale Bewertungskachel. Jede Bewertungsinformation wird als Slider angezeigt; mit „Weiter“ wird zum nächsten Punkt gewechselt. Die Lebensleiste bleibt währenddessen statisch sichtbar und zeigt 0 bis 10 Balken. Bei 0–3 Balken werden aktive Balken rot, bei 4–6 gelb und bei 7–10 grün dargestellt. Der rechnerische Punktestand kann unter 0 fallen, die Balkenanzeige bleibt jedoch zwischen 0 und 10.
