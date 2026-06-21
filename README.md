@@ -20,11 +20,16 @@ Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Page
   - U-Form
   - Gruppentische
   - Partnerinseln
-- Tische im Raster verschieben
+- Tische frei im quadratischen Raster verschieben
 - 10 Schülerprofile per Drag & Drop oder Klick platzieren
-- Lehrkraft im Raum platzieren
+- Lehrkraft frei im Raum platzieren, per Drag & Drop oder Klickmodus
 - Blickrichtung der Lehrkraft einstellen
 - Sichtbereich der Lehrkraft grün-transparent anzeigen
+- Sichtbereich je nach Lehrkraftverhalten unterschiedlich berechnen:
+  - vorne stehend / leitend: breiter Fächer über vier Reihen
+  - bewegend im Raum: linearer Präsenzkorridor mit schneller Abschwächung nach außen
+  - sitzend am Pult: enger Sichtbereich über zwei Reihen
+- Sichtbereich wird durch davorliegende Tische abgeschwächt; dahinterliegende Felder werden entsprechend heller dargestellt
 - Lehrkraftverhalten wählen:
   - vorne stehend / leitend
   - bewegend im Raum
@@ -34,7 +39,7 @@ Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Page
 
 ## Didaktische Grundidee
 
-Die Vorbereitung des Klassenraums soll sichtbar machen, dass Classroom Management präventiv wirkt. Sitzordnung, räumliche Übersicht, Lehrkraftpositionierung und die Nähe zu potenziell störungsanfälligen Schüler*innen beeinflussen die spätere Stabilität der Unterrichtssituation.
+Die Vorbereitung des Klassenraums soll sichtbar machen, dass Classroom Management präventiv wirkt. Sitzordnung, räumliche Übersicht, Lehrkraftpositionierung, Sichtfeldbrechung durch Tische und die Nähe zu potenziell störungsanfälligen Schüler*innen beeinflussen die spätere Stabilität der Unterrichtssituation.
 
 Der Prototyp wertet daher nicht nur aus, ob alle Schüler*innen platziert wurden, sondern auch, ob risikoreichere Schüler*innen im Sichtbereich der Lehrkraft sitzen, ob ungünstige Nachbarschaften entstehen und ob die Lehrkraft durch ihr Verhalten im Raum Präsenz zeigt.
 
@@ -44,7 +49,8 @@ Die Webseite erzeugt nach der Auswertung unter anderem folgende Informationen:
 
 - `layout` – gewählte Sitzordnung
 - `score` – Startstabilität von 0 bis 10
-- `metrics.highRiskOutsideVision` – störungsanfälligere Schüler*innen außerhalb des Sichtbereichs
+- `metrics.blindRiskStudents` – störungsanfälligere Schüler*innen außerhalb des wirksamen Sichtbereichs
+- `metrics.weaklyVisibleRiskStudents` – störungsanfällige Schüler*innen in abgeschwächten Sichtzonen
 - `metrics.conflictPairs` – problematische Nachbarschaften
 - `metrics.phoneRiskBackOrBlind` – Handy-/Ablenkungsrisiko außerhalb des Überblicks
 - `scenarioFlags` – mögliche Auslöser für spätere Branching-Szenarien

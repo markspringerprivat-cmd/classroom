@@ -43,6 +43,7 @@ const state = {
   assignments: {},
   teacher: { row: 0, col: 4, dir: 'down', mode: 'frontStanding' },
   selectedStudentId: null,
+  placingTeacher: false,
   score: null,
   feedback: [],
   metrics: {}
@@ -77,7 +78,9 @@ function initLayout(layoutKey, keepAssignments = false) {
   }
 
   state.teacher = { ...layout.teacher, mode: teacherModeSelect.value || 'frontStanding' };
+  state.placingTeacher = false;
   setDirectionActive(state.teacher.dir);
+  updateTeacherPlacementButton();
   clearResults();
   render();
 }
@@ -90,7 +93,7 @@ function render() {
 
 function renderGrid() {
   gridEl.innerHTML = '';
-  const visionCells = getVisionCells();
+  const visionMap = getVisionMap();
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -98,8 +101,14 @@ function renderGrid() {
       cell.className = 'grid-cell';
       cell.dataset.row = row;
       cell.dataset.col = col;
-      const vision = visionCells.find(item => item.row === row && item.col === col);
-      if (vision) cell.classList.add(`vision-${vision.level}`);
+
+      const vision = visionMap.get(cellKey(row, col));
+      if (vision) {
+        cell.classList.add('vision', `vision-${vision.level}`);
+        cell.dataset.visionStrength = String(vision.strength);
+      }
+
+      if (state.placingTeacher) cell.classList.add('teacher-placement-active');
 
       const desk = getDeskAt(row, col);
       if (desk) cell.appendChild(createDeskElement(desk));
@@ -189,6 +198,12 @@ function createTeacherInRoom() {
     event.dataTransfer.setData('type', 'teacher');
     event.dataTransfer.effectAllowed = 'move';
   });
+  el.addEventListener('click', event => {
+    event.stopPropagation();
+    state.placingTeacher = !state.placingTeacher;
+    updateTeacherPlacementButton();
+    renderGrid();
+  });
   return el;
 }
 
@@ -239,13 +254,20 @@ function bindCellDnD(cell) {
 }
 
 function handleCellClick(row, col) {
+  if (state.placingTeacher) {
+    placeTeacher(row, col);
+    return;
+  }
   const desk = getDeskAt(row, col);
   if (state.selectedStudentId && desk) assignStudentToDesk(state.selectedStudentId, desk.id);
 }
 
 function selectStudent(studentId) {
   state.selectedStudentId = state.selectedStudentId === studentId ? null : studentId;
+  if (state.selectedStudentId) state.placingTeacher = false;
+  updateTeacherPlacementButton();
   renderPalette();
+  renderGrid();
 }
 
 function assignStudentToDesk(studentId, deskId) {
@@ -274,6 +296,8 @@ function placeTeacher(row, col) {
   if (getDeskAt(row, col)) return;
   state.teacher.row = row;
   state.teacher.col = col;
+  state.placingTeacher = false;
+  updateTeacherPlacementButton();
   clearResults();
   renderGrid();
 }
@@ -282,6 +306,7 @@ function getDeskAt(row, col) { return state.desks.find(desk => desk.row === row 
 function getStudent(id) { return students.find(student => student.id === id); }
 function isStudentAssigned(studentId) { return Object.values(state.assignments).includes(studentId); }
 function updateCounter() { placedCounter.textContent = `${Object.keys(state.assignments).length}/${students.length} platziert`; }
+function cellKey(row, col) { return `${row},${col}`; }
 
 function directionLabel(dir) {
   return ({ up: 'Lehrkraft ↑', down: 'Lehrkraft ↓', left: 'Lehrkraft ←', right: 'Lehrkraft →' })[dir] || 'Lehrkraft';
@@ -291,27 +316,96 @@ function setDirectionActive(dir) {
   document.querySelectorAll('.dir-btn').forEach(button => button.classList.toggle('active', button.dataset.dir === dir));
 }
 
-function getVisionCells() {
+function updateTeacherPlacementButton() {
+  teacherToken.classList.toggle('selected', state.placingTeacher);
+  teacherToken.textContent = state.placingTeacher ? 'Ziel wählen' : 'Lehrkraft';
+}
+
+function getVectorForDirection(dir) {
+  if (dir === 'up') return { dr: -1, dc: 0 };
+  if (dir === 'down') return { dr: 1, dc: 0 };
+  if (dir === 'left') return { dr: 0, dc: -1 };
+  return { dr: 0, dc: 1 };
+}
+
+function getCandidateVisionCells() {
   const { row, col, dir, mode } = state.teacher;
-  const depth = mode === 'deskSitting' ? 2 : 3;
-  const widthBoost = mode === 'moving' ? 1 : 0;
   const cells = [];
+
+  if (mode === 'moving') {
+    // Bewegend im Raum: eher linearer Präsenzkorridor. Die Wirkung fällt nach außen schnell ab.
+    const depth = 5;
+    for (let step = 1; step <= depth; step++) {
+      for (let offset = -1; offset <= 1; offset++) {
+        const baseStrength = offset === 0
+          ? Math.max(1, 5 - step)
+          : Math.max(1, 3 - step);
+        if (baseStrength < 1) continue;
+        const pos = offsetCell(row, col, dir, step, offset);
+        if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
+      }
+    }
+    return cells;
+  }
+
+  const depth = mode === 'deskSitting' ? 2 : 4;
   for (let step = 1; step <= depth; step++) {
-    const spread = step - 1 + widthBoost;
+    const spread = mode === 'deskSitting' ? Math.max(0, step - 1) : step;
     for (let offset = -spread; offset <= spread; offset++) {
-      let r = row, c = col;
-      if (dir === 'up') { r = row - step; c = col + offset; }
-      if (dir === 'down') { r = row + step; c = col + offset; }
-      if (dir === 'left') { r = row + offset; c = col - step; }
-      if (dir === 'right') { r = row + offset; c = col + step; }
-      if (r >= 0 && r < ROWS && c >= 0 && c < COLS) cells.push({ row: r, col: c, level: step });
+      const distanceLoss = mode === 'deskSitting' ? step - 1 : Math.floor((step - 1) / 1.25);
+      const sideLoss = Math.floor(Math.abs(offset) / 2);
+      const baseStrength = Math.max(1, 5 - distanceLoss - sideLoss);
+      const pos = offsetCell(row, col, dir, step, offset);
+      if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
     }
   }
   return cells;
 }
 
-function isDeskInVision(desk) {
-  return getVisionCells().some(cell => cell.row === desk.row && cell.col === desk.col);
+function offsetCell(row, col, dir, step, offset) {
+  if (dir === 'up') return { row: row - step, col: col + offset };
+  if (dir === 'down') return { row: row + step, col: col + offset };
+  if (dir === 'left') return { row: row + offset, col: col - step };
+  return { row: row + offset, col: col + step };
+}
+
+function insideGrid(row, col) {
+  return row >= 0 && row < ROWS && col >= 0 && col < COLS;
+}
+
+function getVisionMap() {
+  const map = new Map();
+  const candidates = getCandidateVisionCells();
+  candidates.forEach(candidate => {
+    const blockers = countDeskBlockersBefore(candidate);
+    // Jeder Tisch auf dem gedachten Sichtstrahl schwächt die dahinterliegenden Felder deutlich ab.
+    const strength = Math.max(0, candidate.baseStrength - blockers * 2);
+    if (strength <= 0) return;
+    const level = Math.max(1, Math.min(5, 6 - strength)); // level 1 = dunkel/stark, level 5 = sehr schwach
+    const key = cellKey(candidate.row, candidate.col);
+    const existing = map.get(key);
+    if (!existing || strength > existing.strength) map.set(key, { ...candidate, blockers, strength, level });
+  });
+  return map;
+}
+
+function countDeskBlockersBefore(candidate) {
+  let blockers = 0;
+  const { row, col, dir } = state.teacher;
+  for (let step = 1; step < candidate.step; step++) {
+    const scaledOffset = Math.round(candidate.offset * (step / candidate.step));
+    const pos = offsetCell(row, col, dir, step, scaledOffset);
+    if (insideGrid(pos.row, pos.col) && getDeskAt(pos.row, pos.col)) blockers += 1;
+  }
+  return blockers;
+}
+
+function getVisionStrengthAt(row, col) {
+  return getVisionMap().get(cellKey(row, col))?.strength || 0;
+}
+
+function isDeskEffectivelyInVision(desk) {
+  return getVisionStrengthAt(desk.row, desk.col) >= 2;
 }
 
 function manhattan(a, b) { return Math.abs(a.row - b.row) + Math.abs(a.col - b.col); }
@@ -330,7 +424,9 @@ function evaluatePreparation() {
     placedStudents: Object.keys(state.assignments).length,
     teacherMode: state.teacher.mode,
     teacherDirection: state.teacher.dir,
+    visionModel: 'fan-or-linear-with-desk-attenuation',
     visibleRiskStudents: [],
+    weaklyVisibleRiskStudents: [],
     blindRiskStudents: [],
     riskyPairs: [],
     stabilizingPairs: [],
@@ -352,33 +448,44 @@ function evaluatePreparation() {
   score += layoutEffect.delta;
   feedback.push(layoutEffect.feedback);
 
-  const visibleRiskStudents = students.filter(student => {
+  const visibleRiskStudents = [];
+  const weaklyVisibleRiskStudents = [];
+  const blindRiskStudents = [];
+
+  students.forEach(student => {
     const desk = getStudentDesk(student.id);
-    return desk && student.hidden.risk >= 3 && isDeskInVision(desk);
+    if (!desk || student.hidden.risk < 3) return;
+    const strength = getVisionStrengthAt(desk.row, desk.col);
+    if (strength >= 3) visibleRiskStudents.push(student);
+    else if (strength >= 1) weaklyVisibleRiskStudents.push(student);
+    else blindRiskStudents.push(student);
   });
-  const blindRiskStudents = students.filter(student => {
-    const desk = getStudentDesk(student.id);
-    return desk && student.hidden.risk >= 3 && !isDeskInVision(desk);
-  });
+
   metrics.visibleRiskStudents = visibleRiskStudents.map(s => s.id);
+  metrics.weaklyVisibleRiskStudents = weaklyVisibleRiskStudents.map(s => s.id);
   metrics.blindRiskStudents = blindRiskStudents.map(s => s.id);
 
   if (visibleRiskStudents.length >= 3) {
     score += 2;
-    feedback.push({ type: 'good', text: 'Mehrere störanfällige Schüler*innen liegen im Sichtbereich der Lehrkraft.' });
+    feedback.push({ type: 'good', text: 'Mehrere störanfällige Schüler*innen liegen in einem wirksamen Sichtbereich der Lehrkraft.' });
   } else if (visibleRiskStudents.length >= 1) {
     score += 1;
-    feedback.push({ type: 'good', text: 'Mindestens ein störanfälliger Schüler liegt im Sichtbereich der Lehrkraft.' });
+    feedback.push({ type: 'good', text: 'Mindestens ein störanfälliger Schüler liegt in einem wirksamen Sichtbereich der Lehrkraft.' });
+  }
+
+  if (weaklyVisibleRiskStudents.length >= 1) {
+    metrics.futureScenarioHooks.push('weak-vision-through-desk-blocking');
+    feedback.push({ type: 'warning', text: 'Einige störanfällige Schüler*innen liegen nur schwach im Sichtfeld, weil Tische davor das Sichtfeld brechen.' });
   }
 
   if (blindRiskStudents.length >= 2) {
     score -= 2;
     metrics.futureScenarioHooks.push('blindspot-disruption');
-    feedback.push({ type: 'bad', text: 'Mehrere störanfällige Schüler*innen sitzen außerhalb des Sichtbereichs. Das kann später Blind-Spot-Störungen auslösen.' });
+    feedback.push({ type: 'bad', text: 'Mehrere störanfällige Schüler*innen sitzen außerhalb eines wirksamen Sichtbereichs. Das kann später Blind-Spot-Störungen auslösen.' });
   } else if (blindRiskStudents.length === 1) {
     score -= 1;
     metrics.futureScenarioHooks.push('minor-blindspot');
-    feedback.push({ type: 'warning', text: 'Ein störanfälliger Schüler sitzt außerhalb des Sichtbereichs.' });
+    feedback.push({ type: 'warning', text: 'Ein störanfälliger Schüler sitzt außerhalb eines wirksamen Sichtbereichs.' });
   }
 
   const pairResult = evaluatePairs();
@@ -466,25 +573,28 @@ function evaluateBackRowRisks() {
   students.forEach(student => {
     const desk = getStudentDesk(student.id);
     if (!desk) return;
-    if (backRows.includes(desk.row) && (student.hidden.phoneRisk || student.hidden.needsMonitoring || student.hidden.distractor)) result.backRowRisks.push(student.id);
+    const weakVision = !isDeskEffectivelyInVision(desk);
+    if (backRows.includes(desk.row) && weakVision && (student.hidden.phoneRisk || student.hidden.needsMonitoring || student.hidden.distractor)) {
+      result.backRowRisks.push(student.id);
+    }
   });
 
   if (result.backRowRisks.length >= 2) {
     result.delta -= 2;
     result.hooks.push('backrow-phone-or-offtask');
-    result.feedback.push({ type: 'bad', text: 'Mehrere kontrollbedürftige Schüler*innen sitzen weit hinten. Das kann später Handy- oder Off-Task-Szenarien begünstigen.' });
+    result.feedback.push({ type: 'bad', text: 'Mehrere kontrollbedürftige Schüler*innen sitzen weit hinten und nicht wirksam im Sichtbereich. Das kann später Handy- oder Off-Task-Szenarien begünstigen.' });
   } else if (result.backRowRisks.length === 1) {
     result.delta -= 1;
     result.hooks.push('single-backrow-risk');
-    result.feedback.push({ type: 'warning', text: 'Ein kontrollbedürftiger Schüler sitzt weit hinten.' });
+    result.feedback.push({ type: 'warning', text: 'Ein kontrollbedürftiger Schüler sitzt weit hinten und nicht wirksam im Sichtbereich.' });
   }
   return result;
 }
 
 function evaluateTeacherMode() {
-  if (state.teacher.mode === 'moving') return { delta: 1, hooks: ['teacher-moving-presence'], feedback: { type: 'good', text: 'Bewegung im Raum erhöht Präsenz und kann verdeckte Störungen früh sichtbar machen.' } };
-  if (state.teacher.mode === 'deskSitting') return { delta: -1, hooks: ['teacher-desk-blindspots'], feedback: { type: 'warning', text: 'Sitzend am Pult ist der Sicht- und Handlungsradius eingeschränkt.' } };
-  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', text: 'Vorne stehend entsteht eine klare Leitungsposition. Entscheidend ist, ob risikorelevante Plätze im Sichtbereich liegen.' } };
+  if (state.teacher.mode === 'moving') return { delta: 1, hooks: ['teacher-moving-presence'], feedback: { type: 'good', text: 'Bewegung im Raum erzeugt eine lineare Präsenzzone und kann verdeckte Störungen früh sichtbar machen.' } };
+  if (state.teacher.mode === 'deskSitting') return { delta: -1, hooks: ['teacher-desk-blindspots'], feedback: { type: 'warning', text: 'Sitzend am Pult ist der Sicht- und Handlungsradius auf zwei Reihen eingeschränkt.' } };
+  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', text: 'Vorne stehend entsteht ein breiter Leitungsfächer. Entscheidend ist, ob risikorelevante Plätze darin liegen.' } };
 }
 
 function showResults(score, feedback, metrics) {
@@ -497,12 +607,20 @@ function showResults(score, feedback, metrics) {
     li.textContent = item.text;
     feedbackList.appendChild(li);
   });
+  const visionByDesk = state.desks.map(desk => ({
+    deskId: desk.id,
+    row: desk.row,
+    col: desk.col,
+    strength: getVisionStrengthAt(desk.row, desk.col),
+    studentId: state.assignments[desk.id] || null
+  }));
   const exportData = {
     preparationScore: score,
     chosenLayout: { key: state.layout, label: layouts[state.layout].label },
     teacher: state.teacher,
     desks: state.desks,
     assignments: state.assignments,
+    visionByDesk,
     metrics,
     suggestedScenarioHooks: [...new Set(metrics.futureScenarioHooks)]
   };
@@ -528,6 +646,13 @@ function bindGlobalEvents() {
   teacherToken.addEventListener('dragstart', event => {
     event.dataTransfer.setData('type', 'teacher');
     event.dataTransfer.effectAllowed = 'move';
+  });
+  teacherToken.addEventListener('click', () => {
+    state.placingTeacher = !state.placingTeacher;
+    state.selectedStudentId = null;
+    updateTeacherPlacementButton();
+    renderPalette();
+    renderGrid();
   });
   document.querySelectorAll('.dir-btn').forEach(button => {
     button.addEventListener('click', () => {
