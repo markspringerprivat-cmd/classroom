@@ -22,12 +22,12 @@ const layouts = {
   },
   uform: {
     label: 'U-Form',
-    deskPositions: [[1,1], [2,1], [3,1], [4,1], [5,2], [6,3], [6,5], [5,7], [4,8], [3,8]],
-    teacher: { row: 1, col: 4, dir: 'down' }
+    deskPositions: [[1,1], [3,1], [5,1], [7,2], [7,4], [7,6], [7,8], [5,9], [3,9], [1,9]],
+    teacher: { row: 1, col: 5, dir: 'down' }
   },
   groups: {
     label: 'Gruppentische',
-    deskPositions: [[2,2], [2,3], [3,2], [3,3], [2,6], [2,7], [3,6], [3,7], [6,4], [6,5]],
+    deskPositions: [[1,1], [1,2], [1,6], [1,7], [4,1], [4,2], [4,6], [4,7], [7,4], [7,5]],
     teacher: { row: 0, col: 4, dir: 'down' }
   },
   pairs: {
@@ -69,6 +69,11 @@ const resultsPanel = document.getElementById('resultsPanel');
 const feedbackList = document.getElementById('feedbackList');
 const meterFill = document.getElementById('meterFill');
 const stateOutput = document.getElementById('stateOutput');
+const evaluationOverlay = document.getElementById('evaluationOverlay');
+const overlayCloseBtn = document.getElementById('overlayCloseBtn');
+const overlayScore = document.getElementById('overlayScore');
+const overlayMeterFill = document.getElementById('overlayMeterFill');
+const overlayFeedbackList = document.getElementById('overlayFeedbackList');
 
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
@@ -102,6 +107,7 @@ function render() {
 function renderGrid() {
   gridEl.innerHTML = '';
   const visionMap = getVisionMap();
+  const influenceMap = getCombinedInfluenceMap(visionMap);
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -116,10 +122,13 @@ function renderGrid() {
         cell.dataset.visionStrength = String(vision.strength);
       }
 
+      const influence = influenceMap.get(cellKey(row, col));
+      if (influence) applyInfluenceClasses(cell, influence);
+
       if (state.placingTeacher) cell.classList.add('teacher-placement-active');
 
       const desk = getDeskAt(row, col);
-      if (desk) cell.appendChild(createDeskElement(desk));
+      if (desk) cell.appendChild(createDeskElement(desk, influence));
 
       if (state.teacher.row === row && state.teacher.col === col) cell.appendChild(createTeacherInRoom());
 
@@ -130,9 +139,19 @@ function renderGrid() {
   }
 }
 
-function createDeskElement(desk) {
+function applyInfluenceClasses(el, influence) {
+  el.dataset.influenceNet = String(influence.net);
+  el.dataset.influenceGreen = String(influence.green);
+  el.dataset.influenceRed = String(influence.red);
+  if (influence.kind === 'good') el.classList.add(`influence-good-${influence.level}`);
+  if (influence.kind === 'risk') el.classList.add(`influence-risk-${influence.level}`);
+  if (influence.kind === 'neutral') el.classList.add(`influence-neutral-${influence.level}`);
+}
+
+function createDeskElement(desk, influence = null) {
   const deskEl = document.createElement('div');
   deskEl.className = 'desk';
+  if (influence) applyInfluenceClasses(deskEl, influence);
   deskEl.draggable = true;
   deskEl.dataset.deskId = desk.id;
   deskEl.title = 'Tisch ziehen und in ein anderes Rasterfeld ablegen';
@@ -191,8 +210,12 @@ function createDeskElement(desk) {
     if (event.target.closest('.student-chip, .remove-student-btn')) return;
     event.stopPropagation();
     startDrag(event, { type: 'desk', deskId: desk.id });
+    deskEl.classList.add('dragging');
   });
-  deskEl.addEventListener('dragend', clearDragState);
+  deskEl.addEventListener('dragend', () => {
+    deskEl.classList.remove('dragging');
+    clearDragState();
+  });
 
   deskEl.addEventListener('dragover', event => {
     if (dragState.type !== 'student') return;
@@ -228,8 +251,12 @@ function createTeacherInRoom() {
   el.addEventListener('dragstart', event => {
     event.stopPropagation();
     startDrag(event, { type: 'teacher' });
+    el.classList.add('dragging');
   });
-  el.addEventListener('dragend', clearDragState);
+  el.addEventListener('dragend', () => {
+    el.classList.remove('dragging');
+    clearDragState();
+  });
   el.addEventListener('click', event => {
     event.stopPropagation();
     state.placingTeacher = !state.placingTeacher;
@@ -251,8 +278,12 @@ function renderPalette() {
     card.innerHTML = `<div class="student-name">${student.name} (${student.age})</div><div class="student-note">${student.note}</div>`;
     card.addEventListener('dragstart', event => {
       startDrag(event, { type: 'student', studentId: student.id });
+      card.classList.add('dragging');
     });
-    card.addEventListener('dragend', clearDragState);
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      clearDragState();
+    });
     card.addEventListener('click', () => selectStudent(student.id));
     paletteEl.appendChild(card);
   });
@@ -366,23 +397,60 @@ function moveDesk(deskId, row, col) {
   if (!deskId) return;
   const desk = state.desks.find(item => item.id === deskId);
   if (!desk) return;
-  const targetDesk = getDeskAt(row, col);
-  if (targetDesk && targetDesk.id !== deskId) return;
-  if (state.teacher.row === row && state.teacher.col === col) return;
+  const validation = canPlaceDeskAt(deskId, row, col);
+  if (!validation.ok) {
+    flashCell(row, col, 'invalid');
+    showTemporaryHint(validation.reason);
+    return;
+  }
   desk.row = row;
   desk.col = col;
   clearResults();
   renderGrid();
 }
 
+function canPlaceDeskAt(deskId, row, col) {
+  if (!insideGrid(row, col)) return { ok: false, reason: 'Das Ziel liegt außerhalb des Rasters.' };
+  const targetDesk = getDeskAt(row, col);
+  if (targetDesk && targetDesk.id !== deskId) return { ok: false, reason: 'Hier steht bereits ein Tisch.' };
+  if (state.teacher.row === row && state.teacher.col === col) return { ok: false, reason: 'Hier steht die Lehrkraft.' };
+  const verticalBlocker = state.desks.find(other => other.id !== deskId && other.col === col && Math.abs(other.row - row) === 1);
+  if (verticalBlocker) return { ok: false, reason: 'Vor und hinter einem Tisch muss ein Rasterfeld frei bleiben.' };
+  return { ok: true, reason: '' };
+}
+
 function placeTeacher(row, col) {
-  if (getDeskAt(row, col)) return;
+  if (getDeskAt(row, col)) {
+    flashCell(row, col, 'invalid');
+    showTemporaryHint('Die Lehrkraft kann nicht auf einem Tischfeld stehen.');
+    return;
+  }
   state.teacher.row = row;
   state.teacher.col = col;
   state.placingTeacher = false;
   updateTeacherPlacementButton();
   clearResults();
   renderGrid();
+}
+
+function flashCell(row, col, type = 'invalid') {
+  const cell = gridEl.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+  if (!cell) return;
+  cell.classList.add(type === 'invalid' ? 'invalid-target' : 'drop-hover');
+  window.setTimeout(() => cell.classList.remove('invalid-target', 'drop-hover'), 700);
+}
+
+function showTemporaryHint(message) {
+  if (!evalHint) return;
+  const previous = evalHint.textContent;
+  const wasReady = evalHint.classList.contains('ready');
+  evalHint.classList.remove('ready');
+  evalHint.textContent = message;
+  window.setTimeout(() => {
+    updateEvaluateButton();
+    if (!evalHint.textContent) evalHint.textContent = previous;
+    evalHint.classList.toggle('ready', wasReady && allStudentsPlaced());
+  }, 1500);
 }
 
 function getDeskAt(row, col) { return state.desks.find(desk => desk.row === row && desk.col === col); }
@@ -430,7 +498,7 @@ function getCandidateVisionCells() {
   const cells = [];
 
   if (mode === 'moving') {
-    // Bewegend im Raum: eher linearer Präsenzkorridor. Die Wirkung fällt nach außen schnell ab.
+    // Bewegend im Raum: linearer Präsenzkorridor mit schnellem Abfall nach außen.
     const depth = 5;
     for (let step = 1; step <= depth; step++) {
       for (let offset = -1; offset <= 1; offset++) {
@@ -475,7 +543,7 @@ function getVisionMap() {
   const candidates = getCandidateVisionCells();
   candidates.forEach(candidate => {
     const blockers = countDeskBlockersBefore(candidate);
-    // Jeder Tisch auf dem gedachten Sichtstrahl schwächt die dahinterliegenden Felder deutlich ab.
+    // Jeder Tisch auf dem Sichtstrahl schwächt dahinterliegende Felder ab.
     const strength = Math.max(0, candidate.baseStrength - blockers * 2);
     if (strength <= 0) return;
     const level = Math.max(1, Math.min(5, 6 - strength)); // level 1 = dunkel/stark, level 5 = sehr schwach
@@ -502,15 +570,120 @@ function getVisionStrengthAt(row, col) {
 }
 
 function isDeskEffectivelyInVision(desk) {
-  return getVisionStrengthAt(desk.row, desk.col) >= 2;
+  return getVisionStrengthAt(desk.row, desk.col) >= 3;
+}
+
+function visionGreenLevel(strength) {
+  if (strength >= 5) return 4;
+  if (strength >= 4) return 3;
+  if (strength >= 3) return 2;
+  if (strength >= 1) return 1;
+  return 0;
+}
+
+function getCombinedInfluenceMap(visionMap = getVisionMap()) {
+  const raw = new Map();
+  const add = (row, col, type, value, source = '') => {
+    if (!insideGrid(row, col) || value <= 0) return;
+    const key = cellKey(row, col);
+    const current = raw.get(key) || { green: 0, red: 0, sources: [] };
+    current[type] = Math.min(12, current[type] + value);
+    current.sources.push(source);
+    raw.set(key, current);
+  };
+
+  visionMap.forEach((vision, key) => {
+    const [row, col] = key.split(',').map(Number);
+    add(row, col, 'green', visionGreenLevel(vision.strength), `Sichtfeld Stufe ${vision.strength}`);
+  });
+
+  Object.entries(state.assignments).forEach(([deskId, studentId]) => {
+    const desk = state.desks.find(item => item.id === deskId);
+    const student = getStudent(studentId);
+    if (!desk || !student) return;
+    const h = student.hidden;
+
+    if (h.distractor) {
+      add(desk.row, desk.col - 1, 'red', 4, `${student.name}: lenkt links ab`);
+      add(desk.row, desk.col + 1, 'red', 4, `${student.name}: lenkt rechts ab`);
+      add(desk.row, desk.col, 'red', 2, `${student.name}: Störpotenzial`);
+    }
+    if (h.callsOut) {
+      add(desk.row, desk.col, 'red', 3, `${student.name}: Zwischenrufe`);
+      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'red', 2, `${student.name}: Aufmerksamkeitssuche`));
+    }
+    if (h.boundaryTesting) {
+      add(desk.row, desk.col, 'red', 3, `${student.name}: testet Grenzen`);
+      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'red', 3, `${student.name}: provoziert Umfeld`));
+    }
+    if (h.conflictWithBoys) {
+      add(desk.row, desk.col, 'red', 2, `${student.name}: Konfliktrisiko`);
+      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'red', 2, `${student.name}: Konfliktrisiko Umfeld`));
+    }
+    if (h.phoneRisk) {
+      add(desk.row, desk.col, 'red', 3, `${student.name}: verdecktes Off-Task-Risiko`);
+    }
+
+    if (h.stabilizer) {
+      add(desk.row, desk.col, 'green', 2, `${student.name}: stabilisiert`);
+      add(desk.row, desk.col - 1, 'green', 4, `${student.name}: hilft links`);
+      add(desk.row, desk.col + 1, 'green', 4, `${student.name}: hilft rechts`);
+    }
+    if (h.mediator) {
+      add(desk.row, desk.col, 'green', 3, `${student.name}: vermittelt`);
+      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'green', 3, `${student.name}: vermittelt im Umfeld`));
+    }
+  });
+
+  const combined = new Map();
+  raw.forEach((value, key) => {
+    const green = value.green || 0;
+    const red = value.red || 0;
+    if (!green && !red) return;
+    const net = green - red;
+    const maxValue = Math.max(green, red);
+    let kind = 'neutral';
+    let level = Math.max(1, Math.min(4, Math.ceil(maxValue / 3)));
+    if (green && red && Math.abs(net) <= 1) {
+      kind = 'neutral';
+    } else if (net > 0) {
+      kind = 'good';
+      level = Math.max(1, Math.min(4, Math.ceil(net / 2)));
+    } else if (net < 0) {
+      kind = 'risk';
+      level = Math.max(1, Math.min(4, Math.ceil(Math.abs(net) / 2)));
+    }
+    combined.set(key, { green, red, net, kind, level, sources: value.sources });
+  });
+  return combined;
+}
+
+function forEachNeighbor(desk, callback) {
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const row = desk.row + dr;
+      const col = desk.col + dc;
+      if (insideGrid(row, col)) callback({ row, col });
+    }
+  }
 }
 
 function manhattan(a, b) { return Math.abs(a.row - b.row) + Math.abs(a.col - b.col); }
-function isNear(a, b) { return manhattan(a, b) <= 2; }
+function chebyshev(a, b) { return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col)); }
+function isNear(a, b) { return chebyshev(a, b) <= 1 && !(a.row === b.row && a.col === b.col); }
 
 function getStudentDesk(studentId) {
   const deskId = Object.entries(state.assignments).find(([, sid]) => sid === studentId)?.[0];
   return deskId ? state.desks.find(desk => desk.id === deskId) || null : null;
+}
+
+function namesFromIds(ids) {
+  return ids.map(id => getStudent(id)?.name || id).join(', ');
+}
+
+function addFeedback(feedback, type, delta, text, detail = '') {
+  feedback.push({ type, delta, text, detail });
 }
 
 function evaluatePreparation() {
@@ -531,74 +704,48 @@ function evaluatePreparation() {
     placedStudents: Object.keys(state.assignments).length,
     teacherMode: state.teacher.mode,
     teacherDirection: state.teacher.dir,
-    visionModel: 'fan-or-linear-with-desk-attenuation',
-    visibleRiskStudents: [],
+    visionModel: 'fan-or-linear-with-desk-attenuation-and-student-influence',
+    visionRiskStudents: [],
     weaklyVisibleRiskStudents: [],
     blindRiskStudents: [],
     riskyPairs: [],
+    neutralizedRiskPairs: [],
     stabilizingPairs: [],
+    spacing: evaluateDeskSpacing(),
     backRowRisks: [],
     futureScenarioHooks: []
   };
 
   let score = 5;
-  const placedCount = Object.keys(state.assignments).length;
-  if (placedCount === students.length) {
-    score += 1;
-    feedback.push({ type: 'good', text: 'Alle Schüler*innen sind platziert. Das erhöht die Planbarkeit der Stunde.' });
-  } else {
-    score -= 1;
-    feedback.push({ type: 'warning', text: `${students.length - placedCount} Schüler*innen sind noch nicht platziert. Das würde später keine saubere Szenario-Auswahl erlauben.` });
-  }
+  addFeedback(feedback, 'good', +1, 'Alle Schüler*innen sind platziert.', 'Das erhöht die Planbarkeit der Stunde, weil spätere Szenarien eindeutig auf Sitzplätze und Personen zugreifen können.');
+  score += 1;
 
   const layoutEffect = evaluateLayoutBase();
   score += layoutEffect.delta;
   feedback.push(layoutEffect.feedback);
 
-  const visibleRiskStudents = [];
-  const weaklyVisibleRiskStudents = [];
-  const blindRiskStudents = [];
-
-  students.forEach(student => {
-    const desk = getStudentDesk(student.id);
-    if (!desk || student.hidden.risk < 3) return;
-    const strength = getVisionStrengthAt(desk.row, desk.col);
-    if (strength >= 3) visibleRiskStudents.push(student);
-    else if (strength >= 1) weaklyVisibleRiskStudents.push(student);
-    else blindRiskStudents.push(student);
-  });
-
-  metrics.visibleRiskStudents = visibleRiskStudents.map(s => s.id);
-  metrics.weaklyVisibleRiskStudents = weaklyVisibleRiskStudents.map(s => s.id);
-  metrics.blindRiskStudents = blindRiskStudents.map(s => s.id);
-
-  if (visibleRiskStudents.length >= 3) {
-    score += 2;
-    feedback.push({ type: 'good', text: 'Mehrere störanfällige Schüler*innen liegen in einem wirksamen Sichtbereich der Lehrkraft.' });
-  } else if (visibleRiskStudents.length >= 1) {
+  const spacingResult = metrics.spacing;
+  if (spacingResult.invalidPairs.length === 0) {
     score += 1;
-    feedback.push({ type: 'good', text: 'Mindestens ein störanfälliger Schüler liegt in einem wirksamen Sichtbereich der Lehrkraft.' });
+    addFeedback(feedback, 'good', +1, 'Gang- und Sitzabstände sind eingehalten.', 'Vor und hinter Tischen bleibt jeweils ein Rasterfeld frei; nebeneinander dürfen Tische direkt stehen.');
+  } else {
+    score -= spacingResult.invalidPairs.length;
+    addFeedback(feedback, 'bad', -spacingResult.invalidPairs.length, `${spacingResult.invalidPairs.length} unzulässige Tischabstände erkannt.`, 'Vor und hinter Tischen muss ein Rasterfeld frei bleiben, damit Stühle und Wege nicht blockiert werden.');
   }
 
-  if (weaklyVisibleRiskStudents.length >= 1) {
-    metrics.futureScenarioHooks.push('weak-vision-through-desk-blocking');
-    feedback.push({ type: 'warning', text: 'Einige störanfällige Schüler*innen liegen nur schwach im Sichtfeld, weil Tische davor das Sichtfeld brechen.' });
-  }
-
-  if (blindRiskStudents.length >= 2) {
-    score -= 2;
-    metrics.futureScenarioHooks.push('blindspot-disruption');
-    feedback.push({ type: 'bad', text: 'Mehrere störanfällige Schüler*innen sitzen außerhalb eines wirksamen Sichtbereichs. Das kann später Blind-Spot-Störungen auslösen.' });
-  } else if (blindRiskStudents.length === 1) {
-    score -= 1;
-    metrics.futureScenarioHooks.push('minor-blindspot');
-    feedback.push({ type: 'warning', text: 'Ein störanfälliger Schüler sitzt außerhalb eines wirksamen Sichtbereichs.' });
-  }
+  const visionResult = evaluateRiskStudentVision();
+  score += visionResult.delta;
+  feedback.push(...visionResult.feedback);
+  metrics.visionRiskStudents = visionResult.visionRiskStudents;
+  metrics.weaklyVisibleRiskStudents = visionResult.weaklyVisibleRiskStudents;
+  metrics.blindRiskStudents = visionResult.blindRiskStudents;
+  metrics.futureScenarioHooks.push(...visionResult.hooks);
 
   const pairResult = evaluatePairs();
   score += pairResult.delta;
   feedback.push(...pairResult.feedback);
   metrics.riskyPairs = pairResult.riskyPairs;
+  metrics.neutralizedRiskPairs = pairResult.neutralizedRiskPairs;
   metrics.stabilizingPairs = pairResult.stabilizingPairs;
   metrics.futureScenarioHooks.push(...pairResult.hooks);
 
@@ -621,14 +768,61 @@ function evaluatePreparation() {
 }
 
 function evaluateLayoutBase() {
-  if (state.layout === 'rows') return { delta: 1, feedback: { type: 'good', text: 'Reihensitzordnung: gute Steuerbarkeit und Übersicht, aber weniger kooperative Interaktion.' } };
-  if (state.layout === 'uform') return { delta: 1, feedback: { type: 'good', text: 'U-Form: gute Sichtbarkeit und klare Gesprächsausrichtung, sofern die Lehrkraft passend positioniert ist.' } };
-  if (state.layout === 'groups') return { delta: -1, feedback: { type: 'warning', text: 'Gruppentische: kooperativ geeignet, aber ohne klare Steuerung höheres Ablenkungs- und Lautstärkerisiko.' } };
-  return { delta: 0, feedback: { type: 'warning', text: 'Partnerinseln: ausgewogen, aber die Wirkung hängt stark von den Sitznachbar*innen ab.' } };
+  if (state.layout === 'rows') return { delta: 1, feedback: { type: 'good', delta: +1, text: 'Reihensitzordnung: gute Steuerbarkeit und Übersicht.', detail: 'Sie unterstützt eine klare Plenumssteuerung, bietet aber weniger kooperative Interaktion.' } };
+  if (state.layout === 'uform') return { delta: 1, feedback: { type: 'good', delta: +1, text: 'U-Form: gute Sichtbarkeit und Gesprächsausrichtung.', detail: 'Die Form ist günstig, wenn die Lehrkraft passend positioniert ist und keine blinden Außenbereiche entstehen.' } };
+  if (state.layout === 'groups') return { delta: -1, feedback: { type: 'warning', delta: -1, text: 'Gruppentische: kooperativ geeignet, aber störanfälliger.', detail: 'Ohne sehr klare Steuerung steigt das Risiko für Ablenkung, Lautstärke und informelle Nebengespräche.' } };
+  return { delta: 0, feedback: { type: 'warning', delta: 0, text: 'Partnerinseln: grundsätzlich ausgewogen.', detail: 'Die Bewertung hängt hier besonders stark von den konkreten Sitznachbarschaften ab.' } };
+}
+
+function evaluateDeskSpacing() {
+  const invalidPairs = [];
+  for (let i = 0; i < state.desks.length; i++) {
+    for (let j = i + 1; j < state.desks.length; j++) {
+      const a = state.desks[i];
+      const b = state.desks[j];
+      if (a.col === b.col && Math.abs(a.row - b.row) === 1) invalidPairs.push([a.id, b.id]);
+    }
+  }
+  return { invalidPairs };
+}
+
+function evaluateRiskStudentVision() {
+  const result = { delta: 0, feedback: [], visionRiskStudents: [], weaklyVisibleRiskStudents: [], blindRiskStudents: [], hooks: [] };
+  students.forEach(student => {
+    const desk = getStudentDesk(student.id);
+    if (!desk || student.hidden.risk < 3) return;
+    const strength = getVisionStrengthAt(desk.row, desk.col);
+    const record = { studentId: student.id, name: student.name, row: desk.row, col: desk.col, visionStrength: strength };
+
+    if (strength >= 4) {
+      result.delta += 2;
+      result.visionRiskStudents.push(record);
+      addFeedback(result.feedback, 'good', +2, `${student.name} sitzt im stärksten Sichtbereich der Lehrkraft.`, 'Ein störanfälliger Schüler wird direkt und früh wahrgenommen; die präventive Steuerung ist hier hoch.');
+    } else if (strength === 3) {
+      result.delta += 1;
+      result.visionRiskStudents.push(record);
+      addFeedback(result.feedback, 'good', +1, `${student.name} sitzt noch in einem wirksamen Sichtbereich.`, 'Die Sicht ist nicht maximal, aber ausreichend für frühe Präsenzsignale.');
+    } else if (strength === 2) {
+      result.weaklyVisibleRiskStudents.push(record);
+      result.hooks.push('weak-vision-through-desk-blocking');
+      addFeedback(result.feedback, 'warning', 0, `${student.name} sitzt nur in einer schwachen Sichtzone.`, 'Die Lehrkraft sieht den Platz noch, aber Tische und Distanz schwächen die Präventionswirkung.');
+    } else if (strength === 1) {
+      result.delta -= 1;
+      result.weaklyVisibleRiskStudents.push(record);
+      result.hooks.push('weak-vision-through-desk-blocking');
+      addFeedback(result.feedback, 'warning', -1, `${student.name} sitzt in einer sehr schwachen Sichtzone.`, 'Bei verdeckten Störungen wäre hier spätere Nachsteuerung wahrscheinlich.');
+    } else {
+      result.delta -= 2;
+      result.blindRiskStudents.push(record);
+      result.hooks.push('blindspot-disruption');
+      addFeedback(result.feedback, 'bad', -2, `${student.name} sitzt außerhalb des wirksamen Sichtfelds.`, 'Bei störanfälligen Schüler*innen ist das ein deutliches Risiko für verdeckte Störungen.');
+    }
+  });
+  return result;
 }
 
 function evaluatePairs() {
-  const result = { delta: 0, feedback: [], riskyPairs: [], stabilizingPairs: [], hooks: [] };
+  const result = { delta: 0, feedback: [], riskyPairs: [], neutralizedRiskPairs: [], stabilizingPairs: [], hooks: [] };
   const placed = students.filter(student => getStudentDesk(student.id));
 
   for (let i = 0; i < placed.length; i++) {
@@ -636,42 +830,75 @@ function evaluatePairs() {
       const a = placed[i], b = placed[j];
       const deskA = getStudentDesk(a.id), deskB = getStudentDesk(b.id);
       if (!deskA || !deskB || !isNear(deskA, deskB)) continue;
-      const conflict =
-        (a.hidden.conflictWithBoys && b.hidden.gender === 'm') ||
-        (b.hidden.conflictWithBoys && a.hidden.gender === 'm') ||
-        (a.hidden.distractor && b.hidden.risk >= 2) ||
-        (b.hidden.distractor && a.hidden.risk >= 2) ||
-        (a.hidden.boundaryTesting && b.hidden.callsOut) ||
-        (b.hidden.boundaryTesting && a.hidden.callsOut);
-      const stabilizing =
-        (a.hidden.stabilizer && b.hidden.risk >= 3) ||
-        (b.hidden.stabilizer && a.hidden.risk >= 3) ||
-        (a.hidden.mediator && b.hidden.conflictWithBoys) ||
-        (b.hidden.mediator && a.hidden.conflictWithBoys);
-      if (conflict) result.riskyPairs.push([a.id, b.id]);
-      if (stabilizing) result.stabilizingPairs.push([a.id, b.id]);
+
+      const conflictReason = getConflictReason(a, b);
+      const stabilizingReason = getStabilizingReason(a, b);
+
+      if (conflictReason) {
+        const neutralized = isRiskPairNeutralized(a, b);
+        const pairRecord = { pair: [a.id, b.id], names: [a.name, b.name], reason: conflictReason, neutralized };
+        if (neutralized) {
+          result.neutralizedRiskPairs.push(pairRecord);
+          addFeedback(result.feedback, 'warning', 0, `Riskante Nähe neutralisiert: ${a.name} und ${b.name}.`, `${conflictReason} Die Nähe wird durch starken Sichtbereich oder stabilisierende Mitschüler*innen abgefedert.`);
+        } else {
+          result.delta -= 1;
+          result.riskyPairs.push(pairRecord);
+          result.hooks.push('peer-conflict-medium');
+          addFeedback(result.feedback, 'bad', -1, `Riskante Sitznachbarschaft: ${a.name} und ${b.name}.`, `${conflictReason} Diagonale Nähe zählt ebenfalls als Sitznachbarschaft.`);
+        }
+      }
+
+      if (stabilizingReason) {
+        result.delta += 1;
+        result.stabilizingPairs.push({ pair: [a.id, b.id], names: [a.name, b.name], reason: stabilizingReason });
+        addFeedback(result.feedback, 'good', +1, `Stabilisierende Sitznachbarschaft: ${a.name} und ${b.name}.`, stabilizingReason);
+      }
     }
   }
 
-  if (result.riskyPairs.length >= 3) {
-    result.delta -= 2;
-    result.hooks.push('peer-conflict-high');
-    result.feedback.push({ type: 'bad', text: 'Mehrere riskante Sitznachbarschaften wurden erzeugt. Das erhöht die Wahrscheinlichkeit für Nebengespräche, Provokationen oder Konflikte.' });
-  } else if (result.riskyPairs.length >= 1) {
-    result.delta -= 1;
-    result.hooks.push('peer-conflict-medium');
-    result.feedback.push({ type: 'warning', text: 'Mindestens eine riskante Sitznachbarschaft ist vorhanden.' });
-  } else {
+  if (result.riskyPairs.length === 0 && result.neutralizedRiskPairs.length === 0) {
     result.delta += 1;
-    result.feedback.push({ type: 'good', text: 'Es wurden keine deutlich riskanten Sitznachbarschaften erkannt.' });
+    addFeedback(result.feedback, 'good', +1, 'Keine riskanten direkten oder diagonalen Sitznachbarschaften erkannt.', 'Die Sitzordnung reduziert Konflikt- und Ablenkungswahrscheinlichkeit.');
   }
-
-  if (result.stabilizingPairs.length >= 2) {
-    result.delta += 1;
-    result.feedback.push({ type: 'good', text: 'Stabilisierende Sitznachbarschaften können einzelne Störpotenziale abfedern.' });
-  }
-
+  if (result.riskyPairs.length >= 3) result.hooks.push('peer-conflict-high');
   return result;
+}
+
+function getConflictReason(a, b) {
+  if (a.hidden.conflictWithBoys && b.hidden.gender === 'm') return `${a.name} verträgt sich schlecht mit anderen Jungs.`;
+  if (b.hidden.conflictWithBoys && a.hidden.gender === 'm') return `${b.name} verträgt sich schlecht mit anderen Jungs.`;
+  if (a.hidden.distractor && b.hidden.risk >= 2) return `${a.name} lenkt Sitznachbar*innen ab; ${b.name} ist dafür anfällig.`;
+  if (b.hidden.distractor && a.hidden.risk >= 2) return `${b.name} lenkt Sitznachbar*innen ab; ${a.name} ist dafür anfällig.`;
+  if (a.hidden.boundaryTesting && (b.hidden.callsOut || b.hidden.sensitive)) return `${a.name} testet Grenzen; ${b.name} reagiert darauf wahrscheinlich ungünstig.`;
+  if (b.hidden.boundaryTesting && (a.hidden.callsOut || a.hidden.sensitive)) return `${b.name} testet Grenzen; ${a.name} reagiert darauf wahrscheinlich ungünstig.`;
+  if (a.hidden.phoneRisk && b.hidden.distractor) return `${a.name} hat verdecktes Off-Task-Risiko; ${b.name} kann Ablenkung verstärken.`;
+  if (b.hidden.phoneRisk && a.hidden.distractor) return `${b.name} hat verdecktes Off-Task-Risiko; ${a.name} kann Ablenkung verstärken.`;
+  return '';
+}
+
+function getStabilizingReason(a, b) {
+  if (a.hidden.stabilizer && b.hidden.risk >= 3) return `${a.name} arbeitet stabil und kann ${b.name} in Arbeitsphasen positiv mittragen.`;
+  if (b.hidden.stabilizer && a.hidden.risk >= 3) return `${b.name} arbeitet stabil und kann ${a.name} in Arbeitsphasen positiv mittragen.`;
+  if (a.hidden.mediator && (b.hidden.conflictWithBoys || b.hidden.sensitive || b.hidden.risk >= 2)) return `${a.name} vermittelt häufig und kann soziale Spannungen um ${b.name} abfedern.`;
+  if (b.hidden.mediator && (a.hidden.conflictWithBoys || a.hidden.sensitive || a.hidden.risk >= 2)) return `${b.name} vermittelt häufig und kann soziale Spannungen um ${a.name} abfedern.`;
+  return '';
+}
+
+function isRiskPairNeutralized(a, b) {
+  const deskA = getStudentDesk(a.id);
+  const deskB = getStudentDesk(b.id);
+  const strongVision = Math.max(getVisionStrengthAt(deskA.row, deskA.col), getVisionStrengthAt(deskB.row, deskB.col)) >= 4;
+  return strongVision || hasSupportNear(a.id) || hasSupportNear(b.id);
+}
+
+function hasSupportNear(studentId) {
+  const desk = getStudentDesk(studentId);
+  if (!desk) return false;
+  return students.some(other => {
+    if (other.id === studentId || !(other.hidden.stabilizer || other.hidden.mediator)) return false;
+    const otherDesk = getStudentDesk(other.id);
+    return otherDesk && isNear(desk, otherDesk);
+  });
 }
 
 function evaluateBackRowRisks() {
@@ -682,38 +909,29 @@ function evaluateBackRowRisks() {
     if (!desk) return;
     const weakVision = !isDeskEffectivelyInVision(desk);
     if (backRows.includes(desk.row) && weakVision && (student.hidden.phoneRisk || student.hidden.needsMonitoring || student.hidden.distractor)) {
-      result.backRowRisks.push(student.id);
+      result.delta -= 1;
+      result.backRowRisks.push({ studentId: student.id, name: student.name, row: desk.row, col: desk.col });
+      result.hooks.push(student.hidden.phoneRisk ? 'backrow-phone-or-offtask' : 'backrow-offtask-risk');
+      addFeedback(result.feedback, 'bad', -1, `${student.name} sitzt weit hinten und nicht wirksam im Sichtbereich.`, 'Das erhöht das Risiko für Handy-, Neben- oder Off-Task-Verhalten.');
     }
   });
-
-  if (result.backRowRisks.length >= 2) {
-    result.delta -= 2;
-    result.hooks.push('backrow-phone-or-offtask');
-    result.feedback.push({ type: 'bad', text: 'Mehrere kontrollbedürftige Schüler*innen sitzen weit hinten und nicht wirksam im Sichtbereich. Das kann später Handy- oder Off-Task-Szenarien begünstigen.' });
-  } else if (result.backRowRisks.length === 1) {
-    result.delta -= 1;
-    result.hooks.push('single-backrow-risk');
-    result.feedback.push({ type: 'warning', text: 'Ein kontrollbedürftiger Schüler sitzt weit hinten und nicht wirksam im Sichtbereich.' });
-  }
   return result;
 }
 
 function evaluateTeacherMode() {
-  if (state.teacher.mode === 'moving') return { delta: 1, hooks: ['teacher-moving-presence'], feedback: { type: 'good', text: 'Bewegung im Raum erzeugt eine lineare Präsenzzone und kann verdeckte Störungen früh sichtbar machen.' } };
-  if (state.teacher.mode === 'deskSitting') return { delta: -1, hooks: ['teacher-desk-blindspots'], feedback: { type: 'warning', text: 'Sitzend am Pult ist der Sicht- und Handlungsradius auf zwei Reihen eingeschränkt.' } };
-  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', text: 'Vorne stehend entsteht ein breiter Leitungsfächer. Entscheidend ist, ob risikorelevante Plätze darin liegen.' } };
+  if (state.teacher.mode === 'moving') return { delta: 1, hooks: ['teacher-moving-presence'], feedback: { type: 'good', delta: +1, text: 'Lehrkraftverhalten: bewegend im Raum.', detail: 'Die lineare Präsenzzone kann verdeckte Störungen früh sichtbar machen, ist aber räumlich enger als ein Leitungsfächer.' } };
+  if (state.teacher.mode === 'deskSitting') return { delta: -1, hooks: ['teacher-desk-blindspots'], feedback: { type: 'warning', delta: -1, text: 'Lehrkraftverhalten: sitzend am Pult.', detail: 'Der Sicht- und Handlungsradius ist auf zwei Reihen eingeschränkt; blinde Bereiche werden wahrscheinlicher.' } };
+  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftverhalten: vorne stehend / leitend.', detail: 'Es entsteht ein breiter Leitungsfächer. Entscheidend ist, ob risikorelevante Plätze darin liegen.' } };
 }
 
 function showResults(score, feedback, metrics) {
   scoreValue.textContent = score;
+  overlayScore.textContent = score;
   meterFill.style.width = `${score * 10}%`;
-  feedbackList.innerHTML = '';
-  feedback.forEach(item => {
-    const li = document.createElement('li');
-    li.className = item.type;
-    li.textContent = item.text;
-    feedbackList.appendChild(li);
-  });
+  overlayMeterFill.style.width = `${score * 10}%`;
+  renderFeedbackList(feedbackList, feedback);
+  renderFeedbackList(overlayFeedbackList, feedback);
+
   const visionByDesk = state.desks.map(desk => ({
     deskId: desk.id,
     row: desk.row,
@@ -721,6 +939,7 @@ function showResults(score, feedback, metrics) {
     strength: getVisionStrengthAt(desk.row, desk.col),
     studentId: state.assignments[desk.id] || null
   }));
+  const influenceByCell = [...getCombinedInfluenceMap().entries()].map(([key, value]) => ({ cell: key, ...value }));
   const exportData = {
     preparationScore: score,
     chosenLayout: { key: state.layout, label: layouts[state.layout].label },
@@ -728,11 +947,37 @@ function showResults(score, feedback, metrics) {
     desks: state.desks,
     assignments: state.assignments,
     visionByDesk,
+    influenceByCell,
     metrics,
     suggestedScenarioHooks: [...new Set(metrics.futureScenarioHooks)]
   };
   stateOutput.textContent = JSON.stringify(exportData, null, 2);
   resultsPanel.hidden = false;
+  evaluationOverlay.hidden = false;
+}
+
+function renderFeedbackList(listEl, feedback) {
+  listEl.innerHTML = '';
+  feedback.forEach(item => {
+    const li = document.createElement('li');
+    li.className = item.type;
+    const delta = document.createElement('span');
+    delta.className = `feedback-delta ${item.delta > 0 ? 'positive' : item.delta < 0 ? 'negative' : 'neutral'}`;
+    delta.textContent = item.delta > 0 ? `+${item.delta}` : String(item.delta ?? 0);
+    const body = document.createElement('div');
+    body.className = 'feedback-body';
+    const text = document.createElement('strong');
+    text.textContent = item.text;
+    body.appendChild(text);
+    if (item.detail) {
+      const detail = document.createElement('p');
+      detail.textContent = item.detail;
+      body.appendChild(detail);
+    }
+    li.appendChild(delta);
+    li.appendChild(body);
+    listEl.appendChild(li);
+  });
 }
 
 function clearResults() {
@@ -741,6 +986,7 @@ function clearResults() {
   state.metrics = {};
   scoreValue.textContent = '–';
   resultsPanel.hidden = true;
+  if (evaluationOverlay) evaluationOverlay.hidden = true;
 }
 
 function bindGlobalEvents() {
@@ -791,6 +1037,7 @@ function bindGlobalEvents() {
     }
     clearDragState();
   });
+  if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; });
   evaluateBtn.addEventListener('click', evaluatePreparation);
   resetBtn.addEventListener('click', () => initLayout(state.layout, false));
   document.addEventListener('dragend', clearDragState);

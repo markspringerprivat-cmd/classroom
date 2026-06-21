@@ -69,15 +69,33 @@
         <div class="room-header">
           <div>
             <h2>Klassenraum</h2>
-            <p>Ziehe Tische, Schüler*innen und Lehrkraft per Drag & Drop. Das Raster ist bewusst quadratisch und frei umstellbar.</p>
+            <p>Ziehe Tische, Schüler*innen und Lehrkraft per Drag & Drop. Vor und hinter Tischen bleibt ein Rasterfeld frei; nebeneinander dürfen Tische direkt stehen.</p>
           </div>
           <div class="legend" aria-label="Legende">
             <span><i class="legend-desk"></i> Tisch</span>
             <span><i class="legend-teacher"></i> Lehrkraft</span>
             <span><i class="legend-vision"></i> Sichtbereich / Präsenzzone</span>
+            <span><i class="legend-risk"></i> Störrisiko</span>
+            <span><i class="legend-neutral"></i> neutralisiert</span>
           </div>
         </div>
         <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
+
+        <div id="evaluationOverlay" class="evaluation-overlay" hidden aria-live="polite">
+          <div class="evaluation-card" role="dialog" aria-modal="true" aria-labelledby="evaluationTitle">
+            <div class="evaluation-head">
+              <div>
+                <p class="eyebrow">Auswertung der Vorbereitung</p>
+                <h2 id="evaluationTitle">Startstabilität: <span id="overlayScore">–</span>/10</h2>
+              </div>
+              <button type="button" id="overlayCloseBtn" class="overlay-close" aria-label="Auswertung schließen">×</button>
+            </div>
+            <div class="meter" aria-label="Startstabilität">
+              <div id="overlayMeterFill" class="meter-fill"></div>
+            </div>
+            <ul id="overlayFeedbackList" class="feedback-list detailed"></ul>
+          </div>
+        </div>
       </div>
     </section>
 

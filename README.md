@@ -1,94 +1,50 @@
-# Classroom-Management-Spiel – Schritt 1: Klassenraum vorbereiten
+# Classroom-Management-Spiel · Schritt 1
 
-Dieser Prototyp bildet nur den ersten Abschnitt der interaktiven Phase ab: Die Nutzer*innen bereiten einen Klassenraum vor, indem sie eine Sitzordnung wählen, Tische verschieben, Schüler*innen platzieren und die Lehrkraft positionieren.
+Dieser Prototyp bildet nur den ersten Spielschritt ab: **Klassenraum vorbereiten**.
 
-## Dateien
+## Enthaltene Dateien
 
-- `index.html` – Grundstruktur der Webseite
-- `styles.css` – Gestaltung und Layout
-- `script.js` – Spiellogik, Drag-and-Drop, Auswertung
-- `README.md` – kurze Dokumentation
+- `index.html`
+- `styles.css`
+- `script.js`
+- `README.md`
 
-## Starten
+## Funktionen
 
-Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Pages reicht es, alle Dateien in ein Repository zu legen und GitHub Pages für den Ordner zu aktivieren.
-
-## Aktueller Funktionsumfang
-
-- Auswahl aus vier Sitzordnungen:
+- Auswahl von vier Grund-Sitzordnungen:
   - Reihensitzordnung
   - U-Form
   - Gruppentische
   - Partnerinseln
-- Tische frei im quadratischen Raster verschieben
-- 10 Schülerprofile per Drag & Drop oder Klick platzieren
-- Lehrkraft frei im Raum platzieren, per Drag & Drop oder Klickmodus
-- Blickrichtung der Lehrkraft einstellen
-- Sichtbereich der Lehrkraft grün-transparent anzeigen
-- Sichtbereich je nach Lehrkraftverhalten unterschiedlich berechnen:
-  - vorne stehend / leitend: breiter Fächer über vier Reihen
-  - bewegend im Raum: linearer Präsenzkorridor mit schneller Abschwächung nach außen
-  - sitzend am Pult: enger Sichtbereich über zwei Reihen
-- Sichtbereich wird durch davorliegende Tische abgeschwächt; dahinterliegende Felder werden entsprechend heller dargestellt
-- Lehrkraftverhalten wählen:
-  - vorne stehend / leitend
-  - bewegend im Raum
-  - sitzend am Pult
-- Startstabilität erst berechnen, wenn alle 10 Schüler*innen platziert sind
-- Auswertungsbutton bleibt bis zur vollständigen Platzierung deaktiviert
-- Schüler*innen können zwischen Tischen getauscht oder zurück in die Palette gezogen werden
-- quadratische Lehrkraft-Kachel im Klassenraum
-- zentriertes Klassenraumraster
-- versteckte Variablen für spätere Szenarien ausgeben
+- Tische sind per Drag & Drop im Raster verschiebbar.
+- Vor und hinter Tischen muss ein Rasterfeld frei bleiben; nebeneinander dürfen Tische direkt stehen.
+- 10 Schülerprofile können per Drag & Drop oder Klick auf Tische verteilt werden.
+- Alle Schüler*innen müssen platziert werden, bevor die Vorbereitung ausgewertet werden kann.
+- Schüler*innen auf Tischen haben einen roten Entfernen-Button und können in die Auswahlliste zurückgelegt werden.
+- Die Lehrkraft kann frei per Drag & Drop im Raum platziert werden.
+- Blickrichtung der Lehrkraft ist einstellbar.
+- Sichtbereich/Präsenzzone wird je nach Lehrkraftverhalten berechnet:
+  - vorne stehend/leitend: breiter Fächer über vier Reihen
+  - bewegend im Raum: linearer Präsenzkorridor mit schneller Abschwächung
+  - sitzend am Pult: enger Bereich über zwei Reihen
+- Sichtfeld wird durch davorliegende Tische abgeschwächt.
+- Störpotenziale und stabilisierende Nachbarschaften werden farblich sichtbar gemacht:
+  - Grün: Präventions-/Stabilisierungswirkung
+  - Rot: Störrisiko
+  - Gelb/Orange: Risikofaktor wird durch Sichtfeld oder stabilisierende Mitschüler*innen teilweise neutralisiert
+- Die Auswertung erscheint mittig über dem Spielfeld und zusätzlich in der rechten Seitenleiste.
+- Die Auswertung ist strenger:
+  - riskante Sitznachbarschaften werden einzeln gezählt
+  - diagonale Sitznachbarschaften zählen mit
+  - störanfällige Schüler*innen im stärksten Sichtbereich bringen mehr Punkte
+  - störanfällige Schüler*innen außerhalb des Sichtbereichs führen zu deutlicherem Punktabzug
 
-## Didaktische Grundidee
+## Nutzung
 
-Die Vorbereitung des Klassenraums soll sichtbar machen, dass Classroom Management präventiv wirkt. Sitzordnung, räumliche Übersicht, Lehrkraftpositionierung, Sichtfeldbrechung durch Tische und die Nähe zu potenziell störungsanfälligen Schüler*innen beeinflussen die spätere Stabilität der Unterrichtssituation.
+Die Dateien können direkt statisch geöffnet oder in GitHub Pages abgelegt werden.
 
-Der Prototyp lässt eine Auswertung erst zu, wenn alle Schüler*innen platziert wurden. Danach wird ausgewertet, ob risikoreichere Schüler*innen im Sichtbereich der Lehrkraft sitzen, ob ungünstige Nachbarschaften entstehen und ob die Lehrkraft durch ihr Verhalten im Raum Präsenz zeigt.
+Für GitHub Pages reicht es, den Ordnerinhalt in ein Repository zu legen und Pages auf den entsprechenden Branch/Ordner zu setzen.
 
-## Versteckte Variablen für spätere Spielphasen
+## Nächster sinnvoller Entwicklungsschritt
 
-Die Webseite erzeugt nach der Auswertung unter anderem folgende Informationen:
-
-- `layout` – gewählte Sitzordnung
-- `score` – Startstabilität von 0 bis 10
-- `metrics.blindRiskStudents` – störungsanfälligere Schüler*innen außerhalb des wirksamen Sichtbereichs
-- `metrics.weaklyVisibleRiskStudents` – störungsanfällige Schüler*innen in abgeschwächten Sichtzonen
-- `metrics.conflictPairs` – problematische Nachbarschaften
-- `metrics.phoneRiskBackOrBlind` – Handy-/Ablenkungsrisiko außerhalb des Überblicks
-- `scenarioFlags` – mögliche Auslöser für spätere Branching-Szenarien
-
-Diese Daten können später genutzt werden, um passende Störungsszenarien einzustreuen, zum Beispiel:
-
-- Schüler*in spielt mit dem Handy, wenn Handy-Risiko und schlechter Überblick zusammenkommen.
-- Zwischenrufe nehmen zu, wenn eine impulsive Person außerhalb des Sichtbereichs sitzt.
-- Konflikte entstehen, wenn konfliktaffine Schüler*innen nebeneinander sitzen.
-
-## Geplanter nächster Schritt
-
-Als nächstes können Klassenregeln und Routinen ergänzt werden. Diese sollten als feste Auswahloptionen umgesetzt werden, damit spätere Szenarien gezielt darauf zurückgreifen können.
-
-Beispielhafte Regeln:
-
-- Wir melden uns, bevor wir sprechen.
-- Wir hören einander ausreden.
-- Handys bleiben in der Tasche.
-- Während Arbeitsphasen bleiben wir am Platz.
-
-Beispielhafte Routinen:
-
-- Stundenstart-Routine
-- Ruhezeichen
-- Materialausgabe
-- Übergang in Gruppenarbeit
-- Hilfesignal bei Problemen
-
-
-
-## Update: Drag & Drop und Entfernen
-
-- Schüler*innen auf Tischen haben jetzt einen kleinen roten Entfernen-Button.
-- Tische, Lehrkraft und Schüler*innen können per Drag & Drop im Raster verschoben werden.
-- Schüler*innen können außerdem per Drag & Drop zurück in die Auswahlliste gezogen werden.
-- Die Auswertung bleibt deaktiviert, bis alle Schüler*innen platziert sind.
+Als nächstes könnten feste Klassenregeln und Routinen ergänzt werden. Diese sollten als auswählbare Variablen gespeichert werden, damit spätere Branching-Szenarien gezielt darauf zurückgreifen können.
