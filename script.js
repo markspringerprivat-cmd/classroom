@@ -45,6 +45,7 @@ const state = {
   selectedStudentId: null,
   placingTeacher: false,
   score: null,
+  rawScore: null,
   feedback: [],
   metrics: {}
 };
@@ -71,9 +72,19 @@ const meterFill = document.getElementById('meterFill');
 const stateOutput = document.getElementById('stateOutput');
 const evaluationOverlay = document.getElementById('evaluationOverlay');
 const overlayCloseBtn = document.getElementById('overlayCloseBtn');
-const overlayScore = document.getElementById('overlayScore');
-const overlayMeterFill = document.getElementById('overlayMeterFill');
-const overlayFeedbackList = document.getElementById('overlayFeedbackList');
+const evaluationTitle = document.getElementById('evaluationTitle');
+const evaluationStepCounter = document.getElementById('evaluationStepCounter');
+const evaluationStepDelta = document.getElementById('evaluationStepDelta');
+const evaluationCurrentText = document.getElementById('evaluationCurrentText');
+const evaluationCurrentDetail = document.getElementById('evaluationCurrentDetail');
+const lifeSegments = document.getElementById('lifeSegments');
+const animatedCurrentScore = document.getElementById('animatedCurrentScore');
+const animatedFinalScore = document.getElementById('animatedFinalScore');
+const evaluationActionArea = document.getElementById('evaluationActionArea');
+const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle');
+const evaluationOutcomeMessage = document.getElementById('evaluationOutcomeMessage');
+const step2Btn = document.getElementById('step2Btn');
+let evaluationTimers = [];
 
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
@@ -716,7 +727,7 @@ function evaluatePreparation() {
     futureScenarioHooks: []
   };
 
-  let score = 5;
+  let score = 0;
   addFeedback(feedback, 'good', +1, 'Alle Schüler*innen sind platziert.', 'Das erhöht die Planbarkeit der Stunde, weil spätere Szenarien eindeutig auf Sitzplätze und Personen zugreifen können.');
   score += 1;
 
@@ -760,11 +771,15 @@ function evaluatePreparation() {
   feedback.push(teacherResult.feedback);
   metrics.futureScenarioHooks.push(...teacherResult.hooks);
 
-  score = Math.max(0, Math.min(10, Math.round(score)));
-  state.score = score;
+  const rawScore = Math.round(score);
+  const displayScore = Math.max(0, Math.min(10, rawScore));
+  metrics.rawPreparationScore = rawScore;
+  metrics.clampedPreparationScore = displayScore;
+  state.score = displayScore;
+  state.rawScore = rawScore;
   state.feedback = feedback;
   state.metrics = metrics;
-  showResults(score, feedback, metrics);
+  showResults(displayScore, rawScore, feedback, metrics);
 }
 
 function evaluateLayoutBase() {
@@ -924,13 +939,10 @@ function evaluateTeacherMode() {
   return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftverhalten: vorne stehend / leitend.', detail: 'Es entsteht ein breiter Leitungsfächer. Entscheidend ist, ob risikorelevante Plätze darin liegen.' } };
 }
 
-function showResults(score, feedback, metrics) {
+function showResults(score, rawScore, feedback, metrics) {
   scoreValue.textContent = score;
-  overlayScore.textContent = score;
   meterFill.style.width = `${score * 10}%`;
-  overlayMeterFill.style.width = `${score * 10}%`;
   renderFeedbackList(feedbackList, feedback);
-  renderFeedbackList(overlayFeedbackList, feedback);
 
   const visionByDesk = state.desks.map(desk => ({
     deskId: desk.id,
@@ -942,6 +954,7 @@ function showResults(score, feedback, metrics) {
   const influenceByCell = [...getCombinedInfluenceMap().entries()].map(([key, value]) => ({ cell: key, ...value }));
   const exportData = {
     preparationScore: score,
+    rawPreparationScore: rawScore,
     chosenLayout: { key: state.layout, label: layouts[state.layout].label },
     teacher: state.teacher,
     desks: state.desks,
@@ -954,6 +967,102 @@ function showResults(score, feedback, metrics) {
   stateOutput.textContent = JSON.stringify(exportData, null, 2);
   resultsPanel.hidden = false;
   evaluationOverlay.hidden = false;
+  startEvaluationAnimation(feedback, rawScore);
+}
+
+function clearEvaluationTimers() {
+  evaluationTimers.forEach(timer => window.clearTimeout(timer));
+  evaluationTimers = [];
+}
+
+function initLifeSegments() {
+  if (!lifeSegments) return;
+  lifeSegments.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    const segment = document.createElement('span');
+    segment.className = 'life-segment';
+    segment.dataset.index = String(i);
+    lifeSegments.appendChild(segment);
+  }
+}
+
+function updateLifeBar(rawValue) {
+  const clamped = Math.max(0, Math.min(10, Math.round(rawValue)));
+  if (lifeSegments) {
+    const segments = [...lifeSegments.querySelectorAll('.life-segment')];
+    segments.forEach((segment, index) => segment.classList.toggle('active', index < clamped));
+    lifeSegments.setAttribute('aria-label', `${clamped} von 10 Stabilitätsbalken`);
+  }
+  if (animatedCurrentScore) animatedCurrentScore.textContent = `Punkte aktuell: ${rawValue}`;
+}
+
+function setStepDelta(delta) {
+  if (!evaluationStepDelta) return;
+  evaluationStepDelta.classList.remove('positive', 'negative', 'neutral');
+  evaluationStepDelta.classList.add(delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral');
+  evaluationStepDelta.textContent = delta > 0 ? `+${delta}` : String(delta ?? 0);
+}
+
+function startEvaluationAnimation(feedback, rawScore) {
+  clearEvaluationTimers();
+  initLifeSegments();
+  const steps = feedback.length ? feedback : [{ delta: 0, text: 'Keine Bewertungspunkte vorhanden.', detail: 'Für diese Vorbereitung wurde kein Bewertungsereignis erzeugt.' }];
+  let currentRaw = 0;
+  updateLifeBar(0);
+
+  if (evaluationTitle) evaluationTitle.textContent = 'Startstabilität wird berechnet';
+  if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt 0/${steps.length}`;
+  setStepDelta(0);
+  if (evaluationCurrentText) evaluationCurrentText.textContent = 'Berechnung startet …';
+  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Die einzelnen Entscheidungen werden nacheinander bewertet.';
+  if (animatedFinalScore) animatedFinalScore.textContent = 'Endwert: –';
+  if (evaluationActionArea) evaluationActionArea.hidden = true;
+
+  steps.forEach((item, index) => {
+    const timer = window.setTimeout(() => {
+      const delta = Number(item.delta || 0);
+      currentRaw += delta;
+      if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt ${index + 1}/${steps.length}`;
+      setStepDelta(delta);
+      if (evaluationCurrentText) evaluationCurrentText.textContent = item.text || 'Bewertungsschritt';
+      if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = item.detail || 'Keine Zusatzbegründung vorhanden.';
+      updateLifeBar(currentRaw);
+    }, 600 + index * 2000);
+    evaluationTimers.push(timer);
+  });
+
+  const finalTimer = window.setTimeout(() => {
+    updateLifeBar(rawScore);
+    const clamped = Math.max(0, Math.min(10, rawScore));
+    if (evaluationTitle) evaluationTitle.textContent = `Auswertung abgeschlossen: ${clamped}/10 Balken`;
+    if (animatedFinalScore) animatedFinalScore.textContent = `Endwert: ${rawScore} Punkte`;
+    if (evaluationStepCounter) evaluationStepCounter.textContent = `Fertig · ${steps.length}/${steps.length}`;
+    setStepDelta(0);
+    showEvaluationOutcome(rawScore);
+  }, 900 + steps.length * 2000);
+  evaluationTimers.push(finalTimer);
+}
+
+function showEvaluationOutcome(rawScore) {
+  if (!evaluationActionArea) return;
+  evaluationActionArea.hidden = false;
+  if (rawScore < 1) {
+    evaluationActionArea.classList.add('game-over');
+    if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Game Over: Die Stunde ist vorbelastet';
+    if (evaluationOutcomeMessage) evaluationOutcomeMessage.textContent = 'Die Vorbereitung erzeugt zu viele Risiken. Für das Spiel bedeutet das: Die Unterrichtsphase würde bereits mit einer Eskalationslage starten.';
+    if (step2Btn) {
+      step2Btn.hidden = true;
+      step2Btn.disabled = true;
+    }
+  } else {
+    evaluationActionArea.classList.remove('game-over');
+    if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Vorbereitung tragfähig';
+    if (evaluationOutcomeMessage) evaluationOutcomeMessage.textContent = 'Die Klasse kann in den nächsten Vorbereitungsschritt übergehen: Klassenregeln auswählen und für spätere Szenarien als Variablen speichern.';
+    if (step2Btn) {
+      step2Btn.hidden = false;
+      step2Btn.disabled = false;
+    }
+  }
 }
 
 function renderFeedbackList(listEl, feedback) {
@@ -981,12 +1090,15 @@ function renderFeedbackList(listEl, feedback) {
 }
 
 function clearResults() {
+  clearEvaluationTimers();
   state.score = null;
+  state.rawScore = null;
   state.feedback = [];
   state.metrics = {};
   scoreValue.textContent = '–';
   resultsPanel.hidden = true;
   if (evaluationOverlay) evaluationOverlay.hidden = true;
+  if (evaluationActionArea) evaluationActionArea.hidden = true;
 }
 
 function bindGlobalEvents() {
@@ -1038,6 +1150,9 @@ function bindGlobalEvents() {
     clearDragState();
   });
   if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; });
+  if (step2Btn) step2Btn.addEventListener('click', () => {
+    window.alert('Schritt 2 ist als nächster Abschnitt vorgesehen: Klassenregeln aufstellen.');
+  });
   evaluateBtn.addEventListener('click', evaluatePreparation);
   resetBtn.addEventListener('click', () => initLayout(state.layout, false));
   document.addEventListener('dragend', clearDragState);

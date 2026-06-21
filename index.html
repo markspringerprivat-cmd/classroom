@@ -35,7 +35,7 @@
 
         <div class="control-group">
           <label>2. Lehrkraft platzieren</label>
-          <p class="hint">Ziehe die Lehrkraft frei in ein leeres Feld oder klicke „Lehrkraft“ an und wähle ein Feld. Die Blickrichtung bestimmt den Sichtbereich.</p>
+          <p class="hint">Ziehe die Lehrkraft in ein freies Feld oder klicke „Lehrkraft“ an und wähle ein Feld. Die Blickrichtung bestimmt den Sichtbereich.</p>
           <div class="teacher-tools">
             <div id="teacherToken" class="teacher-token" draggable="true" title="Lehrkraft ziehen">Lehrkraft</div>
             <div class="direction-tools" aria-label="Blickrichtung wählen">
@@ -69,7 +69,7 @@
         <div class="room-header">
           <div>
             <h2>Klassenraum</h2>
-            <p>Ziehe Tische, Schüler*innen und Lehrkraft per Drag & Drop. Vor und hinter Tischen bleibt ein Rasterfeld frei; nebeneinander dürfen Tische direkt stehen.</p>
+            <p>Ziehe Tische frei in quadratische Rasterfelder. Vor und hinter Tischen bleibt ein Rasterfeld frei; nebeneinander dürfen Tische direkt stehen.</p>
           </div>
           <div class="legend" aria-label="Legende">
             <span><i class="legend-desk"></i> Tisch</span>
@@ -82,18 +82,41 @@
         <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
 
         <div id="evaluationOverlay" class="evaluation-overlay" hidden aria-live="polite">
-          <div class="evaluation-card" role="dialog" aria-modal="true" aria-labelledby="evaluationTitle">
-            <div class="evaluation-head">
+          <div class="evaluation-card evaluation-card-game" role="dialog" aria-modal="true" aria-labelledby="evaluationTitle">
+            <div class="evaluation-head evaluation-head-compact">
               <div>
                 <p class="eyebrow">Auswertung der Vorbereitung</p>
-                <h2 id="evaluationTitle">Startstabilität: <span id="overlayScore">–</span>/10</h2>
+                <h2 id="evaluationTitle">Startstabilität wird berechnet</h2>
               </div>
               <button type="button" id="overlayCloseBtn" class="overlay-close" aria-label="Auswertung schließen">×</button>
             </div>
-            <div class="meter" aria-label="Startstabilität">
-              <div id="overlayMeterFill" class="meter-fill"></div>
-            </div>
-            <ul id="overlayFeedbackList" class="feedback-list detailed"></ul>
+
+            <section class="evaluation-stage" aria-live="polite">
+              <div class="step-meta">
+                <span id="evaluationStepCounter">Schritt 0/0</span>
+                <span id="evaluationStepDelta" class="step-delta neutral">0</span>
+              </div>
+              <h3 id="evaluationCurrentText">Berechnung startet …</h3>
+              <p id="evaluationCurrentDetail">Die einzelnen Entscheidungen werden nacheinander bewertet.</p>
+            </section>
+
+            <section class="life-panel" aria-label="Lebensleiste der Unterrichtsstabilität">
+              <div class="life-panel-topline">
+                <strong>Lebensleiste</strong>
+                <span id="animatedCurrentScore">Punkte aktuell: 0</span>
+              </div>
+              <div id="lifeSegments" class="life-segments" aria-label="0 von 10 Stabilitätsbalken"></div>
+              <div class="life-panel-footline">
+                <span>Minimum 0 Balken · Maximum 10 Balken</span>
+                <span id="animatedFinalScore">Endwert: –</span>
+              </div>
+            </section>
+
+            <section id="evaluationActionArea" class="evaluation-action-area" hidden>
+              <h3 id="evaluationOutcomeTitle">Auswertung abgeschlossen</h3>
+              <p id="evaluationOutcomeMessage"></p>
+              <button type="button" id="step2Btn" class="primary-btn">Weiter zu Schritt 2: Klassenregeln aufstellen</button>
+            </section>
           </div>
         </div>
       </div>
