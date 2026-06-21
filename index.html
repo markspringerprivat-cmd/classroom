@@ -56,9 +56,12 @@
           </select>
         </div>
 
-        <div class="button-row">
-          <button type="button" id="evaluateBtn" class="primary-btn">Vorbereitung auswerten</button>
-          <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
+        <div class="button-stack">
+          <div class="button-row">
+            <button type="button" id="evaluateBtn" class="primary-btn" disabled>Vorbereitung auswerten</button>
+            <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
+          </div>
+          <p id="evalHint" class="eval-hint">Platziere zuerst alle 10 Schüler*innen im Raum.</p>
         </div>
       </div>
 
@@ -66,7 +69,7 @@
         <div class="room-header">
           <div>
             <h2>Klassenraum</h2>
-            <p>Ziehe Tische frei in quadratische Rasterfelder und setze Schüler*innen auf Tischplätze.</p>
+            <p>Ziehe Tische, Schüler*innen und Lehrkraft per Drag & Drop. Das Raster ist bewusst quadratisch und frei umstellbar.</p>
           </div>
           <div class="legend" aria-label="Legende">
             <span><i class="legend-desk"></i> Tisch</span>

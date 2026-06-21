@@ -34,14 +34,18 @@ Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Page
   - vorne stehend / leitend
   - bewegend im Raum
   - sitzend am Pult
-- Startstabilität berechnen
+- Startstabilität erst berechnen, wenn alle 10 Schüler*innen platziert sind
+- Auswertungsbutton bleibt bis zur vollständigen Platzierung deaktiviert
+- Schüler*innen können zwischen Tischen getauscht oder zurück in die Palette gezogen werden
+- quadratische Lehrkraft-Kachel im Klassenraum
+- zentriertes Klassenraumraster
 - versteckte Variablen für spätere Szenarien ausgeben
 
 ## Didaktische Grundidee
 
 Die Vorbereitung des Klassenraums soll sichtbar machen, dass Classroom Management präventiv wirkt. Sitzordnung, räumliche Übersicht, Lehrkraftpositionierung, Sichtfeldbrechung durch Tische und die Nähe zu potenziell störungsanfälligen Schüler*innen beeinflussen die spätere Stabilität der Unterrichtssituation.
 
-Der Prototyp wertet daher nicht nur aus, ob alle Schüler*innen platziert wurden, sondern auch, ob risikoreichere Schüler*innen im Sichtbereich der Lehrkraft sitzen, ob ungünstige Nachbarschaften entstehen und ob die Lehrkraft durch ihr Verhalten im Raum Präsenz zeigt.
+Der Prototyp lässt eine Auswertung erst zu, wenn alle Schüler*innen platziert wurden. Danach wird ausgewertet, ob risikoreichere Schüler*innen im Sichtbereich der Lehrkraft sitzen, ob ungünstige Nachbarschaften entstehen und ob die Lehrkraft durch ihr Verhalten im Raum Präsenz zeigt.
 
 ## Versteckte Variablen für spätere Spielphasen
 

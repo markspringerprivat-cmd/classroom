@@ -56,6 +56,7 @@ const teacherModeSelect = document.getElementById('teacherMode');
 const teacherToken = document.getElementById('teacherToken');
 const placedCounter = document.getElementById('placedCounter');
 const evaluateBtn = document.getElementById('evaluateBtn');
+const evalHint = document.getElementById('evalHint');
 const resetBtn = document.getElementById('resetBtn');
 const scoreValue = document.getElementById('scoreValue');
 const resultsPanel = document.getElementById('resultsPanel');
@@ -89,6 +90,7 @@ function render() {
   renderGrid();
   renderPalette();
   updateCounter();
+  updateEvaluateButton();
 }
 
 function renderGrid() {
@@ -161,6 +163,7 @@ function createDeskElement(desk) {
 
   deskEl.addEventListener('dragstart', event => {
     if (event.target.classList.contains('student-chip')) return;
+    event.stopPropagation();
     event.dataTransfer.setData('type', 'desk');
     event.dataTransfer.setData('deskId', desk.id);
     event.dataTransfer.effectAllowed = 'move';
@@ -168,6 +171,7 @@ function createDeskElement(desk) {
 
   deskEl.addEventListener('dragover', event => {
     event.preventDefault();
+    event.stopPropagation();
     event.dataTransfer.dropEffect = 'move';
   });
 
@@ -195,6 +199,7 @@ function createTeacherInRoom() {
   el.textContent = directionLabel(state.teacher.dir);
   el.title = 'Lehrkraft bewegen';
   el.addEventListener('dragstart', event => {
+    event.stopPropagation();
     event.dataTransfer.setData('type', 'teacher');
     event.dataTransfer.effectAllowed = 'move';
   });
@@ -272,9 +277,23 @@ function selectStudent(studentId) {
 
 function assignStudentToDesk(studentId, deskId) {
   if (!studentId || !deskId) return;
-  Object.keys(state.assignments).forEach(key => {
-    if (state.assignments[key] === studentId) delete state.assignments[key];
-  });
+
+  const sourceDeskId = Object.entries(state.assignments).find(([, sid]) => sid === studentId)?.[0] || null;
+  const displacedStudentId = state.assignments[deskId] || null;
+
+  if (sourceDeskId === deskId) {
+    state.selectedStudentId = null;
+    render();
+    return;
+  }
+
+  if (sourceDeskId) delete state.assignments[sourceDeskId];
+
+  if (displacedStudentId && displacedStudentId !== studentId) {
+    if (sourceDeskId) state.assignments[sourceDeskId] = displacedStudentId;
+    else delete state.assignments[deskId];
+  }
+
   state.assignments[deskId] = studentId;
   state.selectedStudentId = null;
   clearResults();
@@ -305,7 +324,21 @@ function placeTeacher(row, col) {
 function getDeskAt(row, col) { return state.desks.find(desk => desk.row === row && desk.col === col); }
 function getStudent(id) { return students.find(student => student.id === id); }
 function isStudentAssigned(studentId) { return Object.values(state.assignments).includes(studentId); }
-function updateCounter() { placedCounter.textContent = `${Object.keys(state.assignments).length}/${students.length} platziert`; }
+function allStudentsPlaced() { return Object.keys(state.assignments).length === students.length; }
+function updateCounter() {
+  const placed = Object.keys(state.assignments).length;
+  placedCounter.textContent = `${placed}/${students.length} platziert`;
+}
+function updateEvaluateButton() {
+  const missing = students.length - Object.keys(state.assignments).length;
+  evaluateBtn.disabled = missing > 0;
+  if (evalHint) {
+    evalHint.textContent = missing > 0
+      ? `Noch ${missing} Schüler*in${missing === 1 ? '' : 'nen'} platzieren, bevor ausgewertet werden kann.`
+      : 'Alle Schüler*innen sind platziert. Die Vorbereitung kann ausgewertet werden.';
+    evalHint.classList.toggle('ready', missing === 0);
+  }
+}
 function cellKey(row, col) { return `${row},${col}`; }
 
 function directionLabel(dir) {
@@ -417,6 +450,16 @@ function getStudentDesk(studentId) {
 }
 
 function evaluatePreparation() {
+  if (!allStudentsPlaced()) {
+    clearResults();
+    const missing = students.length - Object.keys(state.assignments).length;
+    resultsPanel.hidden = false;
+    feedbackList.innerHTML = `<li class="warning">Die Vorbereitung kann erst ausgewertet werden, wenn alle 10 Schüler*innen platziert sind. Es fehlen noch ${missing}.</li>`;
+    meterFill.style.width = '0%';
+    stateOutput.textContent = '';
+    return;
+  }
+
   const feedback = [];
   const metrics = {
     layout: state.layout,
@@ -644,6 +687,7 @@ function bindGlobalEvents() {
     renderGrid();
   });
   teacherToken.addEventListener('dragstart', event => {
+    event.stopPropagation();
     event.dataTransfer.setData('type', 'teacher');
     event.dataTransfer.effectAllowed = 'move';
   });
