@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Klassenraum vorbereiten | Classroom-Management-Spiel</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Interaktive Phase · Schritt 1</p>
+      <h1>Klassenraum vorbereiten</h1>
+      <p class="subtitle">Sitzordnung wählen, Schüler*innen platzieren, Lehrkraft positionieren und Startstabilität berechnen.</p>
+    </div>
+    <div class="score-card" aria-live="polite">
+      <span class="score-label">Startstabilität</span>
+      <strong id="scoreValue">–</strong>
+      <span class="score-scale">von 10</span>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="workspace" aria-label="Klassenraum">
+      <div class="controls panel">
+        <div class="control-group">
+          <label for="layoutSelect">1. Sitzordnung / Raster</label>
+          <select id="layoutSelect">
+            <option value="rows">Reihensitzordnung</option>
+            <option value="uform">U-Form</option>
+            <option value="groups">Gruppentische</option>
+            <option value="pairs">Partnerinseln</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>2. Lehrkraft platzieren</label>
+          <p class="hint">Ziehe die Lehrkraft in ein freies Feld. Die Blickrichtung bestimmt den Sichtbereich.</p>
+          <div class="teacher-tools">
+            <div id="teacherToken" class="teacher-token" draggable="true" title="Lehrkraft ziehen">Lehrkraft</div>
+            <div class="direction-tools" aria-label="Blickrichtung wählen">
+              <button type="button" class="dir-btn" data-dir="up" aria-label="Blickrichtung nach oben">↑</button>
+              <button type="button" class="dir-btn" data-dir="left" aria-label="Blickrichtung nach links">←</button>
+              <button type="button" class="dir-btn active" data-dir="down" aria-label="Blickrichtung nach unten">↓</button>
+              <button type="button" class="dir-btn" data-dir="right" aria-label="Blickrichtung nach rechts">→</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="teacherMode">3. Lehrkraftverhalten im Raum</label>
+          <select id="teacherMode">
+            <option value="frontStanding">vorne stehend / leitend</option>
+            <option value="moving">bewegend im Raum</option>
+            <option value="deskSitting">sitzend am Pult</option>
+          </select>
+        </div>
+
+        <div class="button-row">
+          <button type="button" id="evaluateBtn" class="primary-btn">Vorbereitung auswerten</button>
+          <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
+        </div>
+      </div>
+
+      <div class="room-wrap panel">
+        <div class="room-header">
+          <div>
+            <h2>Klassenraum</h2>
+            <p>Ziehe Tische in freie Felder und setze Schüler*innen auf Tischplätze.</p>
+          </div>
+          <div class="legend" aria-label="Legende">
+            <span><i class="legend-desk"></i> Tisch</span>
+            <span><i class="legend-teacher"></i> Lehrkraft</span>
+            <span><i class="legend-vision"></i> Sichtbereich</span>
+          </div>
+        </div>
+        <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
+      </div>
+    </section>
+
+    <aside class="side-panel panel" aria-label="Schülerprofile und Auswertung">
+      <section>
+        <div class="section-title-row">
+          <h2>Schülerprofile</h2>
+          <span id="placedCounter" class="pill">0/10 platziert</span>
+        </div>
+        <p class="hint">Ziehe die Kacheln auf Tische. Alternativ: Kachel anklicken, dann Tisch anklicken.</p>
+        <div id="studentPalette" class="student-palette"></div>
+      </section>
+
+      <section class="results" id="resultsPanel" hidden>
+        <h2>Auswertung</h2>
+        <div class="meter" aria-label="Startstabilität">
+          <div id="meterFill" class="meter-fill"></div>
+        </div>
+        <ul id="feedbackList" class="feedback-list"></ul>
+        <details class="export-box">
+          <summary>Daten für spätere Szenarien anzeigen</summary>
+          <pre id="stateOutput"></pre>
+        </details>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="footer-note">
+    <strong>Hinweis:</strong> Dieser Prototyp bildet nur Schritt 1 ab. Die berechneten Variablen können später genutzt werden, um passende Störungsszenarien auszuwählen.
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
