@@ -49,6 +49,12 @@ const state = {
   metrics: {}
 };
 
+const dragState = {
+  type: null,
+  studentId: null,
+  deskId: null
+};
+
 const gridEl = document.getElementById('classroomGrid');
 const paletteEl = document.getElementById('studentPalette');
 const layoutSelect = document.getElementById('layoutSelect');
@@ -129,6 +135,7 @@ function createDeskElement(desk) {
   deskEl.className = 'desk';
   deskEl.draggable = true;
   deskEl.dataset.deskId = desk.id;
+  deskEl.title = 'Tisch ziehen und in ein anderes Rasterfeld ablegen';
 
   const label = document.createElement('div');
   label.className = 'desk-label';
@@ -141,14 +148,33 @@ function createDeskElement(desk) {
     seat.className = 'student-chip';
     seat.draggable = true;
     seat.dataset.studentId = student.id;
-    seat.textContent = student.name;
     seat.title = `${student.name} (${student.age}) · ${student.note}`;
+
+    const name = document.createElement('span');
+    name.className = 'student-chip-name';
+    name.textContent = student.name;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-student-btn';
+    removeBtn.setAttribute('aria-label', `${student.name} vom Tisch entfernen`);
+    removeBtn.title = `${student.name} zurück in die Auswahlliste`;
+    removeBtn.textContent = '×';
+    removeBtn.draggable = false;
+    removeBtn.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      removeStudentFromDesk(desk.id);
+    });
+    removeBtn.addEventListener('dragstart', event => event.preventDefault());
+
+    seat.appendChild(name);
+    seat.appendChild(removeBtn);
     seat.addEventListener('dragstart', event => {
       event.stopPropagation();
-      event.dataTransfer.setData('type', 'student');
-      event.dataTransfer.setData('studentId', student.id);
-      event.dataTransfer.effectAllowed = 'move';
+      startDrag(event, { type: 'student', studentId: student.id });
     });
+    seat.addEventListener('dragend', clearDragState);
     seat.addEventListener('click', event => {
       event.stopPropagation();
       selectStudent(student.id);
@@ -162,25 +188,26 @@ function createDeskElement(desk) {
   deskEl.appendChild(seat);
 
   deskEl.addEventListener('dragstart', event => {
-    if (event.target.classList.contains('student-chip')) return;
+    if (event.target.closest('.student-chip, .remove-student-btn')) return;
     event.stopPropagation();
-    event.dataTransfer.setData('type', 'desk');
-    event.dataTransfer.setData('deskId', desk.id);
-    event.dataTransfer.effectAllowed = 'move';
+    startDrag(event, { type: 'desk', deskId: desk.id });
   });
+  deskEl.addEventListener('dragend', clearDragState);
 
   deskEl.addEventListener('dragover', event => {
+    if (dragState.type !== 'student') return;
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = 'move';
   });
 
   deskEl.addEventListener('drop', event => {
-    const type = event.dataTransfer.getData('type');
-    if (type === 'student') {
+    const data = getDropData(event);
+    if (data.type === 'student') {
       event.preventDefault();
       event.stopPropagation();
-      assignStudentToDesk(event.dataTransfer.getData('studentId'), desk.id);
+      assignStudentToDesk(data.studentId, desk.id);
+      clearDragState();
     }
   });
 
@@ -197,12 +224,12 @@ function createTeacherInRoom() {
   el.className = 'teacher-in-room';
   el.draggable = true;
   el.textContent = directionLabel(state.teacher.dir);
-  el.title = 'Lehrkraft bewegen';
+  el.title = 'Lehrkraft ziehen und in ein anderes Rasterfeld ablegen';
   el.addEventListener('dragstart', event => {
     event.stopPropagation();
-    event.dataTransfer.setData('type', 'teacher');
-    event.dataTransfer.effectAllowed = 'move';
+    startDrag(event, { type: 'teacher' });
   });
+  el.addEventListener('dragend', clearDragState);
   el.addEventListener('click', event => {
     event.stopPropagation();
     state.placingTeacher = !state.placingTeacher;
@@ -223,10 +250,9 @@ function renderPalette() {
     card.dataset.studentId = student.id;
     card.innerHTML = `<div class="student-name">${student.name} (${student.age})</div><div class="student-note">${student.note}</div>`;
     card.addEventListener('dragstart', event => {
-      event.dataTransfer.setData('type', 'student');
-      event.dataTransfer.setData('studentId', student.id);
-      event.dataTransfer.effectAllowed = 'move';
+      startDrag(event, { type: 'student', studentId: student.id });
     });
+    card.addEventListener('dragend', clearDragState);
     card.addEventListener('click', () => selectStudent(student.id));
     paletteEl.appendChild(card);
   });
@@ -234,9 +260,9 @@ function renderPalette() {
 
 function bindCellDnD(cell) {
   cell.addEventListener('dragover', event => {
-    const type = event.dataTransfer.getData('type');
-    if (!type) return;
+    if (!dragState.type) return;
     event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
     cell.classList.add('drop-hover');
   });
 
@@ -247,15 +273,43 @@ function bindCellDnD(cell) {
     cell.classList.remove('drop-hover');
     const row = Number(cell.dataset.row);
     const col = Number(cell.dataset.col);
-    const type = event.dataTransfer.getData('type');
+    const data = getDropData(event);
 
-    if (type === 'desk') moveDesk(event.dataTransfer.getData('deskId'), row, col);
-    if (type === 'teacher') placeTeacher(row, col);
-    if (type === 'student') {
+    if (data.type === 'desk') moveDesk(data.deskId, row, col);
+    if (data.type === 'teacher') placeTeacher(row, col);
+    if (data.type === 'student') {
       const desk = getDeskAt(row, col);
-      if (desk) assignStudentToDesk(event.dataTransfer.getData('studentId'), desk.id);
+      if (desk) assignStudentToDesk(data.studentId, desk.id);
     }
+    clearDragState();
   });
+}
+
+function startDrag(event, payload) {
+  dragState.type = payload.type || null;
+  dragState.studentId = payload.studentId || null;
+  dragState.deskId = payload.deskId || null;
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('type', dragState.type || '');
+    if (dragState.studentId) event.dataTransfer.setData('studentId', dragState.studentId);
+    if (dragState.deskId) event.dataTransfer.setData('deskId', dragState.deskId);
+  }
+}
+
+function getDropData(event) {
+  return {
+    type: event.dataTransfer?.getData('type') || dragState.type,
+    studentId: event.dataTransfer?.getData('studentId') || dragState.studentId,
+    deskId: event.dataTransfer?.getData('deskId') || dragState.deskId
+  };
+}
+
+function clearDragState() {
+  dragState.type = null;
+  dragState.studentId = null;
+  dragState.deskId = null;
 }
 
 function handleCellClick(row, col) {
@@ -273,6 +327,14 @@ function selectStudent(studentId) {
   updateTeacherPlacementButton();
   renderPalette();
   renderGrid();
+}
+
+function removeStudentFromDesk(deskId) {
+  if (!deskId || !state.assignments[deskId]) return;
+  delete state.assignments[deskId];
+  state.selectedStudentId = null;
+  clearResults();
+  render();
 }
 
 function assignStudentToDesk(studentId, deskId) {
@@ -301,10 +363,12 @@ function assignStudentToDesk(studentId, deskId) {
 }
 
 function moveDesk(deskId, row, col) {
-  if (!deskId || getDeskAt(row, col)) return;
-  if (state.teacher.row === row && state.teacher.col === col) return;
+  if (!deskId) return;
   const desk = state.desks.find(item => item.id === deskId);
   if (!desk) return;
+  const targetDesk = getDeskAt(row, col);
+  if (targetDesk && targetDesk.id !== deskId) return;
+  if (state.teacher.row === row && state.teacher.col === col) return;
   desk.row = row;
   desk.col = col;
   clearResults();
@@ -688,9 +752,9 @@ function bindGlobalEvents() {
   });
   teacherToken.addEventListener('dragstart', event => {
     event.stopPropagation();
-    event.dataTransfer.setData('type', 'teacher');
-    event.dataTransfer.effectAllowed = 'move';
+    startDrag(event, { type: 'teacher' });
   });
+  teacherToken.addEventListener('dragend', clearDragState);
   teacherToken.addEventListener('click', () => {
     state.placingTeacher = !state.placingTeacher;
     state.selectedStudentId = null;
@@ -707,8 +771,9 @@ function bindGlobalEvents() {
     });
   });
   paletteEl.addEventListener('dragover', event => {
-    if (event.dataTransfer.getData('type') === 'student') {
+    if (dragState.type === 'student') {
       event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
       paletteEl.classList.add('drop-hover');
     }
   });
@@ -716,18 +781,20 @@ function bindGlobalEvents() {
   paletteEl.addEventListener('drop', event => {
     event.preventDefault();
     paletteEl.classList.remove('drop-hover');
-    const type = event.dataTransfer.getData('type');
-    const studentId = event.dataTransfer.getData('studentId');
-    if (type === 'student' && studentId) {
+    const data = getDropData(event);
+    if (data.type === 'student' && data.studentId) {
       Object.keys(state.assignments).forEach(deskId => {
-        if (state.assignments[deskId] === studentId) delete state.assignments[deskId];
+        if (state.assignments[deskId] === data.studentId) delete state.assignments[deskId];
       });
       clearResults();
       render();
     }
+    clearDragState();
   });
   evaluateBtn.addEventListener('click', evaluatePreparation);
   resetBtn.addEventListener('click', () => initLayout(state.layout, false));
+  document.addEventListener('dragend', clearDragState);
+  document.addEventListener('drop', () => clearDragState());
 }
 
 bindGlobalEvents();

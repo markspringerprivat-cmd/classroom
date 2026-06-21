@@ -84,3 +84,11 @@ Beispielhafte Routinen:
 - Übergang in Gruppenarbeit
 - Hilfesignal bei Problemen
 
+
+
+## Update: Drag & Drop und Entfernen
+
+- Schüler*innen auf Tischen haben jetzt einen kleinen roten Entfernen-Button.
+- Tische, Lehrkraft und Schüler*innen können per Drag & Drop im Raster verschoben werden.
+- Schüler*innen können außerdem per Drag & Drop zurück in die Auswahlliste gezogen werden.
+- Die Auswertung bleibt deaktiviert, bis alle Schüler*innen platziert sind.
