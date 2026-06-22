@@ -93,3 +93,7 @@ Diese Daten können später genutzt werden, um passende Störungsszenarien einzu
 - Zwischenrufe nehmen zu, wenn eine impulsive Person außerhalb des Sichtbereichs sitzt.
 - Konflikte entstehen, wenn konfliktaffine Schüler*innen nebeneinander sitzen.
 - Eine Melde-Regel kann bei Zwischenrufen als pädagogisch angemessene Classroom-Management-Reaktion aufgegriffen werden.
+
+## Design-Update
+
+Die Oberfläche wurde auf einen modernen Anthrazit-/Dunkelblau-Look umgestellt. Panels, Kacheln, Buttons, Regellisten und Auswertungsoverlays nutzen nun transparente Ebenen, Schatten, Hover-Zustände und dezente Übergangsanimationen. Die funktionale Logik wurde dadurch nicht verändert.

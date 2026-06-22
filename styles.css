@@ -1593,3 +1593,545 @@ pre {
     width: 100%;
   }
 }
+
+/* Modernisierung 2026-06-22: dunkler Anthrazit-Blau-Look, Glassmorphism, weichere Animationen */
+:root {
+  --bg: #07111f;
+  --panel: rgba(14, 25, 43, 0.86);
+  --panel-strong: rgba(18, 33, 55, 0.94);
+  --text: #e8eef8;
+  --muted: #a9b8cf;
+  --line: rgba(151, 170, 202, 0.26);
+  --accent: #5da2ff;
+  --accent-dark: #9cc9ff;
+  --accent-soft: rgba(93, 162, 255, 0.14);
+  --danger: #ef5b65;
+  --warning: #e8b946;
+  --good: #4fd18b;
+  --desk: #fff3cf;
+  --desk-border: #e2bb62;
+  --shadow: 0 22px 58px rgba(0, 0, 0, 0.38);
+  --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.24);
+  --radius: 22px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body,
+.rules-page {
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(76, 132, 255, 0.20) 0, transparent 34%),
+    radial-gradient(circle at 86% 4%, rgba(61, 211, 177, 0.12) 0, transparent 28%),
+    linear-gradient(135deg, #07111f 0%, #0d1b2f 46%, #111827 100%);
+  background-attachment: fixed;
+  animation: pageFadeIn 0.42s ease both;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent 72%);
+  z-index: -1;
+}
+
+.topbar {
+  padding-top: 30px;
+}
+
+h1,
+h2,
+h3,
+.student-name,
+.rule-item strong,
+.score-card strong {
+  color: #f4f8ff;
+}
+
+.subtitle,
+.hint,
+.room-header p,
+.feedback-body p,
+.rule-item p,
+.rules-student-card small,
+.life-panel-topline span,
+.life-panel-footline,
+.footer-note {
+  color: var(--muted);
+}
+
+.eyebrow {
+  color: #8dbdff;
+}
+
+.panel,
+.score-card,
+.controls,
+.room-wrap,
+.side-panel,
+.rules-left,
+.rules-main {
+  border: 1px solid rgba(173, 194, 226, 0.18);
+  background: linear-gradient(180deg, rgba(18, 33, 55, 0.88), rgba(12, 24, 42, 0.82));
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(16px) saturate(130%);
+}
+
+.score-card {
+  min-width: 168px;
+  background: linear-gradient(160deg, rgba(19, 38, 66, 0.92), rgba(9, 19, 34, 0.88));
+  border-color: rgba(93, 162, 255, 0.28);
+  transform: translateZ(0);
+}
+
+#scoreValue,
+#rulesChosenValue {
+  color: #b9d9ff;
+  text-shadow: 0 0 22px rgba(93, 162, 255, 0.28);
+}
+
+.score-label,
+.score-scale {
+  color: #9fb3cd;
+}
+
+select,
+button,
+.current-rule-card,
+.rule-item,
+.student-card,
+.rules-student-card,
+.export-box,
+.feedback-list li,
+.rules-status-bar {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+select {
+  color: #eff6ff;
+  background: rgba(7, 17, 31, 0.78);
+  border-color: rgba(157, 179, 213, 0.30);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+select:hover,
+select:focus-visible {
+  border-color: rgba(93, 162, 255, 0.70);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(93, 162, 255, 0.13), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.primary-btn,
+.ghost-btn,
+.rule-action,
+.stage-next-btn,
+.overlay-close,
+.dir-btn,
+.rule-item-actions button {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.primary-btn {
+  color: #06101f;
+  background: linear-gradient(135deg, #9dccff 0%, #5da2ff 100%);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 14px 28px rgba(57, 127, 220, 0.26);
+}
+
+.primary-btn:hover,
+.primary-btn:focus-visible {
+  background: linear-gradient(135deg, #c2e0ff 0%, #73b2ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(57, 127, 220, 0.34);
+  outline: none;
+}
+
+.primary-btn:active,
+.ghost-btn:active,
+.rule-action:active,
+.stage-next-btn:active,
+.dir-btn:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+.primary-btn::after,
+.ghost-btn::after,
+.rule-action::after,
+.stage-next-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 48%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.48s ease;
+  pointer-events: none;
+}
+
+.primary-btn:hover::after,
+.ghost-btn:hover::after,
+.rule-action:hover::after,
+.stage-next-btn:hover::after {
+  left: 122%;
+}
+
+.ghost-btn,
+.dir-btn,
+.overlay-close,
+.rule-item-actions button {
+  color: #e9f2ff;
+  background: rgba(16, 31, 53, 0.76);
+  border-color: rgba(157, 179, 213, 0.28);
+}
+
+.ghost-btn:hover,
+.dir-btn:hover,
+.overlay-close:hover,
+.rule-item-actions button:hover {
+  color: #ffffff;
+  background: rgba(31, 55, 88, 0.88);
+  border-color: rgba(93, 162, 255, 0.55);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+}
+
+.dir-btn.active {
+  color: #06101f;
+  background: linear-gradient(135deg, #a7d1ff, #5da2ff);
+  border-color: rgba(166, 210, 255, 0.76);
+  box-shadow: 0 0 0 4px rgba(93, 162, 255, 0.14);
+}
+
+.primary-btn:disabled {
+  color: rgba(240,246,255,0.55);
+  background: rgba(95, 116, 147, 0.42);
+  box-shadow: none;
+}
+
+.teacher-token,
+.teacher-in-room {
+  color: #06101f;
+  background: linear-gradient(135deg, #dbeafe 0%, #99c9ff 100%);
+  border-color: rgba(198, 226, 255, 0.72);
+  box-shadow: 0 10px 24px rgba(57, 127, 220, 0.22);
+}
+
+.teacher-token.selected {
+  color: #06101f;
+  background: linear-gradient(135deg, #b7ddff 0%, #66adff 100%);
+  box-shadow: 0 0 0 5px rgba(93, 162, 255, 0.20), 0 14px 30px rgba(57, 127, 220, 0.28);
+}
+
+.classroom-grid,
+.frozen-grid {
+  background:
+    linear-gradient(180deg, rgba(15, 31, 53, 0.88), rgba(8, 18, 32, 0.84));
+  border-color: rgba(157, 179, 213, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 42px rgba(0,0,0,0.20);
+}
+
+.grid-cell,
+.frozen-cell {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(159, 180, 212, 0.24);
+}
+
+.grid-cell:hover {
+  border-color: rgba(93, 162, 255, 0.45);
+  background: rgba(93, 162, 255, 0.075);
+}
+
+.grid-cell.drop-hover,
+.student-palette.drop-hover,
+.rule-dropzone.drop-hover {
+  background: rgba(93, 162, 255, 0.13);
+  border-color: rgba(93, 162, 255, 0.82);
+  box-shadow: inset 0 0 0 2px rgba(93, 162, 255, 0.22), 0 0 24px rgba(93, 162, 255, 0.13);
+}
+
+.grid-cell.invalid-target {
+  background: rgba(239, 91, 101, 0.16) !important;
+  border-color: rgba(239, 91, 101, 0.88) !important;
+}
+
+.desk,
+.frozen-desk {
+  background: linear-gradient(180deg, #fff8e4 0%, #f0d99c 100%);
+  border-color: rgba(226, 187, 98, 0.92);
+  box-shadow: inset 0 -9px 18px rgba(119, 88, 28, 0.12), 0 10px 22px rgba(0,0,0,0.18);
+}
+
+.desk:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 -9px 18px rgba(119, 88, 28, 0.12), 0 16px 32px rgba(0,0,0,0.24);
+}
+
+.desk-label {
+  color: #7f5914;
+}
+
+.student-chip {
+  color: #101827;
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(226, 187, 98, 0.84);
+}
+
+.empty-seat {
+  color: #866112;
+  background: rgba(255, 255, 255, 0.34);
+  border-color: rgba(147, 110, 36, 0.38);
+}
+
+.student-card,
+.rules-student-card,
+.rule-item,
+.feedback-list li,
+.export-box {
+  color: #eaf2ff;
+  background: linear-gradient(180deg, rgba(22, 39, 64, 0.94), rgba(13, 25, 44, 0.90));
+  border-color: rgba(157, 179, 213, 0.22);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.student-card:hover,
+.rules-student-card:hover,
+.rule-item:hover,
+.current-rule-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(93, 162, 255, 0.42);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.34), 0 0 0 1px rgba(93,162,255,0.08) inset;
+}
+
+.student-note,
+.rules-student-card span,
+.rule-item p,
+.feedback-body p {
+  color: #b1bed2;
+}
+
+.pill {
+  color: #d8e9ff;
+  background: rgba(93, 162, 255, 0.15);
+  border: 1px solid rgba(93, 162, 255, 0.20);
+}
+
+.results {
+  border-top-color: rgba(157, 179, 213, 0.20);
+}
+
+.meter {
+  background: rgba(51, 65, 85, 0.72);
+}
+
+pre {
+  color: #cbd8ea;
+}
+
+.evaluation-overlay {
+  background: rgba(4, 10, 19, 0.52);
+  backdrop-filter: blur(9px) saturate(125%);
+}
+
+.evaluation-card,
+.evaluation-card-game {
+  color: var(--text);
+  background: linear-gradient(180deg, rgba(19, 34, 57, 0.98), rgba(9, 18, 32, 0.98));
+  border-color: rgba(157, 179, 213, 0.24);
+  box-shadow: 0 34px 90px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);
+  animation: modalPop 0.26s ease both;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.evaluation-stage {
+  border-color: rgba(93, 162, 255, 0.62);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(93,162,255,0.22), transparent 38%),
+    linear-gradient(135deg, rgba(22, 42, 72, 0.98), rgba(12, 25, 45, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 38px rgba(0,0,0,0.26);
+}
+
+.evaluation-stage h3,
+.current-rule-card h3 {
+  color: #f2f7ff;
+}
+
+.evaluation-stage p {
+  color: #c1cee0;
+}
+
+.step-meta {
+  color: #b9d9ff;
+}
+
+.stage-next-btn {
+  color: #06101f;
+  background: linear-gradient(135deg, #b7ddff, #5da2ff);
+  box-shadow: 0 14px 26px rgba(57,127,220,0.28);
+}
+
+.stage-next-btn:hover,
+.stage-next-btn:focus-visible {
+  color: #06101f;
+  background: linear-gradient(135deg, #d4eaff, #74b4ff);
+  box-shadow: 0 18px 34px rgba(57,127,220,0.38);
+}
+
+.life-panel {
+  background: linear-gradient(180deg, #050b15, #0c1321);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 16px 34px rgba(0,0,0,0.34);
+}
+
+.life-segment {
+  background: rgba(69, 85, 109, 0.60);
+  border-color: rgba(176, 192, 218, 0.18);
+}
+
+.evaluation-action-area,
+.evaluation-action-area.game-over {
+  color: var(--text);
+  background: rgba(18, 33, 55, 0.88);
+  border-color: rgba(157, 179, 213, 0.22);
+}
+
+.evaluation-action-area h3 {
+  color: #8fe5b2;
+}
+
+.evaluation-action-area.game-over h3 {
+  color: #ff9aa1;
+}
+
+.evaluation-action-area p {
+  color: #c0ccdb;
+}
+
+/* Schritt 2 modernisiert */
+.current-rule-card {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(93,162,255,0.22), transparent 40%),
+    linear-gradient(180deg, rgba(24, 45, 75, 0.96), rgba(13, 25, 43, 0.94));
+  border-color: rgba(93, 162, 255, 0.33);
+  box-shadow: 0 22px 48px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.rule-kicker {
+  color: #9cc9ff;
+}
+
+.rule-action.accept {
+  color: #062015;
+  background: linear-gradient(135deg, #b9f5d1, #61d991);
+  box-shadow: 0 12px 22px rgba(79, 209, 139, 0.18);
+}
+
+.rule-action.pending {
+  color: #251704;
+  background: linear-gradient(135deg, #ffe79b, #e8b946);
+  box-shadow: 0 12px 22px rgba(232, 185, 70, 0.16);
+}
+
+.rule-action.reject {
+  color: #2d070a;
+  background: linear-gradient(135deg, #ffc0c4, #ef6a73);
+  box-shadow: 0 12px 22px rgba(239, 91, 101, 0.16);
+}
+
+.rule-list-card {
+  background: linear-gradient(180deg, rgba(19, 35, 58, 0.92), rgba(11, 22, 39, 0.88));
+  border-color: rgba(157, 179, 213, 0.20);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.accepted-list {
+  background: linear-gradient(180deg, rgba(22, 58, 44, 0.86), rgba(11, 30, 26, 0.82));
+  border-color: rgba(79, 209, 139, 0.26);
+}
+
+.pending-list {
+  background: linear-gradient(180deg, rgba(67, 51, 18, 0.82), rgba(37, 29, 13, 0.80));
+  border-color: rgba(232, 185, 70, 0.25);
+}
+
+.rejected-list {
+  background: linear-gradient(180deg, rgba(69, 26, 35, 0.82), rgba(35, 13, 20, 0.80));
+  border-color: rgba(239, 91, 101, 0.24);
+}
+
+.rule-item.accepted {
+  border-color: rgba(79, 209, 139, 0.46);
+}
+
+.rule-item.pending {
+  border-color: rgba(232, 185, 70, 0.46);
+}
+
+.rule-item.rejected {
+  border-color: rgba(239, 91, 101, 0.42);
+}
+
+.rules-status-bar {
+  background: rgba(9, 18, 32, 0.76);
+  border-color: rgba(157, 179, 213, 0.20);
+}
+
+.rules-status.ready { color: #77e1a6; }
+.rules-status.warning { color: #f4cb64; }
+.rules-status.neutral { color: #a9b8cf; }
+
+.frozen-teacher {
+  color: #06101f;
+  background: linear-gradient(135deg, #dbeafe, #9cc9ff);
+  border-color: rgba(198, 226, 255, 0.72);
+}
+
+/* dezente Einblendanimationen für wichtige Bereiche */
+.panel,
+.score-card,
+.current-rule-card,
+.rule-list-card,
+.student-card {
+  animation: cardRise 0.38s ease both;
+}
+
+@keyframes cardRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
