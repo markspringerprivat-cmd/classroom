@@ -361,11 +361,13 @@ function createDeskElement(desk, influence = null) {
   deskEl.dataset.deskId = desk.id;
   deskEl.title = 'Tisch ziehen und in ein anderes Rasterfeld ablegen';
 
+  const assignedStudentId = state.assignments[desk.id];
+  if (assignedStudentId) deskEl.classList.add('has-student');
+
   const label = document.createElement('div');
   label.className = 'desk-label';
   label.innerHTML = `<span>Tisch</span><span>↕</span>`;
 
-  const assignedStudentId = state.assignments[desk.id];
   const seat = document.createElement('div');
   if (assignedStudentId) {
     const student = getStudent(assignedStudentId);
@@ -1044,10 +1046,11 @@ function evaluatePreparation() {
   if (!allStudentsPlaced()) {
     clearResults();
     const missing = students.length - Object.keys(state.assignments).length;
-    resultsPanel.hidden = false;
+    showTemporaryHint(`Die Vorbereitung kann erst ausgewertet werden, wenn alle 10 Schüler*innen platziert sind. Es fehlen noch ${missing}.`);
     feedbackList.innerHTML = `<li class="warning">Die Vorbereitung kann erst ausgewertet werden, wenn alle 10 Schüler*innen platziert sind. Es fehlen noch ${missing}.</li>`;
     meterFill.style.width = '0%';
     stateOutput.textContent = '';
+    resultsPanel.hidden = true;
     return;
   }
 
