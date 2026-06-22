@@ -30,6 +30,11 @@ Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Page
   - bewegend im Raum
   - sitzend am Pult
 - Startstabilität berechnen
+- animierte Auswertungskachel über dem Spielfeld
+- Lebensleiste mit 10 Balken anzeigen
+- Punkte nacheinander ein- und auszählen; der sichtbare Balken bleibt zwischen 0 und 10, der rechnerische Punktewert kann auch negativ werden
+- Game-Over-Hinweis bei 0 oder weniger Punkten
+- Weiterleitungsschaltfläche zum geplanten Schritt 2 „Klassenregeln aufstellen“
 - versteckte Variablen für spätere Szenarien ausgeben
 
 ## Didaktische Grundidee
@@ -43,7 +48,8 @@ Der Prototyp wertet daher nicht nur aus, ob alle Schüler*innen platziert wurden
 Die Webseite erzeugt nach der Auswertung unter anderem folgende Informationen:
 
 - `layout` – gewählte Sitzordnung
-- `score` – Startstabilität von 0 bis 10
+- `preparationScore` – sichtbare Startstabilität von 0 bis 10
+- `rawPreparationScore` – rechnerischer Punktwert, kann negativ sein
 - `metrics.highRiskOutsideVision` – störungsanfälligere Schüler*innen außerhalb des Sichtbereichs
 - `metrics.conflictPairs` – problematische Nachbarschaften
 - `metrics.phoneRiskBackOrBlind` – Handy-/Ablenkungsrisiko außerhalb des Überblicks
@@ -74,3 +80,18 @@ Beispielhafte Routinen:
 - Übergang in Gruppenarbeit
 - Hilfesignal bei Problemen
 
+
+## Auswertungslogik
+
+Die Auswertung läuft schrittweise ab. Jeder Bewertungsaspekt wird etwa alle zwei Sekunden im oberen Bereich der Auswertungskachel angezeigt. Unten wird eine Lebensleiste mit maximal zehn Balken aufgebaut oder reduziert.
+
+- Pluspunkte füllen Balken auf.
+- Minuspunkte entfernen Balken.
+- Unter 0 wird die Balkenanzeige nicht weiter reduziert, der rechnerische Punktwert kann aber negativ werden.
+- Bei weniger als 1 Punkt erscheint ein Game-Over-Hinweis.
+- Ab 1 Punkt kann zum nächsten geplanten Schritt übergegangen werden: Klassenregeln aufstellen.
+
+
+## Schritt 3: Szenario-Katalog
+
+Neu ergänzt: `scenarios.html` und `scenarios.js`. Nach dem Speichern der Klassenregeln wird Schritt 3 geöffnet. Der Button „Szenarien einsehen“ zeigt 40 vorbereitete Unterrichtsszenarien mit je drei Antwortmöglichkeiten (+1/0/-1), Feedback und Variablenbezug zu Raum, Schülerprofilen und Klassenregeln.

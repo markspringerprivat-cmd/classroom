@@ -145,17 +145,6 @@ function isBlockedGroupAnchor(group, row, col) {
   return Boolean(group) && group.minRow === row && group.minCol === col;
 }
 
-function getFrozenBlockedJoinClasses(group, row, col) {
-  if (!group) return [];
-  const has = (r, c) => group.cells.some(cell => cell.row === r && cell.col === c);
-  const classes = [];
-  if (has(row, col - 1)) classes.push('join-left');
-  if (has(row, col + 1)) classes.push('join-right');
-  if (has(row - 1, col)) classes.push('join-up');
-  if (has(row + 1, col)) classes.push('join-down');
-  return classes;
-}
-
 function formatBlockedLabel(group) {
   if (group.type === 'sink') return 'Wasch-<br>becken';
   if (group.type === 'exit') return 'Notaus-<br>gang';
@@ -228,11 +217,10 @@ function renderFrozenGrid() {
       const blockGroup = block ? getBlockedGroupAt(row, col) : null;
       if (block) {
         cell.classList.add('frozen-blocked', `frozen-blocked-${block.type}`);
-        if (blockGroup) cell.classList.add(...getFrozenBlockedJoinClasses(blockGroup, row, col));
         if (blockGroup && isBlockedGroupAnchor(blockGroup, row, col)) {
           const blockEl = document.createElement('span');
           const sideLabel = ['window', 'door', 'exit'].includes(blockGroup.type);
-          blockEl.className = `frozen-blocked-label frozen-${blockGroup.type}${sideLabel ? ' side-label' : ''}`;
+          blockEl.className = `frozen-blocked-label ${sideLabel ? 'side-label' : ''}`;
           blockEl.style.setProperty('--frozen-span-cols', String(blockGroup.colSpan));
           blockEl.style.setProperty('--frozen-span-rows', String(blockGroup.rowSpan));
           blockEl.innerHTML = `<span>${formatBlockedLabel(blockGroup)}</span>`;
@@ -467,8 +455,9 @@ function finishRules() {
   };
   try {
     localStorage.setItem('classroomGame.step2.rules', JSON.stringify(data));
-    setStatus('Regelauswahl gespeichert. Schritt 3 kann später hier anschließen.', 'ready');
-    finishBtn.textContent = 'Gespeichert';
+    setStatus('Regelauswahl gespeichert. Schritt 3 wird geöffnet.', 'ready');
+    finishBtn.textContent = 'Weiter zu Schritt 3';
+    window.location.href = 'scenarios.html';
   } catch (error) {
     setStatus('Speichern fehlgeschlagen. Bitte prüfe den lokalen Speicher des Browsers.', 'warning');
   }

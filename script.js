@@ -1,31 +1,6 @@
 const ROWS = 9;
 const COLS = 10;
 
-const blockedCells = [
-  { row: 0, col: 3, type: 'board', label: 'Tafel' },
-  { row: 0, col: 4, type: 'board', label: 'Tafel' },
-  { row: 0, col: 5, type: 'board', label: 'Tafel' },
-  { row: 0, col: 6, type: 'board', label: 'Tafel' },
-  { row: 1, col: 9, type: 'door', label: 'Tür' },
-  { row: 2, col: 9, type: 'door', label: 'Tür' },
-  { row: 6, col: 9, type: 'exit', label: 'Notausgang' },
-  { row: 7, col: 9, type: 'exit', label: 'Notausgang' },
-  { row: 2, col: 0, type: 'window', label: 'Fenster' },
-  { row: 3, col: 0, type: 'window', label: 'Fenster' },
-  { row: 5, col: 0, type: 'window', label: 'Fenster' },
-  { row: 6, col: 0, type: 'window', label: 'Fenster' },
-  { row: 8, col: 2, type: 'cabinet', label: 'Schrank' },
-  { row: 8, col: 3, type: 'cabinet', label: 'Schrank' },
-  { row: 8, col: 4, type: 'cabinet', label: 'Schrank' },
-  { row: 8, col: 7, type: 'sink', label: 'Waschbecken' },
-  { row: 8, col: 8, type: 'sink', label: 'Waschbecken' }
-];
-
-const roomObjectConfig = {
-  trashCount: 5,
-  broomPreferred: { row: 8, col: 9 }
-};
-
 const students = [
   { id: 'julius', name: 'Julius', age: 12, note: 'verträgt sich schlecht mit anderen Jungs', hidden: { gender: 'm', risk: 3, conflictWithBoys: true, needsMonitoring: true } },
   { id: 'petra', name: 'Petra', age: 15, note: 'lenkt häufig Sitznachbar*innen ab', hidden: { gender: 'f', risk: 3, distractor: true, needsMonitoring: true } },
@@ -43,7 +18,7 @@ const layouts = {
   rows: {
     label: 'Reihensitzordnung',
     deskPositions: [[2,1], [2,3], [2,6], [2,8], [4,1], [4,3], [4,6], [4,8], [6,3], [6,6]],
-    teacher: { row: 1, col: 4, dir: 'down' }
+    teacher: { row: 0, col: 4, dir: 'down' }
   },
   uform: {
     label: 'U-Form',
@@ -53,12 +28,12 @@ const layouts = {
   groups: {
     label: 'Gruppentische',
     deskPositions: [[1,1], [1,2], [1,6], [1,7], [4,1], [4,2], [4,6], [4,7], [7,4], [7,5]],
-    teacher: { row: 1, col: 4, dir: 'down' }
+    teacher: { row: 0, col: 4, dir: 'down' }
   },
   pairs: {
     label: 'Partnerinseln',
     deskPositions: [[1,2], [1,3], [3,1], [3,2], [3,7], [3,8], [6,2], [6,3], [6,6], [6,7]],
-    teacher: { row: 1, col: 4, dir: 'down' }
+    teacher: { row: 0, col: 4, dir: 'down' }
   }
 };
 
@@ -66,9 +41,7 @@ const state = {
   layout: 'rows',
   desks: [],
   assignments: {},
-  teacher: { row: 1, col: 4, dir: 'down', mode: 'frontStanding' },
-  objects: { trash: [], broom: null },
-  cleaningMode: false,
+  teacher: { row: 0, col: 4, dir: 'down', mode: 'frontStanding' },
   selectedStudentId: null,
   placingTeacher: false,
   score: null,
@@ -83,68 +56,6 @@ const dragState = {
   deskId: null
 };
 
-const blockedGroups = buildBlockedGroups();
-
-function buildBlockedGroups() {
-  const groups = [];
-  const visited = new Set();
-  blockedCells.forEach(cell => {
-    const key = `${cell.row},${cell.col},${cell.type}`;
-    if (visited.has(key)) return;
-    const horizontal = blockedCells.filter(c => c.type === cell.type && c.row === cell.row).sort((a,b)=>a.col-b.col);
-    const vertical = blockedCells.filter(c => c.type === cell.type && c.col === cell.col).sort((a,b)=>a.row-b.row);
-
-    const hRun = [cell];
-    let c = cell.col - 1;
-    while (horizontal.some(x => x.col === c)) { hRun.unshift(horizontal.find(x => x.col === c)); c--; }
-    c = cell.col + 1;
-    while (horizontal.some(x => x.col === c)) { hRun.push(horizontal.find(x => x.col === c)); c++; }
-
-    const vRun = [cell];
-    let r = cell.row - 1;
-    while (vertical.some(x => x.row === r)) { vRun.unshift(vertical.find(x => x.row === r)); r--; }
-    r = cell.row + 1;
-    while (vertical.some(x => x.row === r)) { vRun.push(vertical.find(x => x.row === r)); r++; }
-
-    const groupCells = hRun.length >= vRun.length ? hRun : vRun;
-    groupCells.forEach(gc => visited.add(`${gc.row},${gc.col},${gc.type}`));
-    const rows = groupCells.map(gc => gc.row);
-    const cols = groupCells.map(gc => gc.col);
-    groups.push({
-      id: `${cell.type}-${Math.min(...rows)}-${Math.min(...cols)}`,
-      type: cell.type,
-      label: cell.label,
-      cells: groupCells,
-      minRow: Math.min(...rows),
-      maxRow: Math.max(...rows),
-      minCol: Math.min(...cols),
-      maxCol: Math.max(...cols),
-      rowSpan: Math.max(...rows) - Math.min(...rows) + 1,
-      colSpan: Math.max(...cols) - Math.min(...cols) + 1
-    });
-  });
-  return groups;
-}
-
-function getBlockedGroupAt(row, col) {
-  return blockedGroups.find(group => group.cells.some(cell => cell.row === row && cell.col === col)) || null;
-}
-
-function isBlockedGroupAnchor(group, row, col) {
-  return Boolean(group) && group.minRow === row && group.minCol === col;
-}
-
-function getBlockedJoinClasses(group, row, col) {
-  if (!group) return [];
-  const has = (r, c) => group.cells.some(cell => cell.row === r && cell.col === c);
-  const classes = [];
-  if (has(row, col - 1)) classes.push('join-left');
-  if (has(row, col + 1)) classes.push('join-right');
-  if (has(row - 1, col)) classes.push('join-up');
-  if (has(row + 1, col)) classes.push('join-down');
-  return classes;
-}
-
 const gridEl = document.getElementById('classroomGrid');
 const paletteEl = document.getElementById('studentPalette');
 const layoutSelect = document.getElementById('layoutSelect');
@@ -155,7 +66,6 @@ const evaluateBtn = document.getElementById('evaluateBtn');
 const evalHint = document.getElementById('evalHint');
 const resetBtn = document.getElementById('resetBtn');
 const scoreValue = document.getElementById('scoreValue');
-const prepTimerValue = document.getElementById('prepTimerValue');
 const resultsPanel = document.getElementById('resultsPanel');
 const feedbackList = document.getElementById('feedbackList');
 const meterFill = document.getElementById('meterFill');
@@ -165,8 +75,6 @@ const overlayCloseBtn = document.getElementById('overlayCloseBtn');
 const evaluationTitle = document.getElementById('evaluationTitle');
 const evaluationStepCounter = document.getElementById('evaluationStepCounter');
 const evaluationStepDelta = document.getElementById('evaluationStepDelta');
-const evaluationSlide = document.getElementById('evaluationSlide');
-const evaluationNextBtn = document.getElementById('evaluationNextBtn');
 const evaluationCurrentText = document.getElementById('evaluationCurrentText');
 const evaluationCurrentDetail = document.getElementById('evaluationCurrentDetail');
 const lifeSegments = document.getElementById('lifeSegments');
@@ -176,29 +84,7 @@ const evaluationActionArea = document.getElementById('evaluationActionArea');
 const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle');
 const evaluationOutcomeMessage = document.getElementById('evaluationOutcomeMessage');
 const step2Btn = document.getElementById('step2Btn');
-const newAttemptBtn = document.getElementById('newAttemptBtn');
-const teacherDirectionPopover = document.getElementById('teacherDirectionPopover');
-const studentHoverCard = document.getElementById('studentHoverCard');
-const showTutorialBtn = document.getElementById('showTutorialBtn');
-const tutorialOverlay = document.getElementById('tutorialOverlay');
-const tutorialSlide = document.getElementById('tutorialSlide');
-const tutorialVisual = document.getElementById('tutorialVisual');
-const tutorialTitle = document.getElementById('tutorialTitle');
-const tutorialText = document.getElementById('tutorialText');
-const tutorialList = document.getElementById('tutorialList');
-const tutorialProgress = document.getElementById('tutorialProgress');
-const tutorialDots = document.getElementById('tutorialDots');
-const tutorialPrevBtn = document.getElementById('tutorialPrevBtn');
-const tutorialNextBtn = document.getElementById('tutorialNextBtn');
-const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
-const startGateOverlay = document.getElementById('startGateOverlay');
-const startGameBtn = document.getElementById('startGameBtn');
-let tutorialIndex = 0;
-let gameStarted = false;
-let preparationTimerId = null;
-let preparationTimeLeft = 300;
 let evaluationTimers = [];
-let evaluationSession = null;
 
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
@@ -214,16 +100,11 @@ function initLayout(layoutKey, keepAssignments = false) {
     });
   }
 
-  state.teacher = { ...layout.teacher, mode: 'frontStanding' };
-  state.objects = generateRoomObjects();
-  state.cleaningMode = false;
+  state.teacher = { ...layout.teacher, mode: teacherModeSelect.value || 'frontStanding' };
   state.placingTeacher = false;
   setDirectionActive(state.teacher.dir);
   updateTeacherPlacementButton();
   clearResults();
-  stopPreparationTimer();
-  preparationTimeLeft = 300;
-  updatePreparationTimerDisplay();
   render();
 }
 
@@ -255,24 +136,10 @@ function renderGrid() {
       const influence = influenceMap.get(cellKey(row, col));
       if (influence) applyInfluenceClasses(cell, influence);
 
-      const block = getBlockedCell(row, col);
-      const blockGroup = block ? getBlockedGroupAt(row, col) : null;
-      if (block) {
-        cell.classList.add('blocked-cell', `blocked-${block.type}`);
-        if (blockGroup) cell.classList.add(...getBlockedJoinClasses(blockGroup, row, col));
-        cell.dataset.blockedType = block.type;
-        if (blockGroup && isBlockedGroupAnchor(blockGroup, row, col)) {
-          cell.appendChild(createBlockedElement(blockGroup));
-        }
-      }
-
-      if (state.placingTeacher && !block) cell.classList.add('teacher-placement-active');
+      if (state.placingTeacher) cell.classList.add('teacher-placement-active');
 
       const desk = getDeskAt(row, col);
       if (desk) cell.appendChild(createDeskElement(desk, influence));
-
-      const object = getRoomObjectAt(row, col);
-      if (object) cell.appendChild(createRoomObjectElement(object));
 
       if (state.teacher.row === row && state.teacher.col === col) cell.appendChild(createTeacherInRoom());
 
@@ -290,56 +157,6 @@ function applyInfluenceClasses(el, influence) {
   if (influence.kind === 'good') el.classList.add(`influence-good-${influence.level}`);
   if (influence.kind === 'risk') el.classList.add(`influence-risk-${influence.level}`);
   if (influence.kind === 'neutral') el.classList.add(`influence-neutral-${influence.level}`);
-}
-
-
-function formatBlockedLabel(group) {
-  if (group.type === 'sink') return 'Wasch-<br>becken';
-  if (group.type === 'exit') return 'Notaus-<br>gang';
-  return group.label;
-}
-
-function createBlockedElement(group) {
-  const el = document.createElement('div');
-  const sideLabel = ['window', 'door', 'exit'].includes(group.type);
-  el.className = `blocked-marker blocked-${group.type}${sideLabel ? ' side-label' : ''}`;
-  el.style.setProperty('--span-cols', String(group.colSpan));
-  el.style.setProperty('--span-rows', String(group.rowSpan));
-  el.innerHTML = `<span>${formatBlockedLabel(group)}</span>`;
-  el.title = `${group.label}: Dieses Feld ist nicht nutzbar.`;
-  return el;
-}
-
-function createRoomObjectElement(object) {
-  const el = document.createElement('button');
-  el.type = 'button';
-  el.className = `room-object room-object-${object.type}${state.cleaningMode && object.type === 'broom' ? ' active' : ''}`;
-  el.dataset.objectId = object.id;
-  el.textContent = object.type === 'broom' ? '🧹' : '🗑️';
-  el.title = object.type === 'broom'
-    ? 'Besen anklicken, dann Müll anklicken, um ihn zu entfernen.'
-    : 'Müll: erzeugt Störrisiko. Mit dem Besen entfernen.';
-  el.addEventListener('click', event => {
-    event.stopPropagation();
-    if (object.type === 'broom') {
-      state.cleaningMode = !state.cleaningMode;
-      showTemporaryHint(state.cleaningMode ? 'Besen ausgewählt: Klicke Müll an, um ihn zu entfernen.' : 'Besen abgewählt.');
-      renderGrid();
-      return;
-    }
-    if (object.type === 'trash') {
-      if (!state.cleaningMode) {
-        showTemporaryHint('Klicke zuerst den Besen an, um Müll entfernen zu können.');
-        return;
-      }
-      object.removed = true;
-      state.cleaningMode = false;
-      clearResults();
-      showTemporaryHint('Müll entfernt: Der Störreiz im Raum wurde reduziert.');
-      renderGrid();
-    }
-  });
-  return el;
 }
 
 function createDeskElement(desk, influence = null) {
@@ -433,13 +250,6 @@ function createDeskElement(desk, influence = null) {
     if (state.selectedStudentId) assignStudentToDesk(state.selectedStudentId, desk.id);
   });
 
-  if (assignedStudentId) {
-    const student = getStudent(assignedStudentId);
-    deskEl.addEventListener('mouseenter', event => showStudentHoverCard(student, event));
-    deskEl.addEventListener('mousemove', event => moveStudentHoverCard(event));
-    deskEl.addEventListener('mouseleave', hideStudentHoverCard);
-  }
-
   return deskEl;
 }
 
@@ -460,7 +270,9 @@ function createTeacherInRoom() {
   });
   el.addEventListener('click', event => {
     event.stopPropagation();
-    openTeacherDirectionPopover(event.currentTarget);
+    state.placingTeacher = !state.placingTeacher;
+    updateTeacherPlacementButton();
+    renderGrid();
   });
   return el;
 }
@@ -564,9 +376,6 @@ function removeStudentFromDesk(deskId) {
   delete state.assignments[deskId];
   state.selectedStudentId = null;
   clearResults();
-  stopPreparationTimer();
-  preparationTimeLeft = 300;
-  updatePreparationTimerDisplay();
   render();
 }
 
@@ -592,9 +401,6 @@ function assignStudentToDesk(studentId, deskId) {
   state.assignments[deskId] = studentId;
   state.selectedStudentId = null;
   clearResults();
-  stopPreparationTimer();
-  preparationTimeLeft = 300;
-  updatePreparationTimerDisplay();
   render();
 }
 
@@ -616,29 +422,15 @@ function moveDesk(deskId, row, col) {
 
 function canPlaceDeskAt(deskId, row, col) {
   if (!insideGrid(row, col)) return { ok: false, reason: 'Das Ziel liegt außerhalb des Rasters.' };
-  const block = getBlockedCell(row, col);
-  if (block) return { ok: false, reason: `${block.label}: Dieses Feld ist blockiert.` };
-  const targetObject = getRoomObjectAt(row, col);
-  if (targetObject) return { ok: false, reason: targetObject.type === 'trash' ? 'Hier liegt Müll. Entferne ihn zuerst mit dem Besen.' : 'Hier liegt der Besen.' };
   const targetDesk = getDeskAt(row, col);
   if (targetDesk && targetDesk.id !== deskId) return { ok: false, reason: 'Hier steht bereits ein Tisch.' };
   if (state.teacher.row === row && state.teacher.col === col) return { ok: false, reason: 'Hier steht die Lehrkraft.' };
+  const verticalBlocker = state.desks.find(other => other.id !== deskId && other.col === col && Math.abs(other.row - row) === 1);
+  if (verticalBlocker) return { ok: false, reason: 'Vor und hinter einem Tisch muss ein Rasterfeld frei bleiben.' };
   return { ok: true, reason: '' };
 }
 
 function placeTeacher(row, col) {
-  const block = getBlockedCell(row, col);
-  if (block) {
-    flashCell(row, col, 'invalid');
-    showTemporaryHint(`${block.label}: Die Lehrkraft kann hier nicht stehen.`);
-    return;
-  }
-  const object = getRoomObjectAt(row, col);
-  if (object) {
-    flashCell(row, col, 'invalid');
-    showTemporaryHint(object.type === 'trash' ? 'Die Lehrkraft kann nicht auf Müll stehen.' : 'Die Lehrkraft kann nicht auf dem Besenfeld stehen.');
-    return;
-  }
   if (getDeskAt(row, col)) {
     flashCell(row, col, 'invalid');
     showTemporaryHint('Die Lehrkraft kann nicht auf einem Tischfeld stehen.');
@@ -691,48 +483,6 @@ function updateEvaluateButton() {
   }
 }
 function cellKey(row, col) { return `${row},${col}`; }
-function getBlockedCell(row, col) { return blockedCells.find(item => item.row === row && item.col === col) || null; }
-function isBlockedCell(row, col) { return Boolean(getBlockedCell(row, col)); }
-function getRoomObjectAt(row, col) {
-  if (state.objects?.broom && state.objects.broom.row === row && state.objects.broom.col === col) return state.objects.broom;
-  return (state.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;
-}
-function getActiveTrash() { return (state.objects?.trash || []).filter(item => !item.removed); }
-function isCellOccupiedForObjects(row, col) {
-  return isBlockedCell(row, col) || getDeskAt(row, col) || (state.teacher.row === row && state.teacher.col === col) || getRoomObjectAt(row, col);
-}
-function shuffle(items) {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-function generateRoomObjects() {
-  const broom = { id: 'broom-1', type: 'broom', row: roomObjectConfig.broomPreferred.row, col: roomObjectConfig.broomPreferred.col, removed: false };
-  if (isBlockedCell(broom.row, broom.col) || getDeskAt(broom.row, broom.col) || (state.teacher.row === broom.row && state.teacher.col === broom.col)) {
-    for (let row = ROWS - 1; row >= 0; row--) {
-      for (let col = COLS - 1; col >= 0; col--) {
-        if (!isBlockedCell(row, col) && !getDeskAt(row, col) && !(state.teacher.row === row && state.teacher.col === col)) {
-          broom.row = row; broom.col = col; row = -1; break;
-        }
-      }
-    }
-  }
-  const candidates = [];
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (isBlockedCell(row, col)) continue;
-      if (getDeskAt(row, col)) continue;
-      if (state.teacher.row === row && state.teacher.col === col) continue;
-      if (broom.row === row && broom.col === col) continue;
-      candidates.push({ row, col });
-    }
-  }
-  const trash = shuffle(candidates).slice(0, roomObjectConfig.trashCount).map((pos, index) => ({ id: `trash-${index + 1}`, type: 'trash', row: pos.row, col: pos.col, removed: false }));
-  return { broom, trash };
-}
 
 function directionLabel(dir) {
   return ({ up: 'Lehrkraft ↑', down: 'Lehrkraft ↓', left: 'Lehrkraft ←', right: 'Lehrkraft →' })[dir] || 'Lehrkraft';
@@ -743,63 +493,8 @@ function setDirectionActive(dir) {
 }
 
 function updateTeacherPlacementButton() {
-  if (!teacherToken) return;
   teacherToken.classList.toggle('selected', state.placingTeacher);
   teacherToken.textContent = state.placingTeacher ? 'Ziel wählen' : 'Lehrkraft';
-}
-
-function closeTeacherDirectionPopover() {
-  if (!teacherDirectionPopover) return;
-  teacherDirectionPopover.hidden = true;
-}
-
-function openTeacherDirectionPopover(anchorEl) {
-  if (!teacherDirectionPopover || !anchorEl) return;
-  setDirectionActive(state.teacher.dir);
-  const anchorRect = anchorEl.getBoundingClientRect();
-  const wrapRect = document.querySelector('.room-wrap')?.getBoundingClientRect() || { left: 0, top: 0 };
-  teacherDirectionPopover.style.left = `${Math.max(10, anchorRect.left - wrapRect.left + anchorRect.width / 2 - 90)}px`;
-  teacherDirectionPopover.style.top = `${Math.max(10, anchorRect.top - wrapRect.top + anchorRect.height + 8)}px`;
-  teacherDirectionPopover.hidden = false;
-}
-
-function studentProfileTags(student) {
-  const h = student?.hidden || {};
-  const tags = [];
-  if (h.needsMonitoring) tags.push('braucht Blickkontakt/Präsenz');
-  if (h.distractor) tags.push('Ablenkungsrisiko');
-  if (h.phoneRisk) tags.push('Handy-/Off-Task-Risiko');
-  if (h.callsOut) tags.push('Zwischenrufe möglich');
-  if (h.boundaryTesting) tags.push('testet Grenzen');
-  if (h.conflictWithBoys) tags.push('Konfliktrisiko mit Jungen');
-  if (h.needsStructure) tags.push('braucht Struktur');
-  if (h.stabilizer) tags.push('stabilisierend');
-  if (h.mediator) tags.push('vermittelnd');
-  return tags;
-}
-
-function showStudentHoverCard(student, event) {
-  if (!studentHoverCard || !student) return;
-  const tags = studentProfileTags(student).map(tag => `<span>${tag}</span>`).join('');
-  studentHoverCard.innerHTML = `
-    <strong>${student.name} (${student.age})</strong>
-    <p>${student.note}</p>
-    <div class="student-hover-tags">${tags}</div>
-  `;
-  studentHoverCard.hidden = false;
-  moveStudentHoverCard(event);
-}
-
-function moveStudentHoverCard(event) {
-  if (!studentHoverCard || studentHoverCard.hidden) return;
-  const wrapRect = document.querySelector('.room-wrap')?.getBoundingClientRect() || { left: 0, top: 0 };
-  studentHoverCard.style.left = `${Math.max(12, event.clientX - wrapRect.left + 16)}px`;
-  studentHoverCard.style.top = `${Math.max(12, event.clientY - wrapRect.top + 16)}px`;
-}
-
-function hideStudentHoverCard() {
-  if (!studentHoverCard) return;
-  studentHoverCard.hidden = true;
 }
 
 function getVectorForDirection(dir) {
@@ -858,41 +553,27 @@ function getVisionMap() {
   const map = new Map();
   const candidates = getCandidateVisionCells();
   candidates.forEach(candidate => {
-    const obstacleInfo = countVisionObstaclesBefore(candidate);
-    // Tische schwächen den Sichtstrahl ab. Müll hebt das Sichtfeld an dieser Stelle und dahinter komplett auf.
-    if (obstacleInfo.trashBlocked) return;
-    const strength = Math.max(0, candidate.baseStrength - obstacleInfo.deskBlockers * 2);
+    const blockers = countDeskBlockersBefore(candidate);
+    // Jeder Tisch auf dem Sichtstrahl schwächt dahinterliegende Felder ab.
+    const strength = Math.max(0, candidate.baseStrength - blockers * 2);
     if (strength <= 0) return;
     const level = Math.max(1, Math.min(5, 6 - strength)); // level 1 = dunkel/stark, level 5 = sehr schwach
     const key = cellKey(candidate.row, candidate.col);
     const existing = map.get(key);
-    if (!existing || strength > existing.strength) {
-      map.set(key, { ...candidate, blockers: obstacleInfo.deskBlockers, strength, level });
-    }
+    if (!existing || strength > existing.strength) map.set(key, { ...candidate, blockers, strength, level });
   });
   return map;
 }
 
-function countVisionObstaclesBefore(candidate) {
-  let deskBlockers = 0;
-  let trashBlocked = false;
+function countDeskBlockersBefore(candidate) {
+  let blockers = 0;
   const { row, col, dir } = state.teacher;
-  for (let step = 1; step <= candidate.step; step++) {
+  for (let step = 1; step < candidate.step; step++) {
     const scaledOffset = Math.round(candidate.offset * (step / candidate.step));
     const pos = offsetCell(row, col, dir, step, scaledOffset);
-    if (!insideGrid(pos.row, pos.col)) continue;
-
-    const object = getRoomObjectAt(pos.row, pos.col);
-    if (object?.type === 'trash') {
-      trashBlocked = true;
-      break;
-    }
-
-    if (step < candidate.step && getDeskAt(pos.row, pos.col)) {
-      deskBlockers += 1;
-    }
+    if (insideGrid(pos.row, pos.col) && getDeskAt(pos.row, pos.col)) blockers += 1;
   }
-  return { deskBlockers, trashBlocked };
+  return blockers;
 }
 
 function getVisionStrengthAt(row, col) {
@@ -963,14 +644,6 @@ function getCombinedInfluenceMap(visionMap = getVisionMap()) {
       add(desk.row, desk.col, 'green', 3, `${student.name}: vermittelt`);
       forEachNeighbor(desk, pos => add(pos.row, pos.col, 'green', 3, `${student.name}: vermittelt im Umfeld`));
     }
-  });
-
-  getActiveTrash().forEach(trash => {
-    add(trash.row, trash.col, 'red', 3, 'Müll: unruhige Lernumgebung');
-    add(trash.row - 1, trash.col, 'red', 4, 'Müll: Störreiz oben');
-    add(trash.row + 1, trash.col, 'red', 4, 'Müll: Störreiz unten');
-    add(trash.row, trash.col - 1, 'red', 4, 'Müll: Störreiz links');
-    add(trash.row, trash.col + 1, 'red', 4, 'Müll: Störreiz rechts');
   });
 
   const combined = new Map();
@@ -1050,8 +723,6 @@ function evaluatePreparation() {
     neutralizedRiskPairs: [],
     stabilizingPairs: [],
     spacing: evaluateDeskSpacing(),
-    roomObjects: evaluateRoomObjects(),
-    blockedCells,
     backRowRisks: [],
     futureScenarioHooks: []
   };
@@ -1067,16 +738,11 @@ function evaluatePreparation() {
   const spacingResult = metrics.spacing;
   if (spacingResult.invalidPairs.length === 0) {
     score += 1;
-    addFeedback(feedback, 'good', +1, 'Laufwege zwischen Tischreihen sind frei.', 'Vor und hinter Tischen bleibt ein Gang; die Lehrkraft kann sich besser bewegen und Hilfe leisten.');
+    addFeedback(feedback, 'good', +1, 'Gang- und Sitzabstände sind eingehalten.', 'Vor und hinter Tischen bleibt jeweils ein Rasterfeld frei; nebeneinander dürfen Tische direkt stehen.');
   } else {
     score -= spacingResult.invalidPairs.length;
-    addFeedback(feedback, 'bad', -spacingResult.invalidPairs.length, `${spacingResult.invalidPairs.length} blockierte Laufwege erkannt.`, 'Jeder direkt hintereinander gesetzte Tisch erschwert Wege, Präsenz und schnelle Unterstützung. Jeder blockierte Gang zählt einzeln.');
+    addFeedback(feedback, 'bad', -spacingResult.invalidPairs.length, `${spacingResult.invalidPairs.length} unzulässige Tischabstände erkannt.`, 'Vor und hinter Tischen muss ein Rasterfeld frei bleiben, damit Stühle und Wege nicht blockiert werden.');
   }
-
-  const roomObjectResult = metrics.roomObjects;
-  score += roomObjectResult.delta;
-  feedback.push(...roomObjectResult.feedback);
-  metrics.futureScenarioHooks.push(...roomObjectResult.hooks);
 
   const visionResult = evaluateRiskStudentVision();
   score += visionResult.delta;
@@ -1133,21 +799,6 @@ function evaluateDeskSpacing() {
     }
   }
   return { invalidPairs };
-}
-
-
-function evaluateRoomObjects() {
-  const active = getActiveTrash();
-  const result = { delta: 0, feedback: [], activeTrash: active.map(item => ({ id: item.id, row: item.row, col: item.col })), hooks: [] };
-  if (active.length === 0) {
-    result.delta += 1;
-    addFeedback(result.feedback, 'good', +1, 'Der Klassenraum wurde von Müll befreit.', 'Störreize im Raum sind reduziert; das unterstützt eine geordnete Lernumgebung.');
-  } else {
-    result.delta -= active.length;
-    result.hooks.push('room-trash-distraction');
-    addFeedback(result.feedback, 'bad', -active.length, `${active.length} Müllfeld(er) liegen noch im Raum.`, 'Müll erzeugt rote Störfelder auf angrenzenden Plätzen und kann Aufmerksamkeit, Wege und Lernklima beeinträchtigen.');
-  }
-  return result;
 }
 
 function evaluateRiskStudentVision() {
@@ -1283,49 +934,9 @@ function evaluateBackRowRisks() {
 }
 
 function evaluateTeacherMode() {
-  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftpositionierung wurde berücksichtigt.', detail: 'Entscheidend ist hier vor allem die Blickrichtung: Der grüne Sichtfächer zeigt, welche Plätze schnell wahrgenommen werden.' } };
-}
-
-
-function buildStepState() {
-  const visionByDesk = state.desks.map(desk => ({
-    deskId: desk.id,
-    row: desk.row,
-    col: desk.col,
-    strength: getVisionStrengthAt(desk.row, desk.col),
-    studentId: state.assignments[desk.id] || null
-  }));
-  const influenceByCell = [...getCombinedInfluenceMap().entries()].map(([key, value]) => ({ cell: key, ...value }));
-  return {
-    version: 2,
-    savedAt: new Date().toISOString(),
-    rows: ROWS,
-    cols: COLS,
-    students,
-    preparationScore: state.score,
-    rawPreparationScore: state.rawScore,
-    chosenLayout: { key: state.layout, label: layouts[state.layout].label },
-    teacher: state.teacher,
-    desks: state.desks,
-    assignments: state.assignments,
-    blockedCells,
-    objects: state.objects,
-    visionByDesk,
-    influenceByCell,
-    metrics: state.metrics,
-    suggestedScenarioHooks: [...new Set(state.metrics?.futureScenarioHooks || [])]
-  };
-}
-
-function saveStepStateForNextPage() {
-  try {
-    localStorage.setItem('classroomGame.step1', JSON.stringify(buildStepState()));
-    return true;
-  } catch (error) {
-    console.error('Speichern der Schritt-1-Daten fehlgeschlagen:', error);
-    window.alert('Die Vorbereitung konnte nicht gespeichert werden. Bitte prüfe, ob der Browser lokalen Speicher erlaubt.');
-    return false;
-  }
+  if (state.teacher.mode === 'moving') return { delta: 1, hooks: ['teacher-moving-presence'], feedback: { type: 'good', delta: +1, text: 'Lehrkraftverhalten: bewegend im Raum.', detail: 'Die lineare Präsenzzone kann verdeckte Störungen früh sichtbar machen, ist aber räumlich enger als ein Leitungsfächer.' } };
+  if (state.teacher.mode === 'deskSitting') return { delta: -1, hooks: ['teacher-desk-blindspots'], feedback: { type: 'warning', delta: -1, text: 'Lehrkraftverhalten: sitzend am Pult.', detail: 'Der Sicht- und Handlungsradius ist auf zwei Reihen eingeschränkt; blinde Bereiche werden wahrscheinlicher.' } };
+  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftverhalten: vorne stehend / leitend.', detail: 'Es entsteht ein breiter Leitungsfächer. Entscheidend ist, ob risikorelevante Plätze darin liegen.' } };
 }
 
 function showResults(score, rawScore, feedback, metrics) {
@@ -1348,8 +959,6 @@ function showResults(score, rawScore, feedback, metrics) {
     teacher: state.teacher,
     desks: state.desks,
     assignments: state.assignments,
-    blockedCells,
-    objects: state.objects,
     visionByDesk,
     influenceByCell,
     metrics,
@@ -1369,7 +978,6 @@ function clearEvaluationTimers() {
 function initLifeSegments() {
   if (!lifeSegments) return;
   lifeSegments.innerHTML = '';
-  lifeSegments.classList.remove('life-low', 'life-mid', 'life-high');
   for (let i = 1; i <= 10; i++) {
     const segment = document.createElement('span');
     segment.className = 'life-segment';
@@ -1378,23 +986,14 @@ function initLifeSegments() {
   }
 }
 
-function getLifeTone(clamped) {
-  if (clamped <= 3) return 'life-low';
-  if (clamped <= 6) return 'life-mid';
-  return 'life-high';
-}
-
 function updateLifeBar(rawValue) {
   const clamped = Math.max(0, Math.min(10, Math.round(rawValue)));
   if (lifeSegments) {
-    const tone = getLifeTone(clamped);
-    lifeSegments.classList.remove('life-low', 'life-mid', 'life-high');
-    lifeSegments.classList.add(tone);
     const segments = [...lifeSegments.querySelectorAll('.life-segment')];
     segments.forEach((segment, index) => segment.classList.toggle('active', index < clamped));
-    lifeSegments.setAttribute('aria-label', `${clamped} von 10 Stabilitätsbalken, rechnerischer Punktestand ${rawValue}`);
+    lifeSegments.setAttribute('aria-label', `${clamped} von 10 Stabilitätsbalken`);
   }
-  if (animatedCurrentScore) animatedCurrentScore.textContent = `Punkte aktuell: ${rawValue} · Balken: ${clamped}/10`;
+  if (animatedCurrentScore) animatedCurrentScore.textContent = `Punkte aktuell: ${rawValue}`;
 }
 
 function setStepDelta(delta) {
@@ -1404,94 +1003,44 @@ function setStepDelta(delta) {
   evaluationStepDelta.textContent = delta > 0 ? `+${delta}` : String(delta ?? 0);
 }
 
-function renderEvaluationStep(item, index, total) {
-  const delta = Number(item?.delta || 0);
-  if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt ${index + 1}/${total}`;
-  setStepDelta(delta);
-  if (evaluationCurrentText) evaluationCurrentText.textContent = item?.text || 'Bewertungsschritt';
-  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = item?.detail || 'Keine Zusatzbegründung vorhanden.';
-  if (evaluationNextBtn) {
-    evaluationNextBtn.hidden = false;
-    evaluationNextBtn.disabled = false;
-    evaluationNextBtn.textContent = index + 1 >= total ? 'Auswertung abschließen' : 'Weiter';
-  }
-}
-
-function showSlideTransition(renderCallback) {
-  if (!evaluationSlide) {
-    renderCallback();
-    return;
-  }
-  evaluationSlide.classList.remove('slide-in-right', 'slide-out-left');
-  evaluationSlide.classList.add('slide-out-left');
-  window.setTimeout(() => {
-    renderCallback();
-    evaluationSlide.classList.remove('slide-out-left');
-    evaluationSlide.classList.add('slide-in-right');
-    window.setTimeout(() => {
-      evaluationSlide.classList.remove('slide-in-right');
-    }, 360);
-  }, 300);
-}
-
-function advanceEvaluationStep(useAnimation = true) {
-  if (!evaluationSession || evaluationSession.finalShown) return;
-
-  if (evaluationSession.index >= evaluationSession.steps.length - 1) {
-    evaluationSession.finalShown = true;
-    updateLifeBar(evaluationSession.rawScore);
-    const clamped = Math.max(0, Math.min(10, Math.round(evaluationSession.rawScore)));
-    if (evaluationTitle) evaluationTitle.textContent = `Auswertung abgeschlossen: ${clamped}/10 Balken`;
-    if (animatedFinalScore) animatedFinalScore.textContent = `Endwert: ${evaluationSession.rawScore} Punkte`;
-    if (evaluationStepCounter) evaluationStepCounter.textContent = `Fertig · ${evaluationSession.steps.length}/${evaluationSession.steps.length}`;
-    setStepDelta(0);
-    if (evaluationNextBtn) evaluationNextBtn.hidden = true;
-    showEvaluationOutcome(evaluationSession.rawScore);
-    return;
-  }
-
-  const nextIndex = evaluationSession.index + 1;
-  const item = evaluationSession.steps[nextIndex];
-  evaluationSession.index = nextIndex;
-  evaluationSession.currentRaw += Number(item.delta || 0);
-
-  const render = () => {
-    renderEvaluationStep(item, nextIndex, evaluationSession.steps.length);
-    updateLifeBar(evaluationSession.currentRaw);
-  };
-
-  if (useAnimation) showSlideTransition(render);
-  else render();
-}
-
 function startEvaluationAnimation(feedback, rawScore) {
   clearEvaluationTimers();
   initLifeSegments();
   const steps = feedback.length ? feedback : [{ delta: 0, text: 'Keine Bewertungspunkte vorhanden.', detail: 'Für diese Vorbereitung wurde kein Bewertungsereignis erzeugt.' }];
-  evaluationSession = {
-    steps,
-    rawScore,
-    index: -1,
-    currentRaw: 0,
-    finalShown: false
-  };
-
+  let currentRaw = 0;
   updateLifeBar(0);
+
   if (evaluationTitle) evaluationTitle.textContent = 'Startstabilität wird berechnet';
   if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt 0/${steps.length}`;
   setStepDelta(0);
   if (evaluationCurrentText) evaluationCurrentText.textContent = 'Berechnung startet …';
-  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Klicke auf „Weiter“, um die Bewertung Schritt für Schritt durchzugehen.';
+  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Die einzelnen Entscheidungen werden nacheinander bewertet.';
   if (animatedFinalScore) animatedFinalScore.textContent = 'Endwert: –';
-  if (overlayCloseBtn) overlayCloseBtn.hidden = false;
   if (evaluationActionArea) evaluationActionArea.hidden = true;
-  if (evaluationNextBtn) {
-    evaluationNextBtn.hidden = false;
-    evaluationNextBtn.disabled = false;
-    evaluationNextBtn.textContent = 'Weiter';
-  }
 
-  advanceEvaluationStep(false);
+  steps.forEach((item, index) => {
+    const timer = window.setTimeout(() => {
+      const delta = Number(item.delta || 0);
+      currentRaw += delta;
+      if (evaluationStepCounter) evaluationStepCounter.textContent = `Schritt ${index + 1}/${steps.length}`;
+      setStepDelta(delta);
+      if (evaluationCurrentText) evaluationCurrentText.textContent = item.text || 'Bewertungsschritt';
+      if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = item.detail || 'Keine Zusatzbegründung vorhanden.';
+      updateLifeBar(currentRaw);
+    }, 600 + index * 2000);
+    evaluationTimers.push(timer);
+  });
+
+  const finalTimer = window.setTimeout(() => {
+    updateLifeBar(rawScore);
+    const clamped = Math.max(0, Math.min(10, rawScore));
+    if (evaluationTitle) evaluationTitle.textContent = `Auswertung abgeschlossen: ${clamped}/10 Balken`;
+    if (animatedFinalScore) animatedFinalScore.textContent = `Endwert: ${rawScore} Punkte`;
+    if (evaluationStepCounter) evaluationStepCounter.textContent = `Fertig · ${steps.length}/${steps.length}`;
+    setStepDelta(0);
+    showEvaluationOutcome(rawScore);
+  }, 900 + steps.length * 2000);
+  evaluationTimers.push(finalTimer);
 }
 
 function showEvaluationOutcome(rawScore) {
@@ -1505,10 +1054,6 @@ function showEvaluationOutcome(rawScore) {
       step2Btn.hidden = true;
       step2Btn.disabled = true;
     }
-    if (newAttemptBtn) {
-      newAttemptBtn.hidden = false;
-      newAttemptBtn.disabled = false;
-    }
   } else {
     evaluationActionArea.classList.remove('game-over');
     if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Vorbereitung tragfähig';
@@ -1516,10 +1061,6 @@ function showEvaluationOutcome(rawScore) {
     if (step2Btn) {
       step2Btn.hidden = false;
       step2Btn.disabled = false;
-    }
-    if (newAttemptBtn) {
-      newAttemptBtn.hidden = true;
-      newAttemptBtn.disabled = true;
     }
   }
 }
@@ -1557,300 +1098,34 @@ function clearResults() {
   scoreValue.textContent = '–';
   resultsPanel.hidden = true;
   if (evaluationOverlay) evaluationOverlay.hidden = true;
-  if (overlayCloseBtn) overlayCloseBtn.hidden = false;
   if (evaluationActionArea) evaluationActionArea.hidden = true;
 }
 
-const tutorialSlides = [
-  {
-    title: 'Ziel des Rasterspiels',
-    text: 'Du gestaltest den Klassenraum, bevor die Stunde beginnt. Gute Prävention erhöht die Startstabilität für die nächste Spielphase.',
-    bullets: ['Tische sinnvoll platzieren', 'Schüler*innen passend verteilen', 'Lehrkraft so stellen, dass wichtige Plätze gut sichtbar sind', 'Am Ende wird die Vorbereitung streng bewertet'],
-    visual: 'goal'
-  },
-  {
-    title: 'Lehrkraft und Sichtbereich',
-    text: 'Die Lehrkraft kann frei im Raum platziert werden. Der Sichtbereich fächert sich in Blickrichtung nach vorne auf.',
-    bullets: ['Dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Tische schwächen dahinterliegende Felder ab', 'Lehrkraft anklicken: Blickrichtung ändern', 'Störanfällige Schüler*innen sollten möglichst im wirksamen Sichtfeld sitzen'],
-    visual: 'teacher'
-  },
-  {
-    title: 'Rote Risikofelder',
-    text: 'Einige Schülerprofile erzeugen im Umfeld Störrisiken. Diese Profile wirken im Spiel verdeckt im Hintergrund weiter.',
-    bullets: ['Ablenkung wirkt häufig links und rechts', 'Konflikte zählen auch diagonal', 'Verdecktes Off-Task-Verhalten ist in blinden Bereichen riskanter', 'Rot bedeutet: erhöhte Störanfälligkeit'],
-    visual: 'risk'
-  },
-  {
-    title: 'Grüne Stabilisierung',
-    text: 'Stabilisierende Schüler*innen und gute Sichtbereiche können Risiken abschwächen.',
-    bullets: ['Grün steht für Übersicht, Unterstützung oder Vermittlung', 'Je dunkler das Grün, desto stärker der Schutzfaktor', 'Stabile Sitznachbarschaften können riskante Nähe abfedern'],
-    visual: 'support'
-  },
-  {
-    title: 'Neutralisierung: Rot trifft Grün',
-    text: 'Wenn ein Risiko durch Sichtbereich oder unterstützende Nachbarschaft abgefedert wird, entsteht eine neutrale gelb-orange Zone.',
-    bullets: ['Gelb/Orange bedeutet: Risiko ist nicht weg, aber abgefedert', 'So kann ein gefährdeter Platz geschützt werden', 'Die Auswertung rechnet Rot und Grün gegeneinander auf'],
-    visual: 'neutralize'
-  },
-  {
-    title: 'Gänge und Laufwege',
-    text: 'Achte darauf, dass Tischreihen nach vorne und hinten nicht zu eng gestellt werden.',
-    bullets: ['Zwischen Tischreihen sollte möglichst ein Gang frei bleiben', 'So kann sich die Lehrkraft besser im Raum bewegen', 'Blockierte Laufwege geben später Punktabzug'],
-    visual: 'spacing'
-  },
-  {
-    title: 'Raumsauberkeit und Störreize',
-    text: 'Müll im Klassenraum erzeugt starke rote Störfelder. Mit dem Besen kannst du Müll entfernen.',
-    bullets: ['Besen anklicken, danach Müll anklicken', 'Müll wirkt nach oben, unten, links und rechts als Störreiz', 'Ein aufgeräumter Raum reduziert Ablenkung'],
-    visual: 'trash'
-  },
-  {
-    title: 'Worauf du achten solltest',
-    text: 'Die Vorbereitung wird streng bewertet. Einzelne riskante Nachbarschaften geben jeweils Abzug, gute Sichtbarkeit und stabile Nachbarschaften geben Punkte.',
-    bullets: ['Alle 10 Schüler*innen müssen platziert sein', 'Müll möglichst entfernen', 'Störanfällige Schüler*innen sichtbar setzen', 'Riskante Paare trennen oder stabilisieren', 'Danach folgt Schritt 2: Klassenregeln auswählen'],
-    visual: 'checklist'
-  }
-];
-
-function tutorialVisualMarkup(type) {
-  if (type === 'goal') return `
-    <div class="tutorial-mini-board goal-board">
-      <div class="mini-card mini-desk">Tisch</div><div class="mini-card mini-student">Schüler*in</div><div class="mini-card mini-teacher">LK</div>
-      <div class="mini-arrow">→</div><div class="mini-score"><span></span><span></span><span></span><span></span><span></span></div>
-    </div>`;
-  if (type === 'teacher') return `
-    <div class="tutorial-viz-grid viz-teacher">
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell"></span><span class="viz-cell green-3"></span><span class="viz-cell green-4"></span><span class="viz-cell green-3"></span><span class="viz-cell"></span>
-      <span class="viz-cell green-2"></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell green-2"></span>
-      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
-    </div>`;
-  if (type === 'risk') return `
-    <div class="tutorial-mini-grid risk-demo">
-      <span></span><span class="r2"></span><span></span>
-      <span class="r1"></span><span class="student-risk">Petra</span><span class="r1"></span>
-      <span></span><span class="r2"></span><span></span>
-    </div>`;
-  if (type === 'support') return `
-    <div class="tutorial-mini-grid risk-demo support-demo">
-      <span class="g2"></span><span class="g2"></span><span class="g2"></span>
-      <span class="g1"></span><span class="student-support">Amira</span><span class="g1"></span>
-      <span class="g2"></span><span class="g2"></span><span class="g2"></span>
-    </div>`;
-  if (type === 'neutralize') return `
-    <div class="tutorial-viz-grid viz-neutralize">
-      <span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell red-2"></span><span class="viz-cell desk-mini">Tisch 1<span class="remove-x">×</span><br><strong>Ben</strong></span><span class="viz-cell neutral-1"></span><span class="viz-cell desk-mini">Tisch 4<span class="remove-x">×</span><br><strong>Sara</strong></span><span class="viz-cell green-2"></span>
-      <span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
-    </div>`;
-  if (type === 'spacing') return `
-    <div class="tutorial-viz-grid viz-spacing">
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell desk-mini">Tisch 2<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 1<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 4<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 9<br><small>freier Platz</small></span>
-      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
-      <span class="viz-cell desk-mini">Tisch 6<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 5<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 8<br><small>freier Platz</small></span>
-    </div>`;
-  if (type === 'trash') return `
-    <div class="tutorial-viz-grid viz-trash">
-      <span class="viz-cell red-2 trash-home">🗑️</span><span class="viz-cell red-2"></span><span class="viz-cell"></span>
-      <span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home">🧹</span>
-    </div>`;
-  return `
-    <div class="tutorial-check-demo">
-      <div><strong>✓</strong><span>alle platziert</span></div>
-      <div><strong>✓</strong><span>Sichtfeld genutzt</span></div>
-      <div><strong>!</strong><span>riskante Nähe prüfen</span></div>
-      <div><strong>✓</strong><span>Stabilisierung einsetzen</span></div>
-    </div>`;
-}
-
-function openTutorial() {
-  if (!tutorialOverlay) return;
-  tutorialIndex = 0;
-  tutorialOverlay.hidden = false;
-  document.body.classList.add('tutorial-open');
-  renderTutorial(false);
-}
-
-function closeTutorial(showGate = !gameStarted) {
-  if (!tutorialOverlay) return;
-  tutorialOverlay.hidden = true;
-  if (showGate) openStartGate();
-  else document.body.classList.remove('tutorial-open');
-}
-
-function renderTutorial(animated = true, direction = 'next') {
-  if (!tutorialSlide) return;
-  const render = () => {
-    const slide = tutorialSlides[tutorialIndex];
-    if (tutorialProgress) tutorialProgress.textContent = `${tutorialIndex + 1}/${tutorialSlides.length}`;
-    if (tutorialTitle) tutorialTitle.textContent = slide.title;
-    if (tutorialText) tutorialText.textContent = slide.text;
-    if (tutorialVisual) tutorialVisual.innerHTML = tutorialVisualMarkup(slide.visual);
-    if (tutorialList) tutorialList.innerHTML = slide.bullets.map(item => `<li>${item}</li>`).join('');
-    if (tutorialPrevBtn) tutorialPrevBtn.disabled = tutorialIndex === 0;
-    if (tutorialNextBtn) tutorialNextBtn.textContent = tutorialIndex === tutorialSlides.length - 1 ? 'Fertig' : 'Weiter';
-    renderTutorialDots();
-  };
-
-  if (!animated) {
-    render();
-    return;
-  }
-  tutorialSlide.classList.remove('tutorial-enter-left', 'tutorial-enter-right', 'tutorial-exit-left', 'tutorial-exit-right');
-  tutorialSlide.classList.add(direction === 'prev' ? 'tutorial-exit-right' : 'tutorial-exit-left');
-  window.setTimeout(() => {
-    render();
-    tutorialSlide.classList.remove('tutorial-exit-left', 'tutorial-exit-right');
-    tutorialSlide.classList.add(direction === 'prev' ? 'tutorial-enter-left' : 'tutorial-enter-right');
-    window.setTimeout(() => tutorialSlide.classList.remove('tutorial-enter-left', 'tutorial-enter-right'), 360);
-  }, 260);
-}
-
-function renderTutorialDots() {
-  if (!tutorialDots) return;
-  tutorialDots.innerHTML = '';
-  tutorialSlides.forEach((_, index) => {
-    const dot = document.createElement('button');
-    dot.type = 'button';
-    dot.className = index === tutorialIndex ? 'active' : '';
-    dot.setAttribute('aria-label', `Erklärungskarte ${index + 1} anzeigen`);
-    dot.addEventListener('click', () => {
-      if (index === tutorialIndex) return;
-      const direction = index < tutorialIndex ? 'prev' : 'next';
-      tutorialIndex = index;
-      renderTutorial(true, direction);
-    });
-    tutorialDots.appendChild(dot);
-  });
-}
-
-function nextTutorialSlide() {
-  if (tutorialIndex >= tutorialSlides.length - 1) {
-    closeTutorial(true);
-    return;
-  }
-  tutorialIndex += 1;
-  renderTutorial(true, 'next');
-}
-
-function prevTutorialSlide() {
-  if (tutorialIndex <= 0) return;
-  tutorialIndex -= 1;
-  renderTutorial(true, 'prev');
-}
-
-function updatePreparationTimerDisplay() {
-  if (!prepTimerValue) return;
-  const safe = Math.max(0, preparationTimeLeft);
-  const minutes = String(Math.floor(safe / 60)).padStart(2, '0');
-  const seconds = String(safe % 60).padStart(2, '0');
-  prepTimerValue.textContent = `${minutes}:${seconds}`;
-}
-
-function stopPreparationTimer() {
-  if (preparationTimerId) {
-    window.clearInterval(preparationTimerId);
-    preparationTimerId = null;
-  }
-}
-
-function showTimeUpState() {
-  stopPreparationTimer();
-  evaluationSession = null;
-  if (!evaluationOverlay) return;
-  evaluationOverlay.hidden = false;
-  if (overlayCloseBtn) overlayCloseBtn.hidden = true;
-  if (evaluationTitle) evaluationTitle.textContent = 'Zeit abgelaufen';
-  if (evaluationStepCounter) evaluationStepCounter.textContent = 'Zeitlimit erreicht';
-  if (evaluationStepDelta) {
-    evaluationStepDelta.textContent = '0';
-    evaluationStepDelta.className = 'step-delta neutral';
-  }
-  if (evaluationCurrentText) evaluationCurrentText.textContent = 'Die fünf Minuten für die Vorbereitung sind vorbei.';
-  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Die Stunde beginnt jetzt. Für diese Runde ist die Vorbereitungsphase beendet.';
-  if (evaluationNextBtn) evaluationNextBtn.hidden = true;
-  if (evaluationActionArea) evaluationActionArea.hidden = false;
-  if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Zeit ist um';
-  if (evaluationOutcomeMessage) evaluationOutcomeMessage.textContent = 'Du kannst einen neuen Versuch starten und den Klassenraum noch einmal vorbereiten.';
-  if (step2Btn) step2Btn.hidden = true;
-  if (newAttemptBtn) newAttemptBtn.hidden = false;
-}
-
-function startPreparationTimer() {
-  stopPreparationTimer();
-  preparationTimeLeft = 300;
-  updatePreparationTimerDisplay();
-  preparationTimerId = window.setInterval(() => {
-    preparationTimeLeft -= 1;
-    updatePreparationTimerDisplay();
-    if (preparationTimeLeft <= 0) {
-      preparationTimeLeft = 0;
-      updatePreparationTimerDisplay();
-      showTimeUpState();
-    }
-  }, 1000);
-}
-
-function openStartGate() {
-  if (!startGateOverlay) return;
-  startGateOverlay.hidden = false;
-  document.body.classList.add('tutorial-open');
-}
-
-function closeStartGate() {
-  if (!startGateOverlay) return;
-  startGateOverlay.hidden = true;
-  gameStarted = true;
-  document.body.classList.remove('tutorial-open');
-  startPreparationTimer();
-}
-
-function bindTutorialEvents() {
-  if (showTutorialBtn) showTutorialBtn.addEventListener('click', () => { if (startGateOverlay && !startGateOverlay.hidden) closeStartGate(); openTutorial(); });
-  if (tutorialSkipBtn) tutorialSkipBtn.addEventListener('click', () => closeTutorial(true));
-  if (tutorialNextBtn) tutorialNextBtn.addEventListener('click', nextTutorialSlide);
-  if (tutorialPrevBtn) tutorialPrevBtn.addEventListener('click', prevTutorialSlide);
-  if (startGameBtn) startGameBtn.addEventListener('click', closeStartGate);
-  if (tutorialOverlay) {
-    tutorialOverlay.addEventListener('keydown', event => {
-      if (event.key === 'Escape') closeTutorial();
-      if (event.key === 'ArrowRight') nextTutorialSlide();
-      if (event.key === 'ArrowLeft') prevTutorialSlide();
-    });
-  }
-}
-
 function bindGlobalEvents() {
-  if (layoutSelect) layoutSelect.addEventListener('change', () => initLayout(layoutSelect.value, false));
-  if (teacherModeSelect) teacherModeSelect.addEventListener('change', () => {
+  layoutSelect.addEventListener('change', () => initLayout(layoutSelect.value, false));
+  teacherModeSelect.addEventListener('change', () => {
     state.teacher.mode = teacherModeSelect.value;
     clearResults();
     renderGrid();
   });
-  if (teacherToken) {
-    teacherToken.addEventListener('dragstart', event => {
-      event.stopPropagation();
-      startDrag(event, { type: 'teacher' });
-    });
-    teacherToken.addEventListener('dragend', clearDragState);
-    teacherToken.addEventListener('click', () => {
-      state.placingTeacher = !state.placingTeacher;
-      state.selectedStudentId = null;
-      updateTeacherPlacementButton();
-      renderPalette();
-      renderGrid();
-    });
-  }
+  teacherToken.addEventListener('dragstart', event => {
+    event.stopPropagation();
+    startDrag(event, { type: 'teacher' });
+  });
+  teacherToken.addEventListener('dragend', clearDragState);
+  teacherToken.addEventListener('click', () => {
+    state.placingTeacher = !state.placingTeacher;
+    state.selectedStudentId = null;
+    updateTeacherPlacementButton();
+    renderPalette();
+    renderGrid();
+  });
   document.querySelectorAll('.dir-btn').forEach(button => {
-    button.addEventListener('click', event => {
-      event.stopPropagation();
+    button.addEventListener('click', () => {
       state.teacher.dir = button.dataset.dir;
       setDirectionActive(state.teacher.dir);
       clearResults();
       renderGrid();
-      closeTeacherDirectionPopover();
     });
   });
   paletteEl.addEventListener('dragover', event => {
@@ -1874,47 +1149,15 @@ function bindGlobalEvents() {
     }
     clearDragState();
   });
-  if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; evaluationSession = null; });
-  if (evaluationNextBtn) evaluationNextBtn.addEventListener('click', () => advanceEvaluationStep(true));
+  if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; });
   if (step2Btn) step2Btn.addEventListener('click', () => {
-    stopPreparationTimer();
-    if (saveStepStateForNextPage()) window.location.href = 'rules.html';
-  });
-  if (newAttemptBtn) newAttemptBtn.addEventListener('click', () => {
-    stopPreparationTimer();
-    gameStarted = false;
-    try {
-      localStorage.removeItem('classroomGame.step1');
-      localStorage.removeItem('classroomGame.step2.rulesDraft');
-      localStorage.removeItem('classroomGame.step2.rules');
-    } catch (error) {
-      console.warn('LocalStorage konnte nicht geleert werden.', error);
-    }
-    if (evaluationOverlay) evaluationOverlay.hidden = true;
-    if (evaluationNextBtn) evaluationNextBtn.hidden = false;
-    if (step2Btn) step2Btn.hidden = false;
-    evaluationSession = null;
-    initLayout('rows', false);
-    openStartGate();
-  });
-  document.addEventListener('click', event => {
-    if (teacherDirectionPopover && !teacherDirectionPopover.hidden && !event.target.closest('.teacher-direction-popover') && !event.target.closest('.teacher-in-room')) {
-      closeTeacherDirectionPopover();
-    }
+    window.alert('Schritt 2 ist als nächster Abschnitt vorgesehen: Klassenregeln aufstellen.');
   });
   evaluateBtn.addEventListener('click', evaluatePreparation);
-  resetBtn.addEventListener('click', () => {
-    const wasStarted = gameStarted;
-    initLayout(state.layout, false);
-    gameStarted = wasStarted;
-    if (wasStarted) startPreparationTimer();
-  });
+  resetBtn.addEventListener('click', () => initLayout(state.layout, false));
   document.addEventListener('dragend', clearDragState);
   document.addEventListener('drop', () => clearDragState());
 }
 
 bindGlobalEvents();
-bindTutorialEvents();
 initLayout('rows');
-if (startGateOverlay) startGateOverlay.hidden = true;
-openTutorial();

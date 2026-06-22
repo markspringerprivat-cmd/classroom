@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unterrichtsphase | Branching-Szenario</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="scenario-page">
+  <header class="topbar compact-topbar scenario-topbar">
+    <div>
+      <p class="eyebrow">Interaktive Phase · Schritt 3</p>
+      <h1>Unterrichtsphase vorbereiten</h1>
+      <p class="subtitle">Das eigentliche Branching-Szenario wird später ergänzt. Hier sind zunächst alle 40 möglichen Unterrichtsszenarien einsehbar.</p>
+    </div>
+    <button type="button" id="showScenariosBtn" class="primary-btn scenario-top-button">Szenarien einsehen</button>
+  </header>
+
+  <main class="scenario-shell">
+    <section class="panel scenario-intro">
+      <div>
+        <p class="eyebrow">Didaktische Logik</p>
+        <h2>Vom Classroom Management zur Intervention</h2>
+        <p>Die Szenarien greifen Variablen aus der Raumvorbereitung und der Regelauswahl auf. Negative Vorbereitungseffekte werden als Unterrichtsstörungen sichtbar; positive Entscheidungen werden als Ressourcen nutzbar.</p>
+      </div>
+      <div class="scenario-method-box">
+        <span>Schwerpunkt</span>
+        <strong>Kooperative Verhaltensmodifikation</strong>
+        <p>Problem verstehen, Ziel vereinbaren, Intervention durchführen und anschließend auswerten.</p>
+      </div>
+    </section>
+
+    <section class="panel scenario-overview">
+      <div class="section-title-row">
+        <h2>Übernommene Spieldaten</h2>
+        <span class="pill"><span id="activeScenarioCount">0</span>/<span id="totalScenarioCount">40</span> aktiv</span>
+      </div>
+      <div id="scenarioOverviewGrid" class="scenario-overview-grid"></div>
+      <h3>Verbindliche Klassenregeln</h3>
+      <div id="acceptedRulesBox" class="accepted-rules-box"></div>
+    </section>
+
+    <section class="panel scenario-placeholder">
+      <p class="eyebrow">Branching folgt später</p>
+      <h2>Aktueller Stand: Szenario-Katalog</h2>
+      <p>Über den Button oben rechts öffnest du den vollständigen Katalog. Jede Karte enthält eine kurze Situation, drei Antwortmöglichkeiten und Feedback mit +1, 0 oder -1 Punkt.</p>
+      <a class="ghost-btn scenario-back-link" href="rules.html">Zurück zu Schritt 2</a>
+    </section>
+  </main>
+
+  <aside id="scenarioPanel" class="scenario-panel" hidden>
+    <div class="scenario-panel-backdrop"></div>
+    <section class="scenario-panel-card" aria-label="Szenarienliste">
+      <div class="scenario-panel-head">
+        <div>
+          <p class="eyebrow">Szenarien einsehen</p>
+          <h2>40 vorbereitete Unterrichtsszenarien</h2>
+          <p>Aktive Szenarien passen besonders gut zu den gespeicherten Variablen aus Schritt 1 und 2.</p>
+        </div>
+        <button type="button" id="closeScenarioPanel" class="overlay-close">×</button>
+      </div>
+      <input id="scenarioSearch" class="scenario-search" type="search" placeholder="Szenarien filtern: Regel, Schülerprofil, KVM, Sichtfeld ..." />
+      <div id="scenarioList" class="scenario-list"></div>
+    </section>
+  </aside>
+
+  <script src="scenarios.js"></script>
+</body>
+</html>
