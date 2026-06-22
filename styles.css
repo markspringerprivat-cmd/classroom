@@ -4789,141 +4789,57 @@ body.rules-page {
   }
 }
 
-/* === Final polishing fixes (June 2026) === */
-#resultsPanel {
-  display: none !important;
-}
 
-.desk {
-  position: relative;
+/* alignment fix for desk tiles in rules + game */
+.frozen-cell,
+.branch-cell {
   overflow: hidden;
 }
 
-.desk.has-student {
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-}
-
-.desk.has-student .desk-label {
-  display: none !important;
-}
-
-.desk.has-student .student-chip {
-  position: absolute;
-  inset: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.frozen-desk,
+.branch-desk {
+  box-sizing: border-box;
+  inset: 1px !important;
   width: auto;
   height: auto;
-  min-height: 0;
   margin: 0;
-  padding: 2px;
-  border-radius: 10px;
 }
 
-.desk.has-student .student-chip-avatar-wrap,
+.frozen-desk {
+  border-radius: 7px;
+}
+
+.branch-desk {
+  border-radius: 12px;
+  padding: 2px !important;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.18);
+}
+
 .frozen-desk.has-student,
 .branch-desk.has-student {
-  width: 100%;
-  height: 100%;
-}
-
-.desk.has-student .student-chip-avatar-wrap,
-.frozen-desk.has-student,
-.branch-desk.has-student,
-.frozen-desk.has-student .frozen-student-avatar,
-.branch-desk.has-student .branch-student-avatar {
-  display: flex;
+  padding: 1px !important;
   align-items: center;
   justify-content: center;
 }
 
-.desk.has-student .student-chip-avatar,
 .frozen-student-avatar,
 .branch-student-avatar {
-  width: 94%;
-  height: 94%;
-  max-width: none;
-  max-height: none;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
   object-fit: contain;
   object-position: center center;
 }
 
-.desk.has-student .remove-student-btn {
-  top: 4px;
-  right: 4px;
+.branch-desk.has-student .branch-student-avatar,
+.frozen-desk.has-student .frozen-student-avatar {
+  width: 96% !important;
+  height: 96% !important;
 }
 
-.frozen-desk.has-student,
-.branch-desk.has-student {
-  padding: 2px;
-  overflow: hidden;
-}
-
-.branch-desk {
-  overflow: hidden;
-  padding: 2px;
-}
-
-.branch-desk.incident-pulse {
+.branch-desk.has-student .incident-countdown-number,
+.frozen-desk.has-student strong.sr-only,
+.branch-desk.has-student strong.sr-only {
   position: absolute;
-}
-
-.incident-countdown-number {
-  position: absolute !important;
-  inset: 0;
-  z-index: 3;
-  margin: 0;
-  padding: 0;
-  display: grid !important;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  background: none !important;
-  border: none !important;
-  font-size: 2rem !important;
-  line-height: 1 !important;
-  font-weight: 1000;
-  text-align: center;
-}
-
-.branch-object,
-.room-object {
-  overflow: hidden;
-}
-
-.branch-object .branch-object-icon {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.branch-object-trash,
-.room-object-trash {
-  inset: 3px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.96), rgba(153, 27, 27, 0.98));
-  border: 2px solid rgba(254, 202, 202, 0.78);
-  box-shadow: 0 12px 24px rgba(127, 29, 29, 0.30), inset 0 1px 0 rgba(255,255,255,0.10);
-}
-
-.branch-object-broom,
-.room-object-broom {
-  inset: 3px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(186, 230, 253, 0.98), rgba(96, 165, 250, 0.96));
-  border: 2px solid rgba(219, 234, 254, 0.88);
-  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.22), inset 0 1px 0 rgba(255,255,255,0.16);
-}
-
-.branch-object-broom.active-cleaning,
-.room-object-broom.active,
-.branch-object-broom.active {
-  border-color: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.28), 0 16px 32px rgba(37, 99, 235, 0.24);
 }
