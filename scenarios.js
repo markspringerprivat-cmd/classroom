@@ -774,7 +774,7 @@ function startLesson() {
     startLessonBtn.disabled = true;
     startLessonBtn.textContent = 'Unterricht läuft';
   }
-  logEvent('Der Unterricht beginnt. Reagiere auf blinkende Störungen innerhalb von 7 Sekunden.', 'info');
+  logEvent('Der Unterricht beginnt. Reagiere schnell auf blinkende Störungen. Müll blockiert Laufwege, bis er mit dem Besen entfernt wird.', 'info');
   game.lessonTimer = window.setInterval(tickLesson, 250);
   renderBranchGame();
   renderHighscore();
@@ -972,14 +972,14 @@ function spawnTrashIncident() {
     row: candidate.row,
     col: candidate.col,
     createdAt: Date.now(),
-    deadline: Date.now() + INCIDENT_REACTION_MS,
+    deadline: null,
     handled: false,
-    escalation: 'Der Müll bleibt liegen, blockiert weiter den Laufweg und verstärkt die Unruhe im Raum.'
+    escalation: 'Der Müll bleibt liegen und blockiert weiter den Laufweg im Raum.'
   };
   game.dynamicTrash.push({ id, type: 'trash', row: candidate.row, col: candidate.col, removed: false });
   game.activeIncidents.push(incident);
   playAlertAudio();
-  logEvent(`Müll taucht nahe bei ${candidate.nearStudent.name} auf. Aktiviere unten rechts den Besen und entferne den Müll innerhalb von 7 Sekunden.`, 'warn');
+  logEvent(`Müll taucht nahe bei ${candidate.nearStudent.name} auf. Aktiviere unten rechts den Besen und entferne den Müll, damit der Laufweg wieder frei wird.`, 'warn');
   renderBranchGame();
   renderIncidents();
   return true;
@@ -1027,7 +1027,7 @@ function buildEscalationMessage(student, scenarioItem) {
 function checkIncidentTimeouts() {
   if (!game.activeIncidents.length || game.scenarioOpen) return;
   const now = Date.now();
-  const expired = game.activeIncidents.filter(incident => now >= incident.deadline);
+  const expired = game.activeIncidents.filter(incident => incident.kind !== 'trash' && incident.deadline && now >= incident.deadline);
   expired.forEach(incident => failIncidentLate(incident));
 }
 
@@ -1113,8 +1113,8 @@ function renderBranchGame() {
       if (object) {
         const obj = document.createElement('span');
         const trashIncident = object.type === 'trash' ? activeTrashByCell.get(`${row},${col}`) : null;
-        obj.className = `branch-object branch-object-${object.type}${game.cleaningMode && object.type === 'broom' ? ' active-cleaning' : ''}`;
-        obj.innerHTML = `${object.type === 'broom' ? '🧹' : '🗑️'}${trashIncident ? `<strong class="incident-countdown-badge">${Math.max(0, Math.ceil((trashIncident.deadline - Date.now()) / 1000))}</strong>` : ''}`;
+        obj.className = `branch-object branch-object-${object.type}${game.cleaningMode && object.type === 'broom' ? ' active-cleaning' : ''}${trashIncident ? ' is-blocking' : ''}`;
+        obj.innerHTML = `${object.type === 'broom' ? '<span class="branch-object-icon">🧹</span>' : '<span class="branch-object-icon">🗑️</span>'}`;
         cell.appendChild(obj);
       }
 
@@ -1183,16 +1183,10 @@ function clearTrashIncidentAt(row, col) {
     renderBranchGame();
     return;
   }
-  if (Date.now() > incident.deadline) {
-    game.cleaningMode = false;
-    failIncidentLate(incident);
-    return;
-  }
-  const points = reactionPointsForIncident(incident);
   removeIncident(incident.id);
   removeDynamicTrash(incident.id);
   game.cleaningMode = false;
-  addHighscoreEvent(points, 'Müll rechtzeitig entfernt.', points > 0 ? 'good' : 'neutral');
+  addHighscoreEvent(0, 'Müll entfernt und Laufweg wieder freigemacht.', 'good');
   playGoodAudio();
   logEvent(`Der Weg nahe bei ${incident.student?.name || 'einem Tisch'} ist wieder frei.`, 'good');
   renderBranchGame();
@@ -1456,7 +1450,7 @@ function closeScenarioModal() {
   if (scenarioModal) scenarioModal.hidden = true;
   const pauseDuration = game.pausedAt ? Date.now() - game.pausedAt : 0;
   if (pauseDuration > 0) {
-    game.activeIncidents.forEach(incident => { incident.deadline += pauseDuration; });
+    game.activeIncidents.forEach(incident => { if (incident.deadline) incident.deadline += pauseDuration; });
   }
   game.pausedAt = null;
   game.scenarioOpen = false;
@@ -1471,7 +1465,7 @@ function renderIncidents() {
   const cards = game.activeIncidents.map(incident => {
     const left = Math.max(0, Math.ceil((incident.deadline - now) / 1000));
     if (incident.kind === 'trash') {
-      return `<article class="incident-item event-card"><strong>Müll</strong><span>${left}s bis Eskalation</span><small>nahe bei ${escapeHtml(incident.student?.name || 'einem Tisch')}</small></article>`;
+      return `<article class="incident-item event-card"><strong>Müll blockiert den Weg</strong><span>Bleibt aktiv, bis du ihn mit dem Besen entfernst</span><small>nahe bei ${escapeHtml(incident.student?.name || 'einem Tisch')}</small></article>`;
     }
     return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)}</strong><span>${left}s bis Eskalation</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
   }).join('');
