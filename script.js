@@ -134,6 +134,17 @@ function isBlockedGroupAnchor(group, row, col) {
   return Boolean(group) && group.minRow === row && group.minCol === col;
 }
 
+function getBlockedJoinClasses(group, row, col) {
+  if (!group) return [];
+  const has = (r, c) => group.cells.some(cell => cell.row == r && cell.col == c);
+  const classes = [];
+  if (has(row, col - 1)) classes.push('join-left');
+  if (has(row, col + 1)) classes.push('join-right');
+  if (has(row - 1, col)) classes.push('join-up');
+  if (has(row + 1, col)) classes.push('join-down');
+  return classes;
+}
+
 const gridEl = document.getElementById('classroomGrid');
 const paletteEl = document.getElementById('studentPalette');
 const layoutSelect = document.getElementById('layoutSelect');
@@ -248,6 +259,7 @@ function renderGrid() {
       const blockGroup = block ? getBlockedGroupAt(row, col) : null;
       if (block) {
         cell.classList.add('blocked-cell', `blocked-${block.type}`);
+        if (blockGroup) cell.classList.add(...getBlockedJoinClasses(blockGroup, row, col));
         cell.dataset.blockedType = block.type;
         if (blockGroup && isBlockedGroupAnchor(blockGroup, row, col)) {
           cell.appendChild(createBlockedElement(blockGroup));
@@ -1016,8 +1028,7 @@ function evaluatePreparation() {
   if (!allStudentsPlaced()) {
     clearResults();
     const missing = students.length - Object.keys(state.assignments).length;
-    resultsPanel.hidden = false;
-    feedbackList.innerHTML = `<li class="warning">Die Vorbereitung kann erst ausgewertet werden, wenn alle 10 Schüler*innen platziert sind. Es fehlen noch ${missing}.</li>`;
+    if (feedbackList) feedbackList.innerHTML = '';
     meterFill.style.width = '0%';
     stateOutput.textContent = '';
     return;
@@ -1344,7 +1355,7 @@ function showResults(score, rawScore, feedback, metrics) {
     suggestedScenarioHooks: [...new Set(metrics.futureScenarioHooks)]
   };
   stateOutput.textContent = JSON.stringify(exportData, null, 2);
-  resultsPanel.hidden = false;
+  if (resultsPanel) resultsPanel.hidden = true;
   evaluationOverlay.hidden = false;
   startEvaluationAnimation(feedback, rawScore);
 }
@@ -1609,9 +1620,9 @@ function tutorialVisualMarkup(type) {
   if (type === 'teacher') return `
     <div class="tutorial-viz-grid viz-teacher">
       <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell"></span><span class="viz-cell green-3"></span><span class="viz-cell green-4"></span><span class="viz-cell green-3"></span><span class="viz-cell"></span>
-      <span class="viz-cell green-2"></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell green-2"></span>
-      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
+      <span class="viz-cell"></span><span class="viz-cell green-2"></span><span class="viz-cell green-3"></span><span class="viz-cell green-2"></span><span class="viz-cell"></span>
+      <span class="viz-cell green-1"></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell green-1"></span>
+      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-2"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
     </div>`;
   if (type === 'risk') return `
     <div class="tutorial-mini-grid risk-demo">
@@ -1635,7 +1646,7 @@ function tutorialVisualMarkup(type) {
     <div class="tutorial-viz-grid viz-spacing">
       <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
       <span class="viz-cell desk-mini">Tisch 2<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 1<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 4<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 9<br><small>freier Platz</small></span>
-      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
+      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-2"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
       <span class="viz-cell desk-mini">Tisch 6<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 5<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 8<br><small>freier Platz</small></span>
     </div>`;
   if (type === 'trash') return `
