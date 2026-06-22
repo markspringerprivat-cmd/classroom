@@ -1300,7 +1300,7 @@ function audioCandidates(kind) {
   if (kind === 'good') return ['Gut.mp3'];
   if (kind === 'bad') return ['Bad.mp3'];
   if (kind === 'timer') return ['Timer.mp3'];
-  if (kind === 'alert') return ['Alert.mp3', 'Alarm.mp3', 'Störung.mp3', 'Bad.mp3'];
+  if (kind === 'alert') return ['Alert.mp3'];
   return [];
 }
 
