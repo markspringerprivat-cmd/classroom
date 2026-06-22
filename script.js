@@ -144,6 +144,7 @@ const evaluateBtn = document.getElementById('evaluateBtn');
 const evalHint = document.getElementById('evalHint');
 const resetBtn = document.getElementById('resetBtn');
 const scoreValue = document.getElementById('scoreValue');
+const prepTimerValue = document.getElementById('prepTimerValue');
 const resultsPanel = document.getElementById('resultsPanel');
 const feedbackList = document.getElementById('feedbackList');
 const meterFill = document.getElementById('meterFill');
@@ -183,6 +184,8 @@ const startGateOverlay = document.getElementById('startGateOverlay');
 const startGameBtn = document.getElementById('startGameBtn');
 let tutorialIndex = 0;
 let gameStarted = false;
+let preparationTimerId = null;
+let preparationTimeLeft = 300;
 let evaluationTimers = [];
 let evaluationSession = null;
 
@@ -207,6 +210,9 @@ function initLayout(layoutKey, keepAssignments = false) {
   setDirectionActive(state.teacher.dir);
   updateTeacherPlacementButton();
   clearResults();
+  stopPreparationTimer();
+  preparationTimeLeft = 300;
+  updatePreparationTimerDisplay();
   render();
 }
 
@@ -546,6 +552,9 @@ function removeStudentFromDesk(deskId) {
   delete state.assignments[deskId];
   state.selectedStudentId = null;
   clearResults();
+  stopPreparationTimer();
+  preparationTimeLeft = 300;
+  updatePreparationTimerDisplay();
   render();
 }
 
@@ -571,6 +580,9 @@ function assignStudentToDesk(studentId, deskId) {
   state.assignments[deskId] = studentId;
   state.selectedStudentId = null;
   clearResults();
+  stopPreparationTimer();
+  preparationTimeLeft = 300;
+  updatePreparationTimerDisplay();
   render();
 }
 
@@ -834,27 +846,41 @@ function getVisionMap() {
   const map = new Map();
   const candidates = getCandidateVisionCells();
   candidates.forEach(candidate => {
-    const blockers = countDeskBlockersBefore(candidate);
-    // Jeder Tisch auf dem Sichtstrahl schwächt dahinterliegende Felder ab.
-    const strength = Math.max(0, candidate.baseStrength - blockers * 2);
+    const obstacleInfo = countVisionObstaclesBefore(candidate);
+    // Tische schwächen den Sichtstrahl ab. Müll hebt das Sichtfeld an dieser Stelle und dahinter komplett auf.
+    if (obstacleInfo.trashBlocked) return;
+    const strength = Math.max(0, candidate.baseStrength - obstacleInfo.deskBlockers * 2);
     if (strength <= 0) return;
     const level = Math.max(1, Math.min(5, 6 - strength)); // level 1 = dunkel/stark, level 5 = sehr schwach
     const key = cellKey(candidate.row, candidate.col);
     const existing = map.get(key);
-    if (!existing || strength > existing.strength) map.set(key, { ...candidate, blockers, strength, level });
+    if (!existing || strength > existing.strength) {
+      map.set(key, { ...candidate, blockers: obstacleInfo.deskBlockers, strength, level });
+    }
   });
   return map;
 }
 
-function countDeskBlockersBefore(candidate) {
-  let blockers = 0;
+function countVisionObstaclesBefore(candidate) {
+  let deskBlockers = 0;
+  let trashBlocked = false;
   const { row, col, dir } = state.teacher;
-  for (let step = 1; step < candidate.step; step++) {
+  for (let step = 1; step <= candidate.step; step++) {
     const scaledOffset = Math.round(candidate.offset * (step / candidate.step));
     const pos = offsetCell(row, col, dir, step, scaledOffset);
-    if (insideGrid(pos.row, pos.col) && getDeskAt(pos.row, pos.col)) blockers += 1;
+    if (!insideGrid(pos.row, pos.col)) continue;
+
+    const object = getRoomObjectAt(pos.row, pos.col);
+    if (object?.type === 'trash') {
+      trashBlocked = true;
+      break;
+    }
+
+    if (step < candidate.step && getDeskAt(pos.row, pos.col)) {
+      deskBlockers += 1;
+    }
   }
-  return blockers;
+  return { deskBlockers, trashBlocked };
 }
 
 function getVisionStrengthAt(row, col) {
@@ -1445,6 +1471,7 @@ function startEvaluationAnimation(feedback, rawScore) {
   if (evaluationCurrentText) evaluationCurrentText.textContent = 'Berechnung startet …';
   if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Klicke auf „Weiter“, um die Bewertung Schritt für Schritt durchzugehen.';
   if (animatedFinalScore) animatedFinalScore.textContent = 'Endwert: –';
+  if (overlayCloseBtn) overlayCloseBtn.hidden = false;
   if (evaluationActionArea) evaluationActionArea.hidden = true;
   if (evaluationNextBtn) {
     evaluationNextBtn.hidden = false;
@@ -1518,6 +1545,7 @@ function clearResults() {
   scoreValue.textContent = '–';
   resultsPanel.hidden = true;
   if (evaluationOverlay) evaluationOverlay.hidden = true;
+  if (overlayCloseBtn) overlayCloseBtn.hidden = false;
   if (evaluationActionArea) evaluationActionArea.hidden = true;
 }
 
@@ -1579,12 +1607,11 @@ function tutorialVisualMarkup(type) {
       <div class="mini-arrow">→</div><div class="mini-score"><span></span><span></span><span></span><span></span><span></span></div>
     </div>`;
   if (type === 'teacher') return `
-    <div class="tutorial-mini-grid teacher-demo teacher-fan-demo">
-      <span></span><span></span><span class="mini-teacher-square">LK ↓</span><span></span><span></span>
-      <span></span><span class="mini-desk demo-desk-small"></span><span class="mini-desk demo-desk-small"></span><span class="mini-desk demo-desk-small"></span><span></span>
-      <span class="v4"></span><span class="v3"></span><span class="v2"></span><span class="v3"></span><span class="v4"></span>
-      <span class="v4"></span><span class="v3"></span><span class="desk-blocked-demo">Tisch</span><span class="v3"></span><span class="v4"></span>
-      <span class="v4"></span><span class="v4"></span><span class="weakened-demo"></span><span class="v4"></span><span class="v4"></span>
+    <div class="tutorial-viz-grid viz-teacher">
+      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
+      <span class="viz-cell"></span><span class="viz-cell green-3"></span><span class="viz-cell green-4"></span><span class="viz-cell green-3"></span><span class="viz-cell"></span>
+      <span class="viz-cell green-2"></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell green-2"></span>
+      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
     </div>`;
   if (type === 'risk') return `
     <div class="tutorial-mini-grid risk-demo">
@@ -1599,22 +1626,23 @@ function tutorialVisualMarkup(type) {
       <span class="g2"></span><span class="g2"></span><span class="g2"></span>
     </div>`;
   if (type === 'neutralize') return `
-    <div class="tutorial-mini-grid neutral-grid-demo">
-      <span class="r1"></span><span class="yellow-neutral">neutral</span><span class="g1"></span>
-      <span class="neutral-label">Rot</span><span class="student-neutral">Sitzplatz</span><span class="neutral-label">Grün</span>
-      <span></span><span></span><span></span>
+    <div class="tutorial-viz-grid viz-neutralize">
+      <span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
+      <span class="viz-cell red-2"></span><span class="viz-cell desk-mini">Tisch 1<span class="remove-x">×</span><br><strong>Ben</strong></span><span class="viz-cell neutral-1"></span><span class="viz-cell desk-mini">Tisch 4<span class="remove-x">×</span><br><strong>Sara</strong></span><span class="viz-cell green-2"></span>
+      <span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
     </div>`;
   if (type === 'spacing') return `
-    <div class="tutorial-spacing-grid-demo">
-      <span class="demo-desk">Tisch</span><span></span><span class="demo-desk">Tisch</span><span class="demo-note">Gang freihalten</span>
-      <span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span></span>
-      <span class="demo-desk muted-desk">Tisch</span><span></span><span class="demo-desk muted-desk">Tisch</span><span></span>
+    <div class="tutorial-viz-grid viz-spacing">
+      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
+      <span class="viz-cell desk-mini">Tisch 2<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 1<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 4<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 9<br><small>freier Platz</small></span>
+      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
+      <span class="viz-cell desk-mini">Tisch 6<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 5<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 8<br><small>freier Platz</small></span>
     </div>`;
   if (type === 'trash') return `
-    <div class="tutorial-mini-grid trash-demo">
-      <span class="r1">🗑️</span><span class="r1"></span><span></span>
-      <span class="r1"></span><span></span><span></span>
-      <span></span><span></span><button type="button" class="mini-broom">🧹</button>
+    <div class="tutorial-viz-grid viz-trash">
+      <span class="viz-cell red-2 trash-home">🗑️</span><span class="viz-cell red-2"></span><span class="viz-cell"></span>
+      <span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
+      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home">🧹</span>
     </div>`;
   return `
     <div class="tutorial-check-demo">
@@ -1701,6 +1729,58 @@ function prevTutorialSlide() {
   renderTutorial(true, 'prev');
 }
 
+function updatePreparationTimerDisplay() {
+  if (!prepTimerValue) return;
+  const safe = Math.max(0, preparationTimeLeft);
+  const minutes = String(Math.floor(safe / 60)).padStart(2, '0');
+  const seconds = String(safe % 60).padStart(2, '0');
+  prepTimerValue.textContent = `${minutes}:${seconds}`;
+}
+
+function stopPreparationTimer() {
+  if (preparationTimerId) {
+    window.clearInterval(preparationTimerId);
+    preparationTimerId = null;
+  }
+}
+
+function showTimeUpState() {
+  stopPreparationTimer();
+  evaluationSession = null;
+  if (!evaluationOverlay) return;
+  evaluationOverlay.hidden = false;
+  if (overlayCloseBtn) overlayCloseBtn.hidden = true;
+  if (evaluationTitle) evaluationTitle.textContent = 'Zeit abgelaufen';
+  if (evaluationStepCounter) evaluationStepCounter.textContent = 'Zeitlimit erreicht';
+  if (evaluationStepDelta) {
+    evaluationStepDelta.textContent = '0';
+    evaluationStepDelta.className = 'step-delta neutral';
+  }
+  if (evaluationCurrentText) evaluationCurrentText.textContent = 'Die fünf Minuten für die Vorbereitung sind vorbei.';
+  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Die Stunde beginnt jetzt. Für diese Runde ist die Vorbereitungsphase beendet.';
+  if (evaluationNextBtn) evaluationNextBtn.hidden = true;
+  if (evaluationActionArea) evaluationActionArea.hidden = false;
+  if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Zeit ist um';
+  if (evaluationOutcomeMessage) evaluationOutcomeMessage.textContent = 'Du kannst einen neuen Versuch starten und den Klassenraum noch einmal vorbereiten.';
+  if (step2Btn) step2Btn.hidden = true;
+  if (newAttemptBtn) newAttemptBtn.hidden = false;
+}
+
+function startPreparationTimer() {
+  stopPreparationTimer();
+  preparationTimeLeft = 300;
+  updatePreparationTimerDisplay();
+  preparationTimerId = window.setInterval(() => {
+    preparationTimeLeft -= 1;
+    updatePreparationTimerDisplay();
+    if (preparationTimeLeft <= 0) {
+      preparationTimeLeft = 0;
+      updatePreparationTimerDisplay();
+      showTimeUpState();
+    }
+  }, 1000);
+}
+
 function openStartGate() {
   if (!startGateOverlay) return;
   startGateOverlay.hidden = false;
@@ -1712,6 +1792,7 @@ function closeStartGate() {
   startGateOverlay.hidden = true;
   gameStarted = true;
   document.body.classList.remove('tutorial-open');
+  startPreparationTimer();
 }
 
 function bindTutorialEvents() {
@@ -1784,9 +1865,12 @@ function bindGlobalEvents() {
   if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; evaluationSession = null; });
   if (evaluationNextBtn) evaluationNextBtn.addEventListener('click', () => advanceEvaluationStep(true));
   if (step2Btn) step2Btn.addEventListener('click', () => {
+    stopPreparationTimer();
     if (saveStepStateForNextPage()) window.location.href = 'rules.html';
   });
   if (newAttemptBtn) newAttemptBtn.addEventListener('click', () => {
+    stopPreparationTimer();
+    gameStarted = false;
     try {
       localStorage.removeItem('classroomGame.step1');
       localStorage.removeItem('classroomGame.step2.rulesDraft');
@@ -1795,8 +1879,11 @@ function bindGlobalEvents() {
       console.warn('LocalStorage konnte nicht geleert werden.', error);
     }
     if (evaluationOverlay) evaluationOverlay.hidden = true;
+    if (evaluationNextBtn) evaluationNextBtn.hidden = false;
+    if (step2Btn) step2Btn.hidden = false;
     evaluationSession = null;
     initLayout('rows', false);
+    openStartGate();
   });
   document.addEventListener('click', event => {
     if (teacherDirectionPopover && !teacherDirectionPopover.hidden && !event.target.closest('.teacher-direction-popover') && !event.target.closest('.teacher-in-room')) {
@@ -1804,7 +1891,12 @@ function bindGlobalEvents() {
     }
   });
   evaluateBtn.addEventListener('click', evaluatePreparation);
-  resetBtn.addEventListener('click', () => initLayout(state.layout, false));
+  resetBtn.addEventListener('click', () => {
+    const wasStarted = gameStarted;
+    initLayout(state.layout, false);
+    gameStarted = wasStarted;
+    if (wasStarted) startPreparationTimer();
+  });
   document.addEventListener('dragend', clearDragState);
   document.addEventListener('drop', () => clearDragState());
 }
