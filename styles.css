@@ -3406,73 +3406,86 @@ body.rules-page {
 }
 
 
-/* ===== Final overrides based on Version 15 user corrections ===== */
-.results {
+/* ===== Final object-rectangle polish: no internal seams in merged room objects ===== */
+.grid-cell.blocked-cell,
+.frozen-cell.frozen-blocked {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.grid-cell.blocked-cell::before,
+.frozen-cell.frozen-blocked::before {
   display: none !important;
 }
 
-.grid-cell.blocked-cell,
-.frozen-cell.frozen-blocked {
-  overflow: visible;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.grid-cell.blocked-cell::after,
-.frozen-cell.frozen-blocked::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: 12px;
-  background: var(--blocked-fill, rgba(30, 41, 59, 0.88));
-  border: 1px solid var(--blocked-border, rgba(148, 163, 184, 0.18));
-}
-
-.grid-cell.blocked-cell.join-left::after,
-.frozen-cell.frozen-blocked.join-left::after { left: -6px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
-.grid-cell.blocked-cell.join-right::after,
-.frozen-cell.frozen-blocked.join-right::after { right: -6px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.grid-cell.blocked-cell.join-up::after,
-.frozen-cell.frozen-blocked.join-up::after { top: -6px; border-top-left-radius: 0; border-top-right-radius: 0; }
-.grid-cell.blocked-cell.join-down::after,
-.frozen-cell.frozen-blocked.join-down::after { bottom: -6px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-
-.blocked-board, .frozen-blocked-board { --blocked-fill: rgba(37, 99, 235, 0.28); --blocked-border: rgba(147, 197, 253, 0.48); }
-.blocked-door, .frozen-blocked-door { --blocked-fill: rgba(59, 130, 246, 0.20); --blocked-border: rgba(125, 211, 252, 0.35); }
-.blocked-exit, .frozen-blocked-exit { --blocked-fill: rgba(34, 197, 94, 0.18); --blocked-border: rgba(74, 222, 128, 0.30); }
-.blocked-window, .frozen-blocked-window { --blocked-fill: rgba(125, 211, 252, 0.16); --blocked-border: rgba(165, 243, 252, 0.26); }
-.blocked-cabinet, .frozen-blocked-cabinet { --blocked-fill: rgba(100, 116, 139, 0.28); --blocked-border: rgba(148, 163, 184, 0.24); }
-.blocked-sink, .frozen-blocked-sink { --blocked-fill: rgba(59, 130, 246, 0.24); --blocked-border: rgba(147, 197, 253, 0.34); }
-
 .blocked-marker,
 .frozen-blocked-label {
-  z-index: 2;
+  z-index: 9 !important;
+  pointer-events: none;
+  border-radius: 12px !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 1px 0 rgba(0,0,0,0.12) !important;
 }
 
 .blocked-marker {
-  inset: -2px;
-  width: calc(var(--span-cols) * var(--cell-size) + (var(--span-cols) - 1) * var(--grid-gap) + 4px);
-  height: calc(var(--span-rows) * var(--cell-size) + (var(--span-rows) - 1) * var(--grid-gap) + 4px);
+  inset: -2px !important;
+  width: calc(var(--span-cols) * var(--cell-size) + (var(--span-cols) - 1) * var(--grid-gap, 6px) + 4px) !important;
+  height: calc(var(--span-rows) * var(--cell-size) + (var(--span-rows) - 1) * var(--grid-gap, 6px) + 4px) !important;
 }
 
 .frozen-blocked-label {
-  inset: -2px;
-  width: calc(var(--span-cols) * var(--frozen-cell) + (var(--span-cols) - 1) * 6px + 4px);
-  height: calc(var(--span-rows) * var(--frozen-cell) + (var(--span-rows) - 1) * 6px + 4px);
+  position: absolute !important;
+  top: -1px !important;
+  left: -1px !important;
+  width: calc(var(--frozen-span-cols) * var(--frozen-cell) + (var(--frozen-span-cols) - 1) * 4px + 2px) !important;
+  height: calc(var(--frozen-span-rows) * var(--frozen-cell) + (var(--frozen-span-rows) - 1) * 4px + 2px) !important;
+  display: grid !important;
+  place-items: center !important;
 }
 
-.viz-teacher,
-.viz-spacing,
-.viz-neutralize {
-  grid-template-columns: repeat(5, 1fr);
+.blocked-marker.blocked-board,
+.frozen-blocked-label.frozen-board {
+  background: rgba(39, 76, 155, 0.98) !important;
+  border-color: rgba(147, 197, 253, 0.36) !important;
+}
+.blocked-marker.blocked-door,
+.frozen-blocked-label.frozen-door {
+  background: rgba(37, 72, 101, 0.98) !important;
+  border-color: rgba(125, 211, 252, 0.30) !important;
+}
+.blocked-marker.blocked-window,
+.frozen-blocked-label.frozen-window {
+  background: rgba(39, 62, 84, 0.98) !important;
+  border-color: rgba(165, 243, 252, 0.28) !important;
+}
+.blocked-marker.blocked-exit,
+.frozen-blocked-label.frozen-exit {
+  background: rgba(35, 79, 64, 0.98) !important;
+  border-color: rgba(74, 222, 128, 0.28) !important;
+}
+.blocked-marker.blocked-cabinet,
+.frozen-blocked-label.frozen-cabinet {
+  background: rgba(57, 63, 76, 0.98) !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}
+.blocked-marker.blocked-sink,
+.frozen-blocked-label.frozen-sink {
+  background: rgba(37, 62, 106, 0.98) !important;
+  border-color: rgba(147, 197, 253, 0.28) !important;
 }
 
-.viz-teacher,
-.viz-spacing {
-  grid-template-rows: repeat(4, 74px);
+.blocked-marker.side-label span,
+.frozen-blocked-label.side-label span {
+  display: inline-block !important;
+  transform: rotate(-90deg) !important;
+  white-space: nowrap !important;
 }
 
-.viz-neutralize {
-  grid-template-rows: repeat(3, 74px);
+/* Ensure the small classroom copy in rules.html uses the same connected-object logic. */
+.frozen-cell.frozen-blocked.join-left,
+.frozen-cell.frozen-blocked.join-right,
+.frozen-cell.frozen-blocked.join-up,
+.frozen-cell.frozen-blocked.join-down {
+  background: transparent !important;
+  border-color: transparent !important;
 }
