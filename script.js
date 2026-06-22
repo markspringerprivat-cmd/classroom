@@ -86,6 +86,19 @@ const evaluationActionArea = document.getElementById('evaluationActionArea');
 const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle');
 const evaluationOutcomeMessage = document.getElementById('evaluationOutcomeMessage');
 const step2Btn = document.getElementById('step2Btn');
+const showTutorialBtn = document.getElementById('showTutorialBtn');
+const tutorialOverlay = document.getElementById('tutorialOverlay');
+const tutorialSlide = document.getElementById('tutorialSlide');
+const tutorialVisual = document.getElementById('tutorialVisual');
+const tutorialTitle = document.getElementById('tutorialTitle');
+const tutorialText = document.getElementById('tutorialText');
+const tutorialList = document.getElementById('tutorialList');
+const tutorialProgress = document.getElementById('tutorialProgress');
+const tutorialDots = document.getElementById('tutorialDots');
+const tutorialPrevBtn = document.getElementById('tutorialPrevBtn');
+const tutorialNextBtn = document.getElementById('tutorialNextBtn');
+const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
+let tutorialIndex = 0;
 let evaluationTimers = [];
 let evaluationSession = null;
 
@@ -1203,6 +1216,176 @@ function clearResults() {
   if (evaluationActionArea) evaluationActionArea.hidden = true;
 }
 
+const tutorialSlides = [
+  {
+    title: 'Ziel des Rasterspiels',
+    text: 'Du bereitest eine Unterrichtsstunde vor. Gute Classroom-Management-Entscheidungen erhöhen die Startstabilität für die nächste Spielphase.',
+    bullets: ['Sitzordnung wählen und Tische verschieben', 'Schüler*innen passend platzieren', 'Lehrkraft positionieren und Sichtbereich prüfen', 'Am Ende wird die Vorbereitung mit 0 bis 10 Balken bewertet'],
+    visual: 'goal'
+  },
+  {
+    title: 'Lehrkraft und Sichtbereich',
+    text: 'Die Lehrkraft kann frei im Raum platziert werden. Blickrichtung und Verhalten erzeugen unterschiedliche Sicht- und Präsenzbereiche.',
+    bullets: ['vorne stehend: breiter Leitungsfächer', 'bewegend: schmaler Präsenzkorridor', 'sitzend: kurzer Sichtbereich', 'Tische schwächen dahinterliegende Felder ab'],
+    visual: 'teacher'
+  },
+  {
+    title: 'Rote Risikofelder',
+    text: 'Einige Schülerprofile erzeugen im Umfeld Störrisiken. Diese Profile sind für den Spielverlauf hinterlegt und beeinflussen spätere Szenarien.',
+    bullets: ['Ablenkung wirkt häufig links und rechts', 'Konflikte zählen auch diagonal', 'verdecktes Off-Task-Verhalten ist in blinden Bereichen riskanter', 'Rot bedeutet: erhöhte Störanfälligkeit'],
+    visual: 'risk'
+  },
+  {
+    title: 'Grüne Stabilisierung',
+    text: 'Stabilisierende Schüler*innen und gute Sichtbereiche können Risiken abschwächen. Dadurch wird Classroom Management als präventiver Rahmen sichtbar.',
+    bullets: ['Grün steht für Übersicht, Unterstützung oder Vermittlung', 'je dunkler das Grün, desto stärker der Schutzfaktor', 'stabile Sitznachbarschaften können riskante Nähe neutralisieren'],
+    visual: 'support'
+  },
+  {
+    title: 'Neutralisierung: Rot trifft Grün',
+    text: 'Wenn ein Risiko durch Sichtbereich oder unterstützende Nachbarschaft abgefedert wird, wird der Bereich gelb-orange markiert.',
+    bullets: ['Gelb/Orange bedeutet: Risiko ist nicht weg, aber abgefedert', 'so kann ein gefährdeter Schüler geschützt werden', 'die spätere Auswertung rechnet solche Effekte gegeneinander auf'],
+    visual: 'neutralize'
+  },
+  {
+    title: 'Worauf du achten solltest',
+    text: 'Die Vorbereitung wird streng bewertet. Einzelne riskante Nachbarschaften geben jeweils Abzug, gute Sichtbarkeit und stabile Nachbarschaften geben Punkte.',
+    bullets: ['alle 10 Schüler*innen müssen platziert sein', 'vor und hinter Tischen muss ein Feld frei bleiben', 'störanfällige Schüler*innen sollten wirksam sichtbar sein', 'riskante Paare möglichst trennen oder stabilisieren', 'danach folgt Schritt 2: Klassenregeln auswählen'],
+    visual: 'checklist'
+  }
+];
+
+function tutorialVisualMarkup(type) {
+  if (type === 'goal') return `
+    <div class="tutorial-mini-board goal-board">
+      <div class="mini-card mini-desk">Tisch</div><div class="mini-card mini-student">Schüler*in</div><div class="mini-card mini-teacher">LK</div>
+      <div class="mini-arrow">→</div><div class="mini-score"><span></span><span></span><span></span><span></span><span></span></div>
+    </div>`;
+  if (type === 'teacher') return `
+    <div class="tutorial-mini-grid teacher-demo">
+      <span></span><span class="v4"></span><span class="v3"></span><span class="v4"></span><span></span>
+      <span></span><span class="v3"></span><span class="v2"></span><span class="v3"></span><span></span>
+      <span class="v4"></span><span class="v2"></span><span class="v1"></span><span class="v2"></span><span class="v4"></span>
+      <span></span><span></span><span class="mini-teacher-square">LK ↓</span><span></span><span></span>
+    </div>`;
+  if (type === 'risk') return `
+    <div class="tutorial-mini-grid risk-demo">
+      <span></span><span class="r2"></span><span></span>
+      <span class="r1"></span><span class="student-risk">Petra</span><span class="r1"></span>
+      <span></span><span class="r2"></span><span></span>
+    </div>`;
+  if (type === 'support') return `
+    <div class="tutorial-mini-grid risk-demo support-demo">
+      <span class="g2"></span><span class="g2"></span><span class="g2"></span>
+      <span class="g1"></span><span class="student-support">Amira</span><span class="g1"></span>
+      <span class="g2"></span><span class="g2"></span><span class="g2"></span>
+    </div>`;
+  if (type === 'neutralize') return `
+    <div class="tutorial-neutral-demo">
+      <div class="neutral-layer red-layer">Risiko</div>
+      <div class="neutral-plus">+</div>
+      <div class="neutral-layer green-layer">Schutz</div>
+      <div class="neutral-equals">=</div>
+      <div class="neutral-layer yellow-layer">abgefedert</div>
+    </div>`;
+  return `
+    <div class="tutorial-check-demo">
+      <div><strong>✓</strong><span>alle platziert</span></div>
+      <div><strong>✓</strong><span>Sichtfeld genutzt</span></div>
+      <div><strong>!</strong><span>riskante Nähe prüfen</span></div>
+      <div><strong>✓</strong><span>Stabilisierung einsetzen</span></div>
+    </div>`;
+}
+
+function openTutorial() {
+  if (!tutorialOverlay) return;
+  tutorialIndex = 0;
+  tutorialOverlay.hidden = false;
+  document.body.classList.add('tutorial-open');
+  renderTutorial(false);
+}
+
+function closeTutorial() {
+  if (!tutorialOverlay) return;
+  tutorialOverlay.hidden = true;
+  document.body.classList.remove('tutorial-open');
+}
+
+function renderTutorial(animated = true, direction = 'next') {
+  if (!tutorialSlide) return;
+  const render = () => {
+    const slide = tutorialSlides[tutorialIndex];
+    if (tutorialProgress) tutorialProgress.textContent = `${tutorialIndex + 1}/${tutorialSlides.length}`;
+    if (tutorialTitle) tutorialTitle.textContent = slide.title;
+    if (tutorialText) tutorialText.textContent = slide.text;
+    if (tutorialVisual) tutorialVisual.innerHTML = tutorialVisualMarkup(slide.visual);
+    if (tutorialList) tutorialList.innerHTML = slide.bullets.map(item => `<li>${item}</li>`).join('');
+    if (tutorialPrevBtn) tutorialPrevBtn.disabled = tutorialIndex === 0;
+    if (tutorialNextBtn) tutorialNextBtn.textContent = tutorialIndex === tutorialSlides.length - 1 ? 'Spiel starten' : 'Weiter';
+    renderTutorialDots();
+  };
+
+  if (!animated) {
+    render();
+    return;
+  }
+  tutorialSlide.classList.remove('tutorial-enter-left', 'tutorial-enter-right', 'tutorial-exit-left', 'tutorial-exit-right');
+  tutorialSlide.classList.add(direction === 'prev' ? 'tutorial-exit-right' : 'tutorial-exit-left');
+  window.setTimeout(() => {
+    render();
+    tutorialSlide.classList.remove('tutorial-exit-left', 'tutorial-exit-right');
+    tutorialSlide.classList.add(direction === 'prev' ? 'tutorial-enter-left' : 'tutorial-enter-right');
+    window.setTimeout(() => tutorialSlide.classList.remove('tutorial-enter-left', 'tutorial-enter-right'), 360);
+  }, 260);
+}
+
+function renderTutorialDots() {
+  if (!tutorialDots) return;
+  tutorialDots.innerHTML = '';
+  tutorialSlides.forEach((_, index) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = index === tutorialIndex ? 'active' : '';
+    dot.setAttribute('aria-label', `Erklärungskarte ${index + 1} anzeigen`);
+    dot.addEventListener('click', () => {
+      if (index === tutorialIndex) return;
+      const direction = index < tutorialIndex ? 'prev' : 'next';
+      tutorialIndex = index;
+      renderTutorial(true, direction);
+    });
+    tutorialDots.appendChild(dot);
+  });
+}
+
+function nextTutorialSlide() {
+  if (tutorialIndex >= tutorialSlides.length - 1) {
+    closeTutorial();
+    return;
+  }
+  tutorialIndex += 1;
+  renderTutorial(true, 'next');
+}
+
+function prevTutorialSlide() {
+  if (tutorialIndex <= 0) return;
+  tutorialIndex -= 1;
+  renderTutorial(true, 'prev');
+}
+
+function bindTutorialEvents() {
+  if (showTutorialBtn) showTutorialBtn.addEventListener('click', openTutorial);
+  if (tutorialSkipBtn) tutorialSkipBtn.addEventListener('click', closeTutorial);
+  if (tutorialNextBtn) tutorialNextBtn.addEventListener('click', nextTutorialSlide);
+  if (tutorialPrevBtn) tutorialPrevBtn.addEventListener('click', prevTutorialSlide);
+  if (tutorialOverlay) {
+    tutorialOverlay.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeTutorial();
+      if (event.key === 'ArrowRight') nextTutorialSlide();
+      if (event.key === 'ArrowLeft') prevTutorialSlide();
+    });
+  }
+}
+
 function bindGlobalEvents() {
   layoutSelect.addEventListener('change', () => initLayout(layoutSelect.value, false));
   teacherModeSelect.addEventListener('change', () => {
@@ -1263,4 +1446,6 @@ function bindGlobalEvents() {
 }
 
 bindGlobalEvents();
+bindTutorialEvents();
 initLayout('rows');
+openTutorial();

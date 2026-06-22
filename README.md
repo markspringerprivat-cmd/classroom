@@ -94,6 +94,19 @@ Diese Daten können später genutzt werden, um passende Störungsszenarien einzu
 - Konflikte entstehen, wenn konfliktaffine Schüler*innen nebeneinander sitzen.
 - Eine Melde-Regel kann bei Zwischenrufen als pädagogisch angemessene Classroom-Management-Reaktion aufgegriffen werden.
 
-## Design-Update
+## Neu: Spielerklärung am Start
 
-Die Oberfläche wurde auf einen modernen Anthrazit-/Dunkelblau-Look umgestellt. Panels, Kacheln, Buttons, Regellisten und Auswertungsoverlays nutzen nun transparente Ebenen, Schatten, Hover-Zustände und dezente Übergangsanimationen. Die funktionale Logik wurde dadurch nicht verändert.
+Beim Öffnen von `index.html` wird nun zuerst eine abgedunkelte Spielerklärung eingeblendet. Sie besteht aus sechs Karten, die man manuell durchklicken kann:
+
+1. Ziel des Rasterspiels
+2. Lehrkraft und Sichtbereich
+3. rote Risikofelder störanfälliger Schüler*innen
+4. grüne Stabilisierung durch Sichtfeld und unterstützende Mitschüler*innen
+5. Neutralisierung von Risiko durch Schutzfaktoren
+6. zentrale Bewertungskriterien
+
+Die Karten wechseln mit einer Slider-Animation. Über den Button „Anleitung“ kann die Erklärung später erneut geöffnet werden.
+
+## Designstand
+
+Die Oberfläche nutzt einen dunklen Blau-/Anthrazit-Hintergrund, abgehobene Kacheln mit Schatten und Glas-Effekt sowie weichere Button- und Kartenanimationen.

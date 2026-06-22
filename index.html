@@ -60,6 +60,7 @@
           <div class="button-row">
             <button type="button" id="evaluateBtn" class="primary-btn" disabled>Vorbereitung auswerten</button>
             <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
+            <button type="button" id="showTutorialBtn" class="ghost-btn">Anleitung</button>
           </div>
           <p id="evalHint" class="eval-hint">Platziere zuerst alle 10 Schüler*innen im Raum.</p>
         </div>
@@ -154,6 +155,36 @@
   <footer class="footer-note">
     <strong>Hinweis:</strong> Dieser Prototyp bildet nur Schritt 1 ab. Die berechneten Variablen können später genutzt werden, um passende Störungsszenarien auszuwählen.
   </footer>
+
+
+  <div id="tutorialOverlay" class="tutorial-overlay" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="tutorialTitle">
+    <div class="tutorial-backdrop"></div>
+    <article class="tutorial-book" role="document">
+      <div class="tutorial-topline">
+        <span id="tutorialProgress" class="tutorial-progress-pill">1/6</span>
+        <button type="button" id="tutorialSkipBtn" class="tutorial-skip">Überspringen</button>
+      </div>
+
+      <div class="tutorial-viewport">
+        <section id="tutorialSlide" class="tutorial-slide-card">
+          <div id="tutorialVisual" class="tutorial-visual" aria-hidden="true"></div>
+          <div class="tutorial-content">
+            <p class="eyebrow">Spielerklärung</p>
+            <h2 id="tutorialTitle">Klassenraum vorbereiten</h2>
+            <p id="tutorialText">Du gestaltest den Raum, bevor die Stunde beginnt. Gute Prävention erhöht die Startstabilität.</p>
+            <ul id="tutorialList" class="tutorial-list"></ul>
+          </div>
+        </section>
+      </div>
+
+      <div class="tutorial-controls">
+        <button type="button" id="tutorialPrevBtn" class="ghost-btn">Zurück</button>
+        <div id="tutorialDots" class="tutorial-dots" aria-label="Fortschritt der Spielerklärung"></div>
+        <button type="button" id="tutorialNextBtn" class="primary-btn">Weiter</button>
+      </div>
+    </article>
+  </div>
+
 
   <script src="script.js"></script>
 </body>
