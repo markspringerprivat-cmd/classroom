@@ -4608,3 +4608,183 @@ body.rules-page {
 .branch-outcome-modal.is-visible {
   display: grid !important;
 }
+
+/* === Avatar / Transparenz-Update === */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #284056;
+  background: #dbe8f8;
+  border-radius: 999px;
+}
+
+.student-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.student-card-avatar-wrap,
+.rules-student-avatar-wrap {
+  flex: 0 0 auto;
+}
+
+.student-card-copy,
+.rules-student-copy {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.student-card-avatar,
+.rules-student-avatar,
+.scenario-student-avatar {
+  width: 4.4rem;
+  height: 4.4rem;
+  object-fit: contain;
+  display: block;
+}
+
+.student-chip-photo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  min-height: 3.9rem;
+}
+
+.student-chip-avatar-wrap,
+.frozen-desk.has-student,
+.branch-desk.has-student {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-chip-avatar,
+.frozen-student-avatar,
+.branch-student-avatar {
+  width: 100%;
+  height: 100%;
+  max-width: 3.2rem;
+  max-height: 3.2rem;
+  object-fit: contain;
+  display: block;
+}
+
+.remove-student-btn {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  z-index: 3;
+}
+
+.desk-label {
+  letter-spacing: 0.02em;
+}
+
+.frozen-desk.has-student,
+.branch-desk.has-student {
+  padding: 0.15rem;
+}
+
+.frozen-desk.has-student strong,
+.branch-desk.has-student strong {
+  position: absolute;
+}
+
+.rules-student-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.scenario-student-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.scenario-student-list li > div {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.branch-desk {
+  position: relative;
+  overflow: visible;
+}
+
+.incident-countdown-number {
+  position: absolute !important;
+  right: -0.15rem;
+  top: -0.3rem;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: #d7293a;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  box-shadow: 0 0.2rem 0.5rem rgba(109, 15, 34, 0.28);
+}
+
+.branch-object {
+  position: relative;
+}
+
+.branch-object.active-cleaning {
+  filter: drop-shadow(0 0 0.4rem rgba(31, 132, 90, 0.6));
+  transform: scale(1.08);
+}
+
+.incident-countdown-badge {
+  position: absolute;
+  right: -0.45rem;
+  top: -0.55rem;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  background: #d7293a;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .student-card-avatar,
+  .rules-student-avatar,
+  .scenario-student-avatar {
+    width: 3.6rem;
+    height: 3.6rem;
+  }
+
+  .student-chip-avatar,
+  .frozen-student-avatar,
+  .branch-student-avatar {
+    max-width: 2.6rem;
+    max-height: 2.6rem;
+  }
+}
