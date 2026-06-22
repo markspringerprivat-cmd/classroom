@@ -942,6 +942,46 @@ function evaluateTeacherMode() {
   return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftverhalten: vorne stehend / leitend.', detail: 'Es entsteht ein breiter Leitungsfächer. Entscheidend ist, ob risikorelevante Plätze darin liegen.' } };
 }
 
+
+function buildStepState() {
+  const visionByDesk = state.desks.map(desk => ({
+    deskId: desk.id,
+    row: desk.row,
+    col: desk.col,
+    strength: getVisionStrengthAt(desk.row, desk.col),
+    studentId: state.assignments[desk.id] || null
+  }));
+  const influenceByCell = [...getCombinedInfluenceMap().entries()].map(([key, value]) => ({ cell: key, ...value }));
+  return {
+    version: 2,
+    savedAt: new Date().toISOString(),
+    rows: ROWS,
+    cols: COLS,
+    students,
+    preparationScore: state.score,
+    rawPreparationScore: state.rawScore,
+    chosenLayout: { key: state.layout, label: layouts[state.layout].label },
+    teacher: state.teacher,
+    desks: state.desks,
+    assignments: state.assignments,
+    visionByDesk,
+    influenceByCell,
+    metrics: state.metrics,
+    suggestedScenarioHooks: [...new Set(state.metrics?.futureScenarioHooks || [])]
+  };
+}
+
+function saveStepStateForNextPage() {
+  try {
+    localStorage.setItem('classroomGame.step1', JSON.stringify(buildStepState()));
+    return true;
+  } catch (error) {
+    console.error('Speichern der Schritt-1-Daten fehlgeschlagen:', error);
+    window.alert('Die Vorbereitung konnte nicht gespeichert werden. Bitte prüfe, ob der Browser lokalen Speicher erlaubt.');
+    return false;
+  }
+}
+
 function showResults(score, rawScore, feedback, metrics) {
   scoreValue.textContent = score;
   meterFill.style.width = `${score * 10}%`;
@@ -1214,7 +1254,7 @@ function bindGlobalEvents() {
   if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', () => { evaluationOverlay.hidden = true; evaluationSession = null; });
   if (evaluationNextBtn) evaluationNextBtn.addEventListener('click', () => advanceEvaluationStep(true));
   if (step2Btn) step2Btn.addEventListener('click', () => {
-    window.alert('Schritt 2 ist als nächster Abschnitt vorgesehen: Klassenregeln aufstellen.');
+    if (saveStepStateForNextPage()) window.location.href = 'rules.html';
   });
   evaluateBtn.addEventListener('click', evaluatePreparation);
   resetBtn.addEventListener('click', () => initLayout(state.layout, false));

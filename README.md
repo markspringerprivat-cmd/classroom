@@ -1,19 +1,24 @@
-# Classroom-Management-Spiel – Schritt 1: Klassenraum vorbereiten
+# Classroom-Management-Spiel – Schritt 1 und Schritt 2
 
-Dieser Prototyp bildet nur den ersten Abschnitt der interaktiven Phase ab: Die Nutzer*innen bereiten einen Klassenraum vor, indem sie eine Sitzordnung wählen, Tische verschieben, Schüler*innen platzieren und die Lehrkraft positionieren.
+Dieser Prototyp bildet die ersten beiden Abschnitte der interaktiven Phase ab:
+
+1. `index.html`: Klassenraum vorbereiten
+2. `rules.html`: Klassenregeln aufstellen
+
+Die Seiten sind für eine einfache Einbindung über GitHub Pages gedacht. Alle Dateien können in ein Repository gelegt werden; Startseite ist `index.html`.
 
 ## Dateien
 
-- `index.html` – Grundstruktur der Webseite
-- `styles.css` – Gestaltung und Layout
-- `script.js` – Spiellogik, Drag-and-Drop, Auswertung
+- `index.html` – Schritt 1: Klassenraum vorbereiten
+- `rules.html` – Schritt 2: Klassenregeln aufstellen
+- `styles.css` – Gestaltung beider Seiten
+- `script.js` – Spiellogik, Drag-and-Drop und Auswertung für Schritt 1
+- `rules.js` – Regelauswahl, Listenlogik und Speicherung für Schritt 2
 - `README.md` – kurze Dokumentation
 
-## Starten
+## Schritt 1: Klassenraum vorbereiten
 
-Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Pages reicht es, alle Dateien in ein Repository zu legen und GitHub Pages für den Ordner zu aktivieren.
-
-## Aktueller Funktionsumfang
+Funktionsumfang:
 
 - Auswahl aus vier Sitzordnungen:
   - Reihensitzordnung
@@ -32,65 +37,59 @@ Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Page
 - Startstabilität berechnen
 - animierte Auswertungskachel über dem Spielfeld
 - Lebensleiste mit 10 Balken anzeigen
-- Punkte nacheinander ein- und auszählen; der sichtbare Balken bleibt zwischen 0 und 10, der rechnerische Punktewert kann auch negativ werden
+- Punkte manuell mit „Weiter“ nacheinander ein- und auszählen
 - Game-Over-Hinweis bei 0 oder weniger Punkten
-- Weiterleitungsschaltfläche zum geplanten Schritt 2 „Klassenregeln aufstellen“
-- versteckte Variablen für spätere Szenarien ausgeben
+- Weiterleitung zu Schritt 2, wenn mindestens 1 Punkt erreicht wurde
+
+Die Vorbereitung wird beim Übergang zu Schritt 2 im lokalen Browser-Speicher unter `classroomGame.step1` gespeichert.
+
+## Schritt 2: Klassenregeln aufstellen
+
+Funktionsumfang:
+
+- übernommener Klassenraum wird links als nicht bewegliches Raster angezeigt
+- Schülerliste bleibt sichtbar, damit Regeln passend zu Stärken und Risiken ausgewählt werden können
+- 15 vorgefertigte Regeln werden nacheinander eingeblendet
+- jede Regel kann in eine von drei Listen gelegt werden:
+  - Klassenregeln
+  - Später zuordnen
+  - Aussortiert
+- Regeln können per Drag & Drop oder über kleine Aktionsbuttons zwischen den Listen verschoben werden
+- am Ende müssen genau 6 Regeln in „Klassenregeln“ liegen
+- genau 9 Regeln müssen in „Aussortiert“ liegen
+- die Liste „Später zuordnen“ muss leer sein
+- die Regelauswahl kann gespeichert werden, sobald diese Bedingungen erfüllt sind
+
+Die ausgewählten Regeln werden im lokalen Browser-Speicher unter `classroomGame.step2.rules` gespeichert. Der Entwurf während des Sortierens wird unter `classroomGame.step2.rulesDraft` gespeichert.
 
 ## Didaktische Grundidee
 
 Die Vorbereitung des Klassenraums soll sichtbar machen, dass Classroom Management präventiv wirkt. Sitzordnung, räumliche Übersicht, Lehrkraftpositionierung und die Nähe zu potenziell störungsanfälligen Schüler*innen beeinflussen die spätere Stabilität der Unterrichtssituation.
 
-Der Prototyp wertet daher nicht nur aus, ob alle Schüler*innen platziert wurden, sondern auch, ob risikoreichere Schüler*innen im Sichtbereich der Lehrkraft sitzen, ob ungünstige Nachbarschaften entstehen und ob die Lehrkraft durch ihr Verhalten im Raum Präsenz zeigt.
+Die Auswahl der Klassenregeln ergänzt diese Prävention. Regeln werden nicht frei formuliert, sondern als feste Variablen gespeichert, damit spätere Szenarien gezielt darauf zurückgreifen können. Beispiel: Wenn die Regel „Handys bleiben während des Unterrichts in der Tasche“ gewählt wurde, kann ein späteres Handy-Szenario anders bewertet werden als ohne diese Regel.
 
 ## Versteckte Variablen für spätere Spielphasen
 
-Die Webseite erzeugt nach der Auswertung unter anderem folgende Informationen:
+Nach Schritt 1 werden unter anderem gespeichert:
 
-- `layout` – gewählte Sitzordnung
+- `chosenLayout` – gewählte Sitzordnung
 - `preparationScore` – sichtbare Startstabilität von 0 bis 10
 - `rawPreparationScore` – rechnerischer Punktwert, kann negativ sein
-- `metrics.highRiskOutsideVision` – störungsanfälligere Schüler*innen außerhalb des Sichtbereichs
-- `metrics.conflictPairs` – problematische Nachbarschaften
-- `metrics.phoneRiskBackOrBlind` – Handy-/Ablenkungsrisiko außerhalb des Überblicks
-- `scenarioFlags` – mögliche Auslöser für spätere Branching-Szenarien
+- `teacher` – Position, Blickrichtung und Verhalten der Lehrkraft
+- `desks` – Tischpositionen
+- `assignments` – Sitzplätze der Schüler*innen
+- `metrics` – Bewertungsdaten und mögliche Szenario-Hooks
+
+Nach Schritt 2 werden gespeichert:
+
+- `acceptedRuleIds` – verbindliche Klassenregeln
+- `rejectedRuleIds` – aussortierte Regeln
+- `pendingRuleIds` – sollte am Ende leer sein
+- `acceptedRules` – Regeltexte und Hinweise
 
 Diese Daten können später genutzt werden, um passende Störungsszenarien einzustreuen, zum Beispiel:
 
 - Schüler*in spielt mit dem Handy, wenn Handy-Risiko und schlechter Überblick zusammenkommen.
 - Zwischenrufe nehmen zu, wenn eine impulsive Person außerhalb des Sichtbereichs sitzt.
 - Konflikte entstehen, wenn konfliktaffine Schüler*innen nebeneinander sitzen.
-
-## Geplanter nächster Schritt
-
-Als nächstes können Klassenregeln und Routinen ergänzt werden. Diese sollten als feste Auswahloptionen umgesetzt werden, damit spätere Szenarien gezielt darauf zurückgreifen können.
-
-Beispielhafte Regeln:
-
-- Wir melden uns, bevor wir sprechen.
-- Wir hören einander ausreden.
-- Handys bleiben in der Tasche.
-- Während Arbeitsphasen bleiben wir am Platz.
-
-Beispielhafte Routinen:
-
-- Stundenstart-Routine
-- Ruhezeichen
-- Materialausgabe
-- Übergang in Gruppenarbeit
-- Hilfesignal bei Problemen
-
-
-## Auswertungslogik
-
-Die Auswertung läuft schrittweise ab. Jeder Bewertungsaspekt wird etwa alle zwei Sekunden im oberen Bereich der Auswertungskachel angezeigt. Unten wird eine Lebensleiste mit maximal zehn Balken aufgebaut oder reduziert.
-
-- Pluspunkte füllen Balken auf.
-- Minuspunkte entfernen Balken.
-- Unter 0 wird die Balkenanzeige nicht weiter reduziert, der rechnerische Punktwert kann aber negativ werden.
-- Bei weniger als 1 Punkt erscheint ein Game-Over-Hinweis.
-- Ab 1 Punkt kann zum nächsten geplanten Schritt übergegangen werden: Klassenregeln aufstellen.
-
-## Update: manuelle Auswertung
-
-Die Auswertung läuft nicht mehr automatisch durch. Nach dem Klick auf „Vorbereitung auswerten“ erscheint eine zentrale Bewertungskachel. Jede Bewertungsinformation wird als Slider angezeigt; mit „Weiter“ wird zum nächsten Punkt gewechselt. Die Lebensleiste bleibt währenddessen statisch sichtbar und zeigt 0 bis 10 Balken. Bei 0–3 Balken werden aktive Balken rot, bei 4–6 gelb und bei 7–10 grün dargestellt. Der rechnerische Punktestand kann unter 0 fallen, die Balkenanzeige bleibt jedoch zwischen 0 und 10.
+- Eine Melde-Regel kann bei Zwischenrufen als pädagogisch angemessene Classroom-Management-Reaktion aufgegriffen werden.
