@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="rules-page">
-  <header class="topbar rules-topbar">
+  <header class="topbar compact-topbar rules-topbar">
     <div>
       <p class="eyebrow">Interaktive Phase · Schritt 2</p>
       <h1>Klassenregeln aufstellen</h1>
@@ -50,12 +50,7 @@
       <article id="currentRuleCard" class="current-rule-card" draggable="true" aria-live="polite">
         <span class="rule-kicker">Regel prüfen</span>
         <h3 id="currentRuleText">Regel wird geladen …</h3>
-        <p id="currentRuleHint">Ordne diese Regel einer Liste zu.</p>
-        <div class="rule-quick-actions">
-          <button type="button" class="rule-action accept" data-target="accepted">Als Klassenregel aufnehmen</button>
-          <button type="button" class="rule-action pending" data-target="pending">Später zuordnen</button>
-          <button type="button" class="rule-action reject" data-target="rejected">Aussortieren</button>
-        </div>
+        <p id="currentRuleHint">Ziehe die Regel per Drag & Drop in eine der Listen.</p>
       </article>
 
       <div class="rule-lists" aria-label="Regellisten">
@@ -68,6 +63,15 @@
           <div id="acceptedList" class="rule-dropzone" data-list="accepted"></div>
         </section>
 
+        <section class="rule-list-card rejected-list" data-list="rejected">
+          <div class="rule-list-head">
+            <h3>Aussortiert</h3>
+            <span id="rejectedCounter" class="pill">0/9</span>
+          </div>
+          <p class="hint">Alle nicht gewählten Regeln. Am Ende müssen hier neun Regeln liegen.</p>
+          <div id="rejectedList" class="rule-dropzone" data-list="rejected"></div>
+        </section>
+
         <section class="rule-list-card pending-list" data-list="pending">
           <div class="rule-list-head">
             <h3>Später zuordnen</h3>
@@ -77,14 +81,7 @@
           <div id="pendingList" class="rule-dropzone" data-list="pending"></div>
         </section>
 
-        <section class="rule-list-card rejected-list" data-list="rejected">
-          <div class="rule-list-head">
-            <h3>Aussortiert</h3>
-            <span id="rejectedCounter" class="pill">0/9</span>
-          </div>
-          <p class="hint">Alle nicht gewählten Regeln. Am Ende müssen hier neun Regeln liegen.</p>
-          <div id="rejectedList" class="rule-dropzone" data-list="rejected"></div>
-        </section>
+
       </div>
 
       <div class="rules-status-bar">

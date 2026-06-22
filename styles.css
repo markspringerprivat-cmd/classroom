@@ -3137,3 +3137,209 @@ body.tutorial-open {
     width: 100%;
   }
 }
+
+/* Rules page compact repair */
+.rules-topbar,
+.rules-shell,
+.footer-note {
+  max-width: 1560px;
+  margin-inline: auto;
+}
+
+.rules-topbar {
+  padding-top: 14px;
+  padding-bottom: 8px;
+}
+
+.rules-topbar h1 {
+  font-size: clamp(1.6rem, 2.6vw, 2.55rem);
+  margin-bottom: 5px;
+}
+
+.rules-shell {
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 14px;
+  padding: 0 14px 12px;
+}
+
+.rules-left {
+  gap: 12px;
+  padding: 14px;
+  max-height: calc(100vh - 112px);
+}
+
+.rules-left h2 {
+  font-size: 1.05rem;
+  margin-bottom: 3px;
+}
+
+.frozen-grid {
+  --frozen-cell: 29px;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 13px;
+}
+
+.frozen-cell {
+  border-radius: 7px;
+}
+
+.frozen-blocked {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.frozen-blocked-label {
+  position: absolute;
+  inset: -1px auto auto -1px;
+  width: calc(var(--span-cols) * var(--frozen-cell) + (var(--span-cols) - 1) * 3px + 2px);
+  height: calc(var(--span-rows) * var(--frozen-cell) + (var(--span-rows) - 1) * 3px + 2px);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(30, 41, 59, 0.90);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  font-size: 0.43rem;
+  line-height: 1.04;
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 950;
+  color: #dbeafe;
+  pointer-events: none;
+}
+
+.frozen-blocked-label.side-label {
+  writing-mode: sideways-lr;
+  text-orientation: mixed;
+  letter-spacing: 0.04em;
+}
+
+.rules-student-list {
+  gap: 5px;
+  max-height: 230px;
+  overflow: auto;
+}
+
+.rules-student-card {
+  padding: 7px 9px;
+  border-radius: 10px;
+}
+
+.rules-student-card span,
+.rules-student-card small {
+  font-size: 0.69rem;
+  line-height: 1.15;
+}
+
+.rules-main {
+  padding: 14px;
+  min-height: auto;
+}
+
+.rule-deck-head {
+  margin-bottom: 10px;
+}
+
+.current-rule-card {
+  margin-bottom: 12px;
+  min-height: 118px;
+  padding: 18px 22px;
+  display: grid;
+  place-items: center start;
+  cursor: grab;
+}
+
+.current-rule-card h3 {
+  margin: 2px 0 4px;
+  font-size: clamp(1.25rem, 1.7vw, 1.85rem);
+  line-height: 1.12;
+}
+
+.current-rule-card p {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.current-rule-card.empty-deck {
+  text-align: center;
+  place-items: center;
+  cursor: default;
+}
+
+.current-rule-card.empty-deck .rule-kicker {
+  display: none;
+}
+
+.rule-quick-actions,
+.rule-action,
+.rule-item-actions {
+  display: none !important;
+}
+
+.rule-lists {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rule-list-card {
+  min-height: 535px;
+  padding: 12px;
+  border-radius: 17px;
+}
+
+.rule-list-card .hint {
+  margin-bottom: 8px;
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.rule-dropzone {
+  gap: 7px;
+  min-height: 424px;
+  padding: 7px;
+}
+
+.rule-item {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 11px;
+  cursor: grab;
+  min-height: 0;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.rule-item strong {
+  display: block;
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.18;
+}
+
+.rules-status-bar {
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+.rules-status {
+  font-size: 0.86rem;
+}
+
+@media (max-width: 1180px) {
+  .rules-shell {
+    grid-template-columns: 1fr;
+  }
+  .rules-left {
+    position: static;
+    max-height: none;
+  }
+  .rule-lists {
+    grid-template-columns: 1fr;
+  }
+  .rule-list-card {
+    min-height: auto;
+  }
+  .rule-dropzone {
+    min-height: 120px;
+  }
+}
