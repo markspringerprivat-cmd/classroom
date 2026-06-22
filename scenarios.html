@@ -3,66 +3,67 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Unterrichtsphase | Branching-Szenario</title>
+  <title>Unterrichtsszenarien | Classroom-Management-Spiel</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="scenario-page">
-  <header class="topbar compact-topbar scenario-topbar">
+<body class="scenarios-page">
+  <header class="topbar compact-topbar scenarios-topbar">
     <div>
       <p class="eyebrow">Interaktive Phase · Schritt 3</p>
-      <h1>Unterrichtsphase vorbereiten</h1>
-      <p class="subtitle">Das eigentliche Branching-Szenario wird später ergänzt. Hier sind zunächst alle 40 möglichen Unterrichtsszenarien einsehbar.</p>
+      <h1>Unterrichtsverlauf vorbereiten</h1>
+      <p class="subtitle">Der Branching-Modus ist noch nicht aktiv. Zuerst ist hier der Szenario-Katalog einsehbar.</p>
     </div>
-    <button type="button" id="showScenariosBtn" class="primary-btn scenario-top-button">Szenarien einsehen</button>
+    <div class="scenario-top-actions">
+      <button type="button" id="openScenarioBtn" class="primary-btn">Szenarien einsehen</button>
+    </div>
   </header>
 
   <main class="scenario-shell">
     <section class="panel scenario-intro">
       <div>
-        <p class="eyebrow">Didaktische Logik</p>
-        <h2>Vom Classroom Management zur Intervention</h2>
-        <p>Die Szenarien greifen Variablen aus der Raumvorbereitung und der Regelauswahl auf. Negative Vorbereitungseffekte werden als Unterrichtsstörungen sichtbar; positive Entscheidungen werden als Ressourcen nutzbar.</p>
+        <p class="eyebrow">Nächster Schritt</p>
+        <h2>Branching-Szenario wird später hier angeschlossen.</h2>
+        <p>Diese Seite übernimmt die vorbereitete Klasse und die gewählten Klassenregeln. Der Button oben rechts öffnet zunächst nur den Katalog der möglichen Unterrichtssituationen.</p>
       </div>
-      <div class="scenario-method-box">
-        <span>Schwerpunkt</span>
-        <strong>Kooperative Verhaltensmodifikation</strong>
-        <p>Problem verstehen, Ziel vereinbaren, Intervention durchführen und anschließend auswerten.</p>
+      <div class="scenario-context-grid">
+        <article>
+          <h3>Aus Schritt 1</h3>
+          <p id="stepSummary">Classroom-Management-Daten werden geladen …</p>
+        </article>
+        <article>
+          <h3>Aus Schritt 2</h3>
+          <p id="ruleSummary">Regeldaten werden geladen …</p>
+          <ul id="selectedRulesList" class="scenario-rule-list"></ul>
+        </article>
       </div>
     </section>
 
-    <section class="panel scenario-overview">
+    <section class="panel scenario-student-panel">
       <div class="section-title-row">
-        <h2>Übernommene Spieldaten</h2>
-        <span class="pill"><span id="activeScenarioCount">0</span>/<span id="totalScenarioCount">40</span> aktiv</span>
+        <h2>Schülerkontext</h2>
+        <span class="pill">aus Sitzplan übernommen</span>
       </div>
-      <div id="scenarioOverviewGrid" class="scenario-overview-grid"></div>
-      <h3>Verbindliche Klassenregeln</h3>
-      <div id="acceptedRulesBox" class="accepted-rules-box"></div>
-    </section>
-
-    <section class="panel scenario-placeholder">
-      <p class="eyebrow">Branching folgt später</p>
-      <h2>Aktueller Stand: Szenario-Katalog</h2>
-      <p>Über den Button oben rechts öffnest du den vollständigen Katalog. Jede Karte enthält eine kurze Situation, drei Antwortmöglichkeiten und Feedback mit +1, 0 oder -1 Punkt.</p>
-      <a class="ghost-btn scenario-back-link" href="rules.html">Zurück zu Schritt 2</a>
+      <ul id="studentContextList" class="scenario-student-list"></ul>
     </section>
   </main>
 
-  <aside id="scenarioPanel" class="scenario-panel" hidden>
-    <div class="scenario-panel-backdrop"></div>
-    <section class="scenario-panel-card" aria-label="Szenarienliste">
-      <div class="scenario-panel-head">
+  <section id="scenarioDrawer" class="scenario-drawer" hidden aria-label="Szenario-Katalog">
+    <div class="scenario-drawer-backdrop"></div>
+    <div class="scenario-drawer-panel">
+      <div class="scenario-drawer-head">
         <div>
-          <p class="eyebrow">Szenarien einsehen</p>
-          <h2>40 vorbereitete Unterrichtsszenarien</h2>
-          <p>Aktive Szenarien passen besonders gut zu den gespeicherten Variablen aus Schritt 1 und 2.</p>
+          <p class="eyebrow">Katalog für spätere Branching-Logik</p>
+          <h2>40 Szenarien</h2>
+          <p>Jedes Szenario enthält eine günstige, eine neutrale und eine ungünstige Antwortoption.</p>
         </div>
-        <button type="button" id="closeScenarioPanel" class="overlay-close">×</button>
+        <div class="scenario-drawer-actions">
+          <span id="scenarioCount" class="pill">40 Szenarien</span>
+          <button type="button" id="closeScenarioBtn" class="ghost-btn">Schließen</button>
+        </div>
       </div>
-      <input id="scenarioSearch" class="scenario-search" type="search" placeholder="Szenarien filtern: Regel, Schülerprofil, KVM, Sichtfeld ..." />
       <div id="scenarioList" class="scenario-list"></div>
-    </section>
-  </aside>
+    </div>
+  </section>
 
   <script src="scenarios.js"></script>
 </body>
