@@ -75,27 +75,20 @@ Beispielhafte Routinen:
 - Hilfesignal bei Problemen
 
 
+## Schritt 3: Unterrichtsverlauf / Branching-Prototyp
 
-## Schritt 3: Szenario-Katalog
+Die Datei `scenarios.html` bildet den laufenden Unterricht ab. Sie übernimmt Sitzplan, Schülerprofile und Klassenregeln aus den vorherigen Phasen und erzeugt dynamische Ereignisse. Die Lehrkraft wird per Klick bewegt, Störungen müssen rechtzeitig erreicht werden und Szenarien werden mit 20 Sekunden Antwortzeit beantwortet.
 
-Neu ergänzt sind `scenarios.html` und `scenarios.js`. Nach dem Speichern der Klassenregeln wird die Szenario-Seite geöffnet. Der Branching-Modus ist noch nicht aktiv; über „Szenarien einsehen“ wird zunächst ein Katalog mit 40 möglichen Unterrichtsszenarien angezeigt.
+Zusätzlich gibt es jetzt ein Highscore-System:
 
+- rechtzeitig erreichte Ereignisse: 100 / 80 / 60 / 40 / 20 / 0 Punkte je nach verbleibendem Countdown
+- gute Szenarioantwort: +200 Punkte
+- neutrale Szenarioantwort: 0 Punkte
+- schlechte oder verpasste Szenarioantwort: -200 Punkte
+- Lebensbonus am Ende: 500 Punkte pro verbleibendem Leben
 
-## Schritt 3: Branching-Prototyp
+Assets liegen im Ordner `assets/`:
 
-`scenarios.html` enthält das Live-Klassenzimmer mit 5-Minuten-Timer, dynamischen Störungen, automatischer Lehrkraftbewegung und Szenario-Katalog.
-
-
-## Assets
-
-Die Lehrkraft-Zustandsbilder für Phase 3 liegen im Ordner `assets/teachers/`:
-
-- `teacher_1.png` für 0–1 Leben
-- `teacher_2.png` für 2 Leben
-- `teacher_3.png` für 3 Leben
-- `teacher_4.png` für 4 Leben
-- `teacher_5.png` für 5 Leben
-- `teacher_6-7.png` für 6–7 Leben
-- `teacher_8-10.png` für 8–10 Leben
-
-`scenarios.js` wählt das passende Bild automatisch anhand der aktuellen Unterrichtsstabilität aus.
+- `assets/teachers/` – Lehrkraft-Bilder je nach aktueller Stabilität
+- `assets/outcomes/win.png` – Abschlussbild bei gewonnener Runde
+- `assets/outcomes/lose.png` – Abschlussbild bei verlorener Runde
