@@ -22,7 +22,7 @@ const blockedCells = [
 ];
 
 const roomObjectConfig = {
-  trashCount: 3,
+  trashCount: 5,
   broomPreferred: { row: 8, col: 9 }
 };
 
@@ -83,6 +83,57 @@ const dragState = {
   deskId: null
 };
 
+const blockedGroups = buildBlockedGroups();
+
+function buildBlockedGroups() {
+  const groups = [];
+  const visited = new Set();
+  blockedCells.forEach(cell => {
+    const key = `${cell.row},${cell.col},${cell.type}`;
+    if (visited.has(key)) return;
+    const horizontal = blockedCells.filter(c => c.type === cell.type && c.row === cell.row).sort((a,b)=>a.col-b.col);
+    const vertical = blockedCells.filter(c => c.type === cell.type && c.col === cell.col).sort((a,b)=>a.row-b.row);
+
+    const hRun = [cell];
+    let c = cell.col - 1;
+    while (horizontal.some(x => x.col === c)) { hRun.unshift(horizontal.find(x => x.col === c)); c--; }
+    c = cell.col + 1;
+    while (horizontal.some(x => x.col === c)) { hRun.push(horizontal.find(x => x.col === c)); c++; }
+
+    const vRun = [cell];
+    let r = cell.row - 1;
+    while (vertical.some(x => x.row === r)) { vRun.unshift(vertical.find(x => x.row === r)); r--; }
+    r = cell.row + 1;
+    while (vertical.some(x => x.row === r)) { vRun.push(vertical.find(x => x.row === r)); r++; }
+
+    const groupCells = hRun.length >= vRun.length ? hRun : vRun;
+    groupCells.forEach(gc => visited.add(`${gc.row},${gc.col},${gc.type}`));
+    const rows = groupCells.map(gc => gc.row);
+    const cols = groupCells.map(gc => gc.col);
+    groups.push({
+      id: `${cell.type}-${Math.min(...rows)}-${Math.min(...cols)}`,
+      type: cell.type,
+      label: cell.label,
+      cells: groupCells,
+      minRow: Math.min(...rows),
+      maxRow: Math.max(...rows),
+      minCol: Math.min(...cols),
+      maxCol: Math.max(...cols),
+      rowSpan: Math.max(...rows) - Math.min(...rows) + 1,
+      colSpan: Math.max(...cols) - Math.min(...cols) + 1
+    });
+  });
+  return groups;
+}
+
+function getBlockedGroupAt(row, col) {
+  return blockedGroups.find(group => group.cells.some(cell => cell.row === row && cell.col === col)) || null;
+}
+
+function isBlockedGroupAnchor(group, row, col) {
+  return Boolean(group) && group.minRow === row && group.minCol === col;
+}
+
 const gridEl = document.getElementById('classroomGrid');
 const paletteEl = document.getElementById('studentPalette');
 const layoutSelect = document.getElementById('layoutSelect');
@@ -128,7 +179,10 @@ const tutorialDots = document.getElementById('tutorialDots');
 const tutorialPrevBtn = document.getElementById('tutorialPrevBtn');
 const tutorialNextBtn = document.getElementById('tutorialNextBtn');
 const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
+const startGateOverlay = document.getElementById('startGateOverlay');
+const startGameBtn = document.getElementById('startGameBtn');
 let tutorialIndex = 0;
+let gameStarted = false;
 let evaluationTimers = [];
 let evaluationSession = null;
 
@@ -185,10 +239,13 @@ function renderGrid() {
       if (influence) applyInfluenceClasses(cell, influence);
 
       const block = getBlockedCell(row, col);
+      const blockGroup = block ? getBlockedGroupAt(row, col) : null;
       if (block) {
         cell.classList.add('blocked-cell', `blocked-${block.type}`);
         cell.dataset.blockedType = block.type;
-        cell.appendChild(createBlockedElement(block));
+        if (blockGroup && isBlockedGroupAnchor(blockGroup, row, col)) {
+          cell.appendChild(createBlockedElement(blockGroup));
+        }
       }
 
       if (state.placingTeacher && !block) cell.classList.add('teacher-placement-active');
@@ -218,11 +275,20 @@ function applyInfluenceClasses(el, influence) {
 }
 
 
-function createBlockedElement(block) {
+function formatBlockedLabel(group) {
+  if (group.type === 'sink') return 'Wasch-<br>becken';
+  if (group.type === 'exit') return 'Notaus-<br>gang';
+  return group.label;
+}
+
+function createBlockedElement(group) {
   const el = document.createElement('div');
-  el.className = `blocked-marker blocked-${block.type}`;
-  el.textContent = block.label;
-  el.title = `${block.label}: Dieses Feld ist nicht nutzbar.`;
+  const sideLabel = ['window', 'door', 'exit'].includes(group.type);
+  el.className = `blocked-marker blocked-${group.type}${sideLabel ? ' side-label' : ''}`;
+  el.style.setProperty('--span-cols', String(group.colSpan));
+  el.style.setProperty('--span-rows', String(group.rowSpan));
+  el.innerHTML = `<span>${formatBlockedLabel(group)}</span>`;
+  el.title = `${group.label}: Dieses Feld ist nicht nutzbar.`;
   return el;
 }
 
@@ -1458,50 +1524,50 @@ function clearResults() {
 const tutorialSlides = [
   {
     title: 'Ziel des Rasterspiels',
-    text: 'Du bereitest eine Unterrichtsstunde vor. Gute Classroom-Management-Entscheidungen erhöhen die Startstabilität für die nächste Spielphase.',
-    bullets: ['Sitzordnung wählen und Tische verschieben', 'Schüler*innen passend platzieren', 'Lehrkraft positionieren und Sichtbereich prüfen', 'Am Ende wird die Vorbereitung mit 0 bis 10 Balken bewertet'],
+    text: 'Du gestaltest den Klassenraum, bevor die Stunde beginnt. Gute Prävention erhöht die Startstabilität für die nächste Spielphase.',
+    bullets: ['Tische sinnvoll platzieren', 'Schüler*innen passend verteilen', 'Lehrkraft so stellen, dass wichtige Plätze gut sichtbar sind', 'Am Ende wird die Vorbereitung streng bewertet'],
     visual: 'goal'
   },
   {
     title: 'Lehrkraft und Sichtbereich',
-    text: 'Die Lehrkraft kann frei im Raum platziert werden. Ihr Sichtfeld fächert sich in Blickrichtung nach vorne auf.',
-    bullets: ['dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Tische schwächen dahinterliegende Felder ab', 'Lehrkraft anklicken: Blickrichtung ändern', 'störanfällige Schüler*innen sollten möglichst im wirksamen Sichtfeld sitzen'],
+    text: 'Die Lehrkraft kann frei im Raum platziert werden. Der Sichtbereich fächert sich in Blickrichtung nach vorne auf.',
+    bullets: ['Dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Tische schwächen dahinterliegende Felder ab', 'Lehrkraft anklicken: Blickrichtung ändern', 'Störanfällige Schüler*innen sollten möglichst im wirksamen Sichtfeld sitzen'],
     visual: 'teacher'
   },
   {
     title: 'Rote Risikofelder',
-    text: 'Einige Schülerprofile erzeugen im Umfeld Störrisiken. Diese Profile sind für den Spielverlauf hinterlegt und beeinflussen spätere Szenarien.',
-    bullets: ['Ablenkung wirkt häufig links und rechts', 'Konflikte zählen auch diagonal', 'verdecktes Off-Task-Verhalten ist in blinden Bereichen riskanter', 'Rot bedeutet: erhöhte Störanfälligkeit'],
+    text: 'Einige Schülerprofile erzeugen im Umfeld Störrisiken. Diese Profile wirken im Spiel verdeckt im Hintergrund weiter.',
+    bullets: ['Ablenkung wirkt häufig links und rechts', 'Konflikte zählen auch diagonal', 'Verdecktes Off-Task-Verhalten ist in blinden Bereichen riskanter', 'Rot bedeutet: erhöhte Störanfälligkeit'],
     visual: 'risk'
   },
   {
     title: 'Grüne Stabilisierung',
-    text: 'Stabilisierende Schüler*innen und gute Sichtbereiche können Risiken abschwächen. Dadurch wird Classroom Management als präventiver Rahmen sichtbar.',
-    bullets: ['Grün steht für Übersicht, Unterstützung oder Vermittlung', 'je dunkler das Grün, desto stärker der Schutzfaktor', 'stabile Sitznachbarschaften können riskante Nähe neutralisieren'],
+    text: 'Stabilisierende Schüler*innen und gute Sichtbereiche können Risiken abschwächen.',
+    bullets: ['Grün steht für Übersicht, Unterstützung oder Vermittlung', 'Je dunkler das Grün, desto stärker der Schutzfaktor', 'Stabile Sitznachbarschaften können riskante Nähe abfedern'],
     visual: 'support'
   },
   {
     title: 'Neutralisierung: Rot trifft Grün',
-    text: 'Wenn ein Risiko durch Sichtbereich oder unterstützende Nachbarschaft abgefedert wird, wird der Bereich gelb-orange markiert.',
-    bullets: ['Gelb/Orange bedeutet: Risiko ist nicht weg, aber abgefedert', 'so kann ein gefährdeter Schüler geschützt werden', 'die spätere Auswertung rechnet solche Effekte gegeneinander auf'],
+    text: 'Wenn ein Risiko durch Sichtbereich oder unterstützende Nachbarschaft abgefedert wird, entsteht eine neutrale gelb-orange Zone.',
+    bullets: ['Gelb/Orange bedeutet: Risiko ist nicht weg, aber abgefedert', 'So kann ein gefährdeter Platz geschützt werden', 'Die Auswertung rechnet Rot und Grün gegeneinander auf'],
     visual: 'neutralize'
   },
   {
-    title: 'Gänge zwischen Tischreihen',
-    text: 'Achte darauf, dass vor und hinter Tischreihen ein Gang frei bleibt. Das simuliert Stühle, Laufwege und den Zugang der Lehrkraft.',
-    bullets: ['nebeneinander dürfen Tische direkt stehen', 'nach vorne und hinten sollte ein freier Gang bleiben', 'blockierte Wege erschweren Präsenz und schnelle Unterstützung'],
+    title: 'Gänge und Laufwege',
+    text: 'Achte darauf, dass Tischreihen nach vorne und hinten nicht zu eng gestellt werden.',
+    bullets: ['Zwischen Tischreihen sollte möglichst ein Gang frei bleiben', 'So kann sich die Lehrkraft besser im Raum bewegen', 'Blockierte Laufwege geben später Punktabzug'],
     visual: 'spacing'
   },
   {
     title: 'Raumsauberkeit und Störreize',
-    text: 'Müll im Klassenraum erzeugt rote Störfelder. Mit dem Besen kannst du Müll entfernen und die Lernumgebung ordnen.',
-    bullets: ['Besen anklicken, danach Müll anklicken', 'Müll wirkt auf angrenzende Felder als Störreiz', 'ein aufgeräumter Raum reduziert Ablenkung und Wegeprobleme'],
+    text: 'Müll im Klassenraum erzeugt starke rote Störfelder. Mit dem Besen kannst du Müll entfernen.',
+    bullets: ['Besen anklicken, danach Müll anklicken', 'Müll wirkt nach oben, unten, links und rechts als Störreiz', 'Ein aufgeräumter Raum reduziert Ablenkung'],
     visual: 'trash'
   },
   {
     title: 'Worauf du achten solltest',
     text: 'Die Vorbereitung wird streng bewertet. Einzelne riskante Nachbarschaften geben jeweils Abzug, gute Sichtbarkeit und stabile Nachbarschaften geben Punkte.',
-    bullets: ['alle 10 Schüler*innen müssen platziert sein', 'Laufwege zwischen Tischreihen frei halten', 'Müll mit dem Besen entfernen', 'störanfällige Schüler*innen sollten wirksam sichtbar sein', 'riskante Paare möglichst trennen oder stabilisieren', 'danach folgt Schritt 2: Klassenregeln auswählen'],
+    bullets: ['Alle 10 Schüler*innen müssen platziert sein', 'Müll möglichst entfernen', 'Störanfällige Schüler*innen sichtbar setzen', 'Riskante Paare trennen oder stabilisieren', 'Danach folgt Schritt 2: Klassenregeln auswählen'],
     visual: 'checklist'
   }
 ];
@@ -1515,9 +1581,10 @@ function tutorialVisualMarkup(type) {
   if (type === 'teacher') return `
     <div class="tutorial-mini-grid teacher-demo teacher-fan-demo">
       <span></span><span></span><span class="mini-teacher-square">LK ↓</span><span></span><span></span>
-      <span></span><span class="v2"></span><span class="v1"></span><span class="v2"></span><span></span>
-      <span class="v4"></span><span class="v3"></span><span class="v2 desk-blocked-demo">T</span><span class="v3"></span><span class="v4"></span>
-      <span class="v4"></span><span class="v4"></span><span class="v4 weakened-demo"></span><span class="v4"></span><span class="v4"></span>
+      <span></span><span class="mini-desk demo-desk-small"></span><span class="mini-desk demo-desk-small"></span><span class="mini-desk demo-desk-small"></span><span></span>
+      <span class="v4"></span><span class="v3"></span><span class="v2"></span><span class="v3"></span><span class="v4"></span>
+      <span class="v4"></span><span class="v3"></span><span class="desk-blocked-demo">Tisch</span><span class="v3"></span><span class="v4"></span>
+      <span class="v4"></span><span class="v4"></span><span class="weakened-demo"></span><span class="v4"></span><span class="v4"></span>
     </div>`;
   if (type === 'risk') return `
     <div class="tutorial-mini-grid risk-demo">
@@ -1533,21 +1600,21 @@ function tutorialVisualMarkup(type) {
     </div>`;
   if (type === 'neutralize') return `
     <div class="tutorial-mini-grid neutral-grid-demo">
-      <span class="r1">Rot</span><span class="yellow-neutral">neutral</span><span class="g1">Grün</span>
-      <span></span><span class="student-neutral">Sitzplatz</span><span></span>
+      <span class="r1"></span><span class="yellow-neutral">neutral</span><span class="g1"></span>
+      <span class="neutral-label">Rot</span><span class="student-neutral">Sitzplatz</span><span class="neutral-label">Grün</span>
       <span></span><span></span><span></span>
     </div>`;
   if (type === 'spacing') return `
     <div class="tutorial-spacing-grid-demo">
-      <span class="demo-desk">Tisch</span><span class="demo-desk">Tisch</span><span></span>
-      <span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span class="demo-note">Gang freihalten</span>
-      <span class="demo-desk muted-desk">Tisch</span><span class="demo-desk muted-desk">Tisch</span><span></span>
+      <span class="demo-desk">Tisch</span><span></span><span class="demo-desk">Tisch</span><span class="demo-note">Gang freihalten</span>
+      <span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span></span>
+      <span class="demo-desk muted-desk">Tisch</span><span></span><span class="demo-desk muted-desk">Tisch</span><span></span>
     </div>`;
   if (type === 'trash') return `
     <div class="tutorial-mini-grid trash-demo">
-      <span></span><span class="r1">🗑️</span><span></span>
-      <span class="r1">rot</span><button type="button" class="mini-broom">🧹</button><span class="r1">rot</span>
-      <span></span><span class="r1">rot</span><span></span>
+      <span class="r1">🗑️</span><span class="r1"></span><span></span>
+      <span class="r1"></span><span></span><span></span>
+      <span></span><span></span><button type="button" class="mini-broom">🧹</button>
     </div>`;
   return `
     <div class="tutorial-check-demo">
@@ -1566,10 +1633,11 @@ function openTutorial() {
   renderTutorial(false);
 }
 
-function closeTutorial() {
+function closeTutorial(showGate = !gameStarted) {
   if (!tutorialOverlay) return;
   tutorialOverlay.hidden = true;
-  document.body.classList.remove('tutorial-open');
+  if (showGate) openStartGate();
+  else document.body.classList.remove('tutorial-open');
 }
 
 function renderTutorial(animated = true, direction = 'next') {
@@ -1582,7 +1650,7 @@ function renderTutorial(animated = true, direction = 'next') {
     if (tutorialVisual) tutorialVisual.innerHTML = tutorialVisualMarkup(slide.visual);
     if (tutorialList) tutorialList.innerHTML = slide.bullets.map(item => `<li>${item}</li>`).join('');
     if (tutorialPrevBtn) tutorialPrevBtn.disabled = tutorialIndex === 0;
-    if (tutorialNextBtn) tutorialNextBtn.textContent = tutorialIndex === tutorialSlides.length - 1 ? 'Spiel starten' : 'Weiter';
+    if (tutorialNextBtn) tutorialNextBtn.textContent = tutorialIndex === tutorialSlides.length - 1 ? 'Fertig' : 'Weiter';
     renderTutorialDots();
   };
 
@@ -1620,7 +1688,7 @@ function renderTutorialDots() {
 
 function nextTutorialSlide() {
   if (tutorialIndex >= tutorialSlides.length - 1) {
-    closeTutorial();
+    closeTutorial(true);
     return;
   }
   tutorialIndex += 1;
@@ -1633,11 +1701,25 @@ function prevTutorialSlide() {
   renderTutorial(true, 'prev');
 }
 
+function openStartGate() {
+  if (!startGateOverlay) return;
+  startGateOverlay.hidden = false;
+  document.body.classList.add('tutorial-open');
+}
+
+function closeStartGate() {
+  if (!startGateOverlay) return;
+  startGateOverlay.hidden = true;
+  gameStarted = true;
+  document.body.classList.remove('tutorial-open');
+}
+
 function bindTutorialEvents() {
-  if (showTutorialBtn) showTutorialBtn.addEventListener('click', openTutorial);
-  if (tutorialSkipBtn) tutorialSkipBtn.addEventListener('click', closeTutorial);
+  if (showTutorialBtn) showTutorialBtn.addEventListener('click', () => { if (startGateOverlay && !startGateOverlay.hidden) closeStartGate(); openTutorial(); });
+  if (tutorialSkipBtn) tutorialSkipBtn.addEventListener('click', () => closeTutorial(true));
   if (tutorialNextBtn) tutorialNextBtn.addEventListener('click', nextTutorialSlide);
   if (tutorialPrevBtn) tutorialPrevBtn.addEventListener('click', prevTutorialSlide);
+  if (startGameBtn) startGameBtn.addEventListener('click', closeStartGate);
   if (tutorialOverlay) {
     tutorialOverlay.addEventListener('keydown', event => {
       if (event.key === 'Escape') closeTutorial();
@@ -1730,4 +1812,5 @@ function bindGlobalEvents() {
 bindGlobalEvents();
 bindTutorialEvents();
 initLayout('rows');
+if (startGateOverlay) startGateOverlay.hidden = true;
 openTutorial();

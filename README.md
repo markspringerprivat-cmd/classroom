@@ -1,62 +1,76 @@
-# Classroom-Management-Spiel – Prototyp
+# Classroom-Management-Spiel – Schritt 1: Klassenraum vorbereiten
 
-Interaktive Webseite für eine Präsentationsphase zu Classroom Management und kooperativer Verhaltensmodifikation.
+Dieser Prototyp bildet nur den ersten Abschnitt der interaktiven Phase ab: Die Nutzer*innen bereiten einen Klassenraum vor, indem sie eine Sitzordnung wählen, Tische verschieben, Schüler*innen platzieren und die Lehrkraft positionieren.
 
 ## Dateien
 
-- `index.html` – Schritt 1: Klassenraum vorbereiten
-- `rules.html` – Schritt 2: Klassenregeln auswählen
-- `styles.css` – gemeinsames Styling
-- `script.js` – Spiellogik für Schritt 1
-- `rules.js` – Spiellogik für Schritt 2
+- `index.html` – Grundstruktur der Webseite
+- `styles.css` – Gestaltung und Layout
+- `script.js` – Spiellogik, Drag-and-Drop, Auswertung
+- `README.md` – kurze Dokumentation
 
-## Schritt 1: Klassenraum vorbereiten
+## Starten
 
-Umgesetzt:
+Die Datei `index.html` kann direkt im Browser geöffnet werden. Für GitHub Pages reicht es, alle Dateien in ein Repository zu legen und GitHub Pages für den Ordner zu aktivieren.
 
-- Klassenraumraster mit quadratischen Feldern
-- feste Raumzonen: Tafel, Tür, Notausgang, Fenster, Klassenschrank, Waschbecken
-- freie Drag-and-drop-Platzierung von Tischen im Raster
-- freie Drag-and-drop-Platzierung der Lehrkraft im Raster
-- Blickrichtung der Lehrkraft durch Klick auf die Lehrkraft veränderbar
-- grüner Sichtfächer der Lehrkraft mit Abschwächung durch Tische
-- Schülerprofile rechts neben dem Raster
-- Schüler*innen per Drag & Drop auf Tische setzen, verschieben oder über X entfernen
-- Mouseover über besetzte Tische zeigt das Schülerprofil
-- rote Risikofelder, grüne Stabilisierung und gelb/orange Neutralisierung
-- zufällig platzierter Müll als Störreiz
-- Besen anklicken, danach Müll anklicken, um Müll zu entfernen
-- Auswertung mit manuellem Slider und Lebensbalken
-- Game-over-Screen mit Button „Neuer Versuch“
-- Übergang zu `rules.html`, wenn die Vorbereitung tragfähig ist
+## Aktueller Funktionsumfang
 
-## Bewertungsidee
+- Auswahl aus vier Sitzordnungen:
+  - Reihensitzordnung
+  - U-Form
+  - Gruppentische
+  - Partnerinseln
+- Tische im Raster verschieben
+- 10 Schülerprofile per Drag & Drop oder Klick platzieren
+- Lehrkraft im Raum platzieren
+- Blickrichtung der Lehrkraft einstellen
+- Sichtbereich der Lehrkraft grün-transparent anzeigen
+- Lehrkraftverhalten wählen:
+  - vorne stehend / leitend
+  - bewegend im Raum
+  - sitzend am Pult
+- Startstabilität berechnen
+- versteckte Variablen für spätere Szenarien ausgeben
 
-Die Vorbereitung erzeugt eine Startstabilität von 0 bis 10 Balken. Bewertet werden unter anderem:
+## Didaktische Grundidee
 
-- ob alle Schüler*innen platziert wurden
-- ob Laufwege zwischen Tischreihen frei bleiben
-- ob störanfällige Schüler*innen im wirksamen Sichtbereich sitzen
-- ob riskante Sitznachbarschaften entstehen
-- ob stabilisierende Nachbarschaften Risiken abfedern
-- ob Müll als Störreiz entfernt wurde
+Die Vorbereitung des Klassenraums soll sichtbar machen, dass Classroom Management präventiv wirkt. Sitzordnung, räumliche Übersicht, Lehrkraftpositionierung und die Nähe zu potenziell störungsanfälligen Schüler*innen beeinflussen die spätere Stabilität der Unterrichtssituation.
 
-## Schritt 2: Klassenregeln
+Der Prototyp wertet daher nicht nur aus, ob alle Schüler*innen platziert wurden, sondern auch, ob risikoreichere Schüler*innen im Sichtbereich der Lehrkraft sitzen, ob ungünstige Nachbarschaften entstehen und ob die Lehrkraft durch ihr Verhalten im Raum Präsenz zeigt.
 
-Umgesetzt:
+## Versteckte Variablen für spätere Spielphasen
 
-- vorbereitetes Klassenraster wird eingefroren übernommen
-- Schülerliste bleibt sichtbar
-- 15 vorgefertigte Regeln werden nacheinander angezeigt
-- Zuordnung in drei Listen: Klassenregeln, Später zuordnen, Aussortiert
-- Ziel: genau 6 Klassenregeln, 9 aussortierte Regeln, keine Regel in „Später zuordnen“
-- Auswahl wird im lokalen Browser-Speicher gesichert
+Die Webseite erzeugt nach der Auswertung unter anderem folgende Informationen:
 
-## Nutzung
+- `layout` – gewählte Sitzordnung
+- `score` – Startstabilität von 0 bis 10
+- `metrics.highRiskOutsideVision` – störungsanfälligere Schüler*innen außerhalb des Sichtbereichs
+- `metrics.conflictPairs` – problematische Nachbarschaften
+- `metrics.phoneRiskBackOrBlind` – Handy-/Ablenkungsrisiko außerhalb des Überblicks
+- `scenarioFlags` – mögliche Auslöser für spätere Branching-Szenarien
 
-1. ZIP entpacken.
-2. `index.html` im Browser öffnen.
-3. Für GitHub Pages alle Dateien gemeinsam in ein Repository legen.
-4. Als Startseite `index.html` verwenden.
+Diese Daten können später genutzt werden, um passende Störungsszenarien einzustreuen, zum Beispiel:
 
-Die Daten zwischen Schritt 1 und Schritt 2 werden über `localStorage` gespeichert.
+- Schüler*in spielt mit dem Handy, wenn Handy-Risiko und schlechter Überblick zusammenkommen.
+- Zwischenrufe nehmen zu, wenn eine impulsive Person außerhalb des Sichtbereichs sitzt.
+- Konflikte entstehen, wenn konfliktaffine Schüler*innen nebeneinander sitzen.
+
+## Geplanter nächster Schritt
+
+Als nächstes können Klassenregeln und Routinen ergänzt werden. Diese sollten als feste Auswahloptionen umgesetzt werden, damit spätere Szenarien gezielt darauf zurückgreifen können.
+
+Beispielhafte Regeln:
+
+- Wir melden uns, bevor wir sprechen.
+- Wir hören einander ausreden.
+- Handys bleiben in der Tasche.
+- Während Arbeitsphasen bleiben wir am Platz.
+
+Beispielhafte Routinen:
+
+- Stundenstart-Routine
+- Ruhezeichen
+- Materialausgabe
+- Übergang in Gruppenarbeit
+- Hilfesignal bei Problemen
+
