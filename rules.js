@@ -92,42 +92,48 @@ function getBlockedCell(row, col) {
 }
 
 function buildBlockedGroups() {
-  const blocked = step1Data.blockedCells || [];
   const groups = [];
+  const cells = step1Data.blockedCells || [];
   const visited = new Set();
-  blocked.forEach(cell => {
+
+  cells.forEach(cell => {
     const key = `${cell.row},${cell.col},${cell.type}`;
     if (visited.has(key)) return;
 
-    const horizontal = blocked.filter(c => c.type === cell.type && c.row === cell.row).sort((a,b)=>a.col-b.col);
-    const vertical = blocked.filter(c => c.type === cell.type && c.col === cell.col).sort((a,b)=>a.row-b.row);
+    const horizontal = cells.filter(c => c.type === cell.type && c.row === cell.row).sort((a, b) => a.col - b.col);
+    const vertical = cells.filter(c => c.type === cell.type && c.col === cell.col).sort((a, b) => a.row - b.row);
 
     const hRun = [cell];
-    let c = cell.col - 1;
-    while (horizontal.some(x => x.col === c)) { hRun.unshift(horizontal.find(x => x.col === c)); c--; }
-    c = cell.col + 1;
-    while (horizontal.some(x => x.col === c)) { hRun.push(horizontal.find(x => x.col === c)); c++; }
+    let col = cell.col - 1;
+    while (horizontal.some(c => c.col === col)) { hRun.unshift(horizontal.find(c => c.col === col)); col -= 1; }
+    col = cell.col + 1;
+    while (horizontal.some(c => c.col === col)) { hRun.push(horizontal.find(c => c.col === col)); col += 1; }
 
     const vRun = [cell];
-    let r = cell.row - 1;
-    while (vertical.some(x => x.row === r)) { vRun.unshift(vertical.find(x => x.row === r)); r--; }
-    r = cell.row + 1;
-    while (vertical.some(x => x.row === r)) { vRun.push(vertical.find(x => x.row === r)); r++; }
+    let row = cell.row - 1;
+    while (vertical.some(c => c.row === row)) { vRun.unshift(vertical.find(c => c.row === row)); row -= 1; }
+    row = cell.row + 1;
+    while (vertical.some(c => c.row === row)) { vRun.push(vertical.find(c => c.row === row)); row += 1; }
 
-    const cells = hRun.length >= vRun.length ? hRun : vRun;
-    cells.forEach(gc => visited.add(`${gc.row},${gc.col},${gc.type}`));
-    const rows = cells.map(gc => gc.row);
-    const cols = cells.map(gc => gc.col);
+    const groupCells = hRun.length >= vRun.length ? hRun : vRun;
+    groupCells.forEach(gc => visited.add(`${gc.row},${gc.col},${gc.type}`));
+
+    const rows = groupCells.map(c => c.row);
+    const cols = groupCells.map(c => c.col);
     groups.push({
+      id: `${cell.type}-${Math.min(...rows)}-${Math.min(...cols)}`,
       type: cell.type,
       label: cell.label,
-      cells,
+      cells: groupCells,
       minRow: Math.min(...rows),
+      maxRow: Math.max(...rows),
       minCol: Math.min(...cols),
+      maxCol: Math.max(...cols),
       rowSpan: Math.max(...rows) - Math.min(...rows) + 1,
       colSpan: Math.max(...cols) - Math.min(...cols) + 1
     });
   });
+
   return groups;
 }
 
@@ -139,7 +145,7 @@ function isBlockedGroupAnchor(group, row, col) {
   return Boolean(group) && group.minRow === row && group.minCol === col;
 }
 
-function formatFrozenBlockedLabel(group) {
+function formatBlockedLabel(group) {
   if (group.type === 'sink') return 'Wasch-<br>becken';
   if (group.type === 'exit') return 'Notaus-<br>gang';
   return group.label;
@@ -214,10 +220,10 @@ function renderFrozenGrid() {
         if (blockGroup && isBlockedGroupAnchor(blockGroup, row, col)) {
           const blockEl = document.createElement('span');
           const sideLabel = ['window', 'door', 'exit'].includes(blockGroup.type);
-          blockEl.className = `frozen-blocked-label${sideLabel ? ' side-label' : ''}`;
-          blockEl.style.setProperty('--span-cols', String(blockGroup.colSpan));
-          blockEl.style.setProperty('--span-rows', String(blockGroup.rowSpan));
-          blockEl.innerHTML = formatFrozenBlockedLabel(blockGroup);
+          blockEl.className = `frozen-blocked-label ${sideLabel ? 'side-label' : ''}`;
+          blockEl.style.setProperty('--frozen-span-cols', String(blockGroup.colSpan));
+          blockEl.style.setProperty('--frozen-span-rows', String(blockGroup.rowSpan));
+          blockEl.innerHTML = `<span>${formatBlockedLabel(blockGroup)}</span>`;
           cell.appendChild(blockEl);
         }
       }
@@ -277,22 +283,21 @@ function renderRules() {
 function renderCurrentRule() {
   const assignedCount = getAssignedRuleIds().length;
   const current = getCurrentRule();
+  currentRuleCard.classList.toggle('empty-deck', !current);
   if (current) {
     currentRuleCard.hidden = false;
-    currentRuleCard.classList.remove('deck-empty');
     currentRuleCard.dataset.ruleId = current.id;
     currentRuleCard.draggable = true;
     progressText.textContent = `Regel ${assignedCount + 1}/${TOTAL_RULES}`;
     currentRuleText.textContent = current.text;
-    currentRuleHint.textContent = 'Ziehe diese Regel per Drag & Drop in eine der Listen.';
+    currentRuleHint.textContent = 'Ziehe diese Regel in eine Liste.';
   } else {
     currentRuleCard.hidden = false;
-    currentRuleCard.classList.add('deck-empty');
     currentRuleCard.removeAttribute('data-rule-id');
     currentRuleCard.draggable = false;
     progressText.textContent = 'Alle 15 Regeln zugeordnet';
     currentRuleText.textContent = 'Keine neue Regel mehr im Stapel.';
-    currentRuleHint.textContent = 'Ordne nun ggf. Regeln zwischen den Listen um, bis genau sechs Klassenregeln gewählt sind.';
+    currentRuleHint.textContent = 'Sortiere die Listen um, bis genau sechs Klassenregeln gewählt sind und „Später zuordnen“ leer ist.';
   }
 }
 
@@ -319,6 +324,7 @@ function renderList(listName, container) {
     card.dataset.ruleId = rule.id;
     card.dataset.source = listName;
     card.innerHTML = `<strong>${rule.text}</strong>`;
+    card.title = 'Per Drag & Drop in eine andere Liste ziehen.';
     card.addEventListener('dragstart', event => startRuleDrag(event, rule.id, listName));
     card.addEventListener('dragend', clearRuleDrag);
     container.appendChild(card);
@@ -326,14 +332,6 @@ function renderList(listName, container) {
 }
 
 function bindEvents() {
-  document.querySelectorAll('.rule-action').forEach(button => {
-    button.addEventListener('click', () => {
-      const current = getCurrentRule();
-      if (!current) return;
-      moveRule(current.id, button.dataset.target);
-    });
-  });
-
   currentRuleCard.addEventListener('dragstart', event => {
     const current = getCurrentRule();
     if (!current) return;
