@@ -86,6 +86,9 @@ const evaluationActionArea = document.getElementById('evaluationActionArea');
 const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle');
 const evaluationOutcomeMessage = document.getElementById('evaluationOutcomeMessage');
 const step2Btn = document.getElementById('step2Btn');
+const newAttemptBtn = document.getElementById('newAttemptBtn');
+const teacherDirectionPopover = document.getElementById('teacherDirectionPopover');
+const studentHoverCard = document.getElementById('studentHoverCard');
 const showTutorialBtn = document.getElementById('showTutorialBtn');
 const tutorialOverlay = document.getElementById('tutorialOverlay');
 const tutorialSlide = document.getElementById('tutorialSlide');
@@ -116,7 +119,7 @@ function initLayout(layoutKey, keepAssignments = false) {
     });
   }
 
-  state.teacher = { ...layout.teacher, mode: teacherModeSelect.value || 'frontStanding' };
+  state.teacher = { ...layout.teacher, mode: (teacherModeSelect && teacherModeSelect.value) || state.teacher.mode || 'frontStanding' };
   state.placingTeacher = false;
   setDirectionActive(state.teacher.dir);
   updateTeacherPlacementButton();
@@ -266,6 +269,13 @@ function createDeskElement(desk, influence = null) {
     if (state.selectedStudentId) assignStudentToDesk(state.selectedStudentId, desk.id);
   });
 
+  if (assignedStudentId) {
+    const student = getStudent(assignedStudentId);
+    deskEl.addEventListener('mouseenter', event => showStudentHoverCard(student, event));
+    deskEl.addEventListener('mousemove', event => moveStudentHoverCard(event));
+    deskEl.addEventListener('mouseleave', hideStudentHoverCard);
+  }
+
   return deskEl;
 }
 
@@ -286,9 +296,7 @@ function createTeacherInRoom() {
   });
   el.addEventListener('click', event => {
     event.stopPropagation();
-    state.placingTeacher = !state.placingTeacher;
-    updateTeacherPlacementButton();
-    renderGrid();
+    openTeacherDirectionPopover(event.currentTarget);
   });
   return el;
 }
@@ -509,8 +517,63 @@ function setDirectionActive(dir) {
 }
 
 function updateTeacherPlacementButton() {
+  if (!teacherToken) return;
   teacherToken.classList.toggle('selected', state.placingTeacher);
   teacherToken.textContent = state.placingTeacher ? 'Ziel wählen' : 'Lehrkraft';
+}
+
+function closeTeacherDirectionPopover() {
+  if (!teacherDirectionPopover) return;
+  teacherDirectionPopover.hidden = true;
+}
+
+function openTeacherDirectionPopover(anchorEl) {
+  if (!teacherDirectionPopover || !anchorEl) return;
+  setDirectionActive(state.teacher.dir);
+  const anchorRect = anchorEl.getBoundingClientRect();
+  const wrapRect = document.querySelector('.room-wrap')?.getBoundingClientRect() || { left: 0, top: 0 };
+  teacherDirectionPopover.style.left = `${Math.max(10, anchorRect.left - wrapRect.left + anchorRect.width / 2 - 90)}px`;
+  teacherDirectionPopover.style.top = `${Math.max(10, anchorRect.top - wrapRect.top + anchorRect.height + 8)}px`;
+  teacherDirectionPopover.hidden = false;
+}
+
+function studentProfileTags(student) {
+  const h = student?.hidden || {};
+  const tags = [];
+  if (h.needsMonitoring) tags.push('braucht Blickkontakt/Präsenz');
+  if (h.distractor) tags.push('Ablenkungsrisiko');
+  if (h.phoneRisk) tags.push('Handy-/Off-Task-Risiko');
+  if (h.callsOut) tags.push('Zwischenrufe möglich');
+  if (h.boundaryTesting) tags.push('testet Grenzen');
+  if (h.conflictWithBoys) tags.push('Konfliktrisiko mit Jungen');
+  if (h.needsStructure) tags.push('braucht Struktur');
+  if (h.stabilizer) tags.push('stabilisierend');
+  if (h.mediator) tags.push('vermittelnd');
+  return tags;
+}
+
+function showStudentHoverCard(student, event) {
+  if (!studentHoverCard || !student) return;
+  const tags = studentProfileTags(student).map(tag => `<span>${tag}</span>`).join('');
+  studentHoverCard.innerHTML = `
+    <strong>${student.name} (${student.age})</strong>
+    <p>${student.note}</p>
+    <div class="student-hover-tags">${tags}</div>
+  `;
+  studentHoverCard.hidden = false;
+  moveStudentHoverCard(event);
+}
+
+function moveStudentHoverCard(event) {
+  if (!studentHoverCard || studentHoverCard.hidden) return;
+  const wrapRect = document.querySelector('.room-wrap')?.getBoundingClientRect() || { left: 0, top: 0 };
+  studentHoverCard.style.left = `${Math.max(12, event.clientX - wrapRect.left + 16)}px`;
+  studentHoverCard.style.top = `${Math.max(12, event.clientY - wrapRect.top + 16)}px`;
+}
+
+function hideStudentHoverCard() {
+  if (!studentHoverCard) return;
+  studentHoverCard.hidden = true;
 }
 
 function getVectorForDirection(dir) {
@@ -1169,6 +1232,10 @@ function showEvaluationOutcome(rawScore) {
       step2Btn.hidden = true;
       step2Btn.disabled = true;
     }
+    if (newAttemptBtn) {
+      newAttemptBtn.hidden = false;
+      newAttemptBtn.disabled = false;
+    }
   } else {
     evaluationActionArea.classList.remove('game-over');
     if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Vorbereitung tragfähig';
@@ -1176,6 +1243,10 @@ function showEvaluationOutcome(rawScore) {
     if (step2Btn) {
       step2Btn.hidden = false;
       step2Btn.disabled = false;
+    }
+    if (newAttemptBtn) {
+      newAttemptBtn.hidden = true;
+      newAttemptBtn.disabled = true;
     }
   }
 }
@@ -1226,7 +1297,7 @@ const tutorialSlides = [
   {
     title: 'Lehrkraft und Sichtbereich',
     text: 'Die Lehrkraft kann frei im Raum platziert werden. Blickrichtung und Verhalten erzeugen unterschiedliche Sicht- und Präsenzbereiche.',
-    bullets: ['vorne stehend: breiter Leitungsfächer', 'bewegend: schmaler Präsenzkorridor', 'sitzend: kurzer Sichtbereich', 'Tische schwächen dahinterliegende Felder ab'],
+    bullets: ['vorne stehend: breiter Leitungsfächer', 'bewegend: schmaler Präsenzkorridor', 'sitzend: kurzer Sichtbereich', 'Tische schwächen dahinterliegende Felder ab', 'Lehrkraft anklicken: Blickrichtung ändern'],
     visual: 'teacher'
   },
   {
@@ -1248,6 +1319,12 @@ const tutorialSlides = [
     visual: 'neutralize'
   },
   {
+    title: 'Gänge zwischen Tischreihen',
+    text: 'Vor und hinter jedem Tisch muss ein Feld frei bleiben. Das simuliert Stühle, Laufwege und den Zugang der Lehrkraft.',
+    bullets: ['nebeneinander dürfen Tische direkt stehen', 'untereinander braucht es einen freien Gang', 'blockierte Wege erschweren Präsenz und schnelle Unterstützung', 'ungültige Abstände werden einzeln abgezogen'],
+    visual: 'spacing'
+  },
+  {
     title: 'Worauf du achten solltest',
     text: 'Die Vorbereitung wird streng bewertet. Einzelne riskante Nachbarschaften geben jeweils Abzug, gute Sichtbarkeit und stabile Nachbarschaften geben Punkte.',
     bullets: ['alle 10 Schüler*innen müssen platziert sein', 'vor und hinter Tischen muss ein Feld frei bleiben', 'störanfällige Schüler*innen sollten wirksam sichtbar sein', 'riskante Paare möglichst trennen oder stabilisieren', 'danach folgt Schritt 2: Klassenregeln auswählen'],
@@ -1263,10 +1340,10 @@ function tutorialVisualMarkup(type) {
     </div>`;
   if (type === 'teacher') return `
     <div class="tutorial-mini-grid teacher-demo">
-      <span></span><span class="v4"></span><span class="v3"></span><span class="v4"></span><span></span>
-      <span></span><span class="v3"></span><span class="v2"></span><span class="v3"></span><span></span>
-      <span class="v4"></span><span class="v2"></span><span class="v1"></span><span class="v2"></span><span class="v4"></span>
       <span></span><span></span><span class="mini-teacher-square">LK ↓</span><span></span><span></span>
+      <span></span><span class="v2"></span><span class="v1"></span><span class="v2"></span><span></span>
+      <span class="v4"></span><span class="v3"></span><span class="v2"></span><span class="v3"></span><span class="v4"></span>
+      <span class="v4"></span><span></span><span class="v3"></span><span></span><span class="v4"></span>
     </div>`;
   if (type === 'risk') return `
     <div class="tutorial-mini-grid risk-demo">
@@ -1287,6 +1364,11 @@ function tutorialVisualMarkup(type) {
       <div class="neutral-layer green-layer">Schutz</div>
       <div class="neutral-equals">=</div>
       <div class="neutral-layer yellow-layer">abgefedert</div>
+    </div>`;
+  if (type === 'spacing') return `
+    <div class="tutorial-spacing-demo">
+      <span class="demo-desk">Tisch</span><span class="demo-gap">Gang</span><span class="demo-desk">Tisch</span>
+      <span class="demo-ok">✓ nebeneinander möglich</span><span class="demo-gap vertical">frei</span><span class="demo-warn">! nicht direkt dahinter</span>
     </div>`;
   return `
     <div class="tutorial-check-demo">
@@ -1387,30 +1469,34 @@ function bindTutorialEvents() {
 }
 
 function bindGlobalEvents() {
-  layoutSelect.addEventListener('change', () => initLayout(layoutSelect.value, false));
-  teacherModeSelect.addEventListener('change', () => {
+  if (layoutSelect) layoutSelect.addEventListener('change', () => initLayout(layoutSelect.value, false));
+  if (teacherModeSelect) teacherModeSelect.addEventListener('change', () => {
     state.teacher.mode = teacherModeSelect.value;
     clearResults();
     renderGrid();
   });
-  teacherToken.addEventListener('dragstart', event => {
-    event.stopPropagation();
-    startDrag(event, { type: 'teacher' });
-  });
-  teacherToken.addEventListener('dragend', clearDragState);
-  teacherToken.addEventListener('click', () => {
-    state.placingTeacher = !state.placingTeacher;
-    state.selectedStudentId = null;
-    updateTeacherPlacementButton();
-    renderPalette();
-    renderGrid();
-  });
+  if (teacherToken) {
+    teacherToken.addEventListener('dragstart', event => {
+      event.stopPropagation();
+      startDrag(event, { type: 'teacher' });
+    });
+    teacherToken.addEventListener('dragend', clearDragState);
+    teacherToken.addEventListener('click', () => {
+      state.placingTeacher = !state.placingTeacher;
+      state.selectedStudentId = null;
+      updateTeacherPlacementButton();
+      renderPalette();
+      renderGrid();
+    });
+  }
   document.querySelectorAll('.dir-btn').forEach(button => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
       state.teacher.dir = button.dataset.dir;
       setDirectionActive(state.teacher.dir);
       clearResults();
       renderGrid();
+      closeTeacherDirectionPopover();
     });
   });
   paletteEl.addEventListener('dragover', event => {
@@ -1438,6 +1524,23 @@ function bindGlobalEvents() {
   if (evaluationNextBtn) evaluationNextBtn.addEventListener('click', () => advanceEvaluationStep(true));
   if (step2Btn) step2Btn.addEventListener('click', () => {
     if (saveStepStateForNextPage()) window.location.href = 'rules.html';
+  });
+  if (newAttemptBtn) newAttemptBtn.addEventListener('click', () => {
+    try {
+      localStorage.removeItem('classroomGame.step1');
+      localStorage.removeItem('classroomGame.step2.rulesDraft');
+      localStorage.removeItem('classroomGame.step2.rules');
+    } catch (error) {
+      console.warn('LocalStorage konnte nicht geleert werden.', error);
+    }
+    if (evaluationOverlay) evaluationOverlay.hidden = true;
+    evaluationSession = null;
+    initLayout('rows', false);
+  });
+  document.addEventListener('click', event => {
+    if (teacherDirectionPopover && !teacherDirectionPopover.hidden && !event.target.closest('.teacher-direction-popover') && !event.target.closest('.teacher-in-room')) {
+      closeTeacherDirectionPopover();
+    }
   });
   evaluateBtn.addEventListener('click', evaluatePreparation);
   resetBtn.addEventListener('click', () => initLayout(state.layout, false));
