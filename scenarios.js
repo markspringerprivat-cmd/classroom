@@ -1114,10 +1114,7 @@ function renderBranchGame() {
         const obj = document.createElement('span');
         const trashIncident = object.type === 'trash' ? activeTrashByCell.get(`${row},${col}`) : null;
         obj.className = `branch-object branch-object-${object.type}${game.cleaningMode && object.type === 'broom' ? ' active-cleaning' : ''}`;
-        obj.innerHTML = `${object.type === 'broom' ? '🧹' : '🗑️'}`;
-        if (object.type === 'trash' && trashIncident) {
-          obj.setAttribute('aria-label', `Müll blockiert den Weg nahe bei ${trashIncident.student?.name || 'einem Tisch'}.`);
-        }
+        obj.innerHTML = `${object.type === 'broom' ? '🧹' : '🗑️'}${trashIncident ? `<strong class="incident-countdown-badge">${Math.max(0, Math.ceil((trashIncident.deadline - Date.now()) / 1000))}</strong>` : ''}`;
         cell.appendChild(obj);
       }
 
