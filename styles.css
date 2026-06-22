@@ -4334,3 +4334,52 @@ body.rules-page {
   max-height: calc(100vh - 48px);
   overflow: auto;
 }
+
+
+/* ===== Phase 3 teacher mood asset card ===== */
+.teacher-mood-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.54);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.teacher-mood-frame {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 180px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(30, 41, 59, 0.50));
+  border: 1px solid rgba(191, 219, 254, 0.14);
+}
+
+.teacher-mood-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 14px 24px rgba(2, 6, 23, 0.32));
+}
+
+.teacher-mood-card span {
+  display: block;
+  color: rgba(191, 219, 254, 0.76);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.teacher-mood-card strong {
+  display: block;
+  margin-top: 3px;
+  color: #f8fafc;
+  font-size: 0.92rem;
+  line-height: 1.2;
+}

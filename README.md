@@ -84,3 +84,18 @@ Neu ergänzt sind `scenarios.html` und `scenarios.js`. Nach dem Speichern der Kl
 ## Schritt 3: Branching-Prototyp
 
 `scenarios.html` enthält das Live-Klassenzimmer mit 5-Minuten-Timer, dynamischen Störungen, automatischer Lehrkraftbewegung und Szenario-Katalog.
+
+
+## Assets
+
+Die Lehrkraft-Zustandsbilder für Phase 3 liegen im Ordner `assets/teachers/`:
+
+- `teacher_1.png` für 0–1 Leben
+- `teacher_2.png` für 2 Leben
+- `teacher_3.png` für 3 Leben
+- `teacher_4.png` für 4 Leben
+- `teacher_5.png` für 5 Leben
+- `teacher_6-7.png` für 6–7 Leben
+- `teacher_8-10.png` für 8–10 Leben
+
+`scenarios.js` wählt das passende Bild automatisch anhand der aktuellen Unterrichtsstabilität aus.

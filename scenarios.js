@@ -599,6 +599,8 @@ const lessonTimerEl = document.getElementById('lessonTimer');
 const branchLifeSegments = document.getElementById('branchLifeSegments');
 const branchScorePill = document.getElementById('branchScorePill');
 const branchScoreNote = document.getElementById('branchScoreNote');
+const teacherMoodImage = document.getElementById('teacherMoodImage');
+const teacherMoodLabel = document.getElementById('teacherMoodLabel');
 const teacherStatus = document.getElementById('teacherStatus');
 const startLessonBtn = document.getElementById('startLessonBtn');
 const incidentCounter = document.getElementById('incidentCounter');
@@ -1225,11 +1227,33 @@ function renderIncidents() {
 function renderLife() {
   if (branchScorePill) branchScorePill.textContent = `${game.score}/10`;
   if (branchScoreNote) branchScoreNote.textContent = `Startwert aus Classroom Management: ${normalizeStartScore(context.stepData?.rawPreparationScore ?? context.stepData?.preparationScore ?? 5)}/10.`;
+  updateTeacherMoodImage();
   if (!branchLifeSegments) return;
   branchLifeSegments.classList.toggle('life-low', game.score <= 3);
   branchLifeSegments.classList.toggle('life-mid', game.score > 3 && game.score <= 6);
   branchLifeSegments.classList.toggle('life-high', game.score > 6);
   branchLifeSegments.innerHTML = Array.from({ length: 10 }, (_, index) => `<span class="${index < game.score ? 'filled' : ''}"></span>`).join('');
+}
+
+function teacherMoodForScore(score) {
+  const lives = Math.max(0, Math.min(10, Math.round(Number(score) || 0)));
+  if (lives <= 1) return { file: 'teacher_1.png', label: 'panisch / stark belastet' };
+  if (lives === 2) return { file: 'teacher_2.png', label: 'sehr gestresst' };
+  if (lives === 3) return { file: 'teacher_3.png', label: 'unsicher' };
+  if (lives === 4) return { file: 'teacher_4.png', label: 'leicht verunsichert' };
+  if (lives === 5) return { file: 'teacher_5.png', label: 'neutral' };
+  if (lives <= 7) return { file: 'teacher_6-7.png', label: 'zufrieden' };
+  return { file: 'teacher_8-10.png', label: 'selbstbewusst' };
+}
+
+function updateTeacherMoodImage() {
+  const mood = teacherMoodForScore(game.score);
+  if (teacherMoodImage) {
+    const nextSrc = `assets/teachers/${mood.file}`;
+    if (!teacherMoodImage.getAttribute('src')?.endsWith(nextSrc)) teacherMoodImage.src = nextSrc;
+    teacherMoodImage.alt = `Lehrkraft-Zustand bei ${game.score} von 10 Stabilität: ${mood.label}`;
+  }
+  if (teacherMoodLabel) teacherMoodLabel.textContent = `${mood.label} · ${game.score}/10`;
 }
 
 function changeScore(delta) {
