@@ -45,57 +45,6 @@ const defaultStep1 = {
   assignments: {}
 };
 
-
-function buildFrozenBlockedGroups() {
-  const blocked = step1Data.blockedCells || [];
-  const groups = [];
-  const visited = new Set();
-  blocked.forEach(cell => {
-    const key = `${cell.row},${cell.col},${cell.type}`;
-    if (visited.has(key)) return;
-    const sameRow = blocked.filter(c => c.type === cell.type && c.row === cell.row).sort((a,b) => a.col - b.col);
-    const sameCol = blocked.filter(c => c.type === cell.type && c.col === cell.col).sort((a,b) => a.row - b.row);
-    const hRun = [cell];
-    let c = cell.col - 1;
-    while (sameRow.some(x => x.col === c)) { hRun.unshift(sameRow.find(x => x.col === c)); c--; }
-    c = cell.col + 1;
-    while (sameRow.some(x => x.col === c)) { hRun.push(sameRow.find(x => x.col === c)); c++; }
-    const vRun = [cell];
-    let r = cell.row - 1;
-    while (sameCol.some(x => x.row === r)) { vRun.unshift(sameCol.find(x => x.row === r)); r--; }
-    r = cell.row + 1;
-    while (sameCol.some(x => x.row === r)) { vRun.push(sameCol.find(x => x.row === r)); r++; }
-    const cells = hRun.length >= vRun.length ? hRun : vRun;
-    cells.forEach(gc => visited.add(`${gc.row},${gc.col},${gc.type}`));
-    const rows = cells.map(gc => gc.row);
-    const cols = cells.map(gc => gc.col);
-    groups.push({
-      type: cell.type,
-      label: cell.label,
-      cells,
-      minRow: Math.min(...rows),
-      minCol: Math.min(...cols),
-      rowSpan: Math.max(...rows) - Math.min(...rows) + 1,
-      colSpan: Math.max(...cols) - Math.min(...cols) + 1
-    });
-  });
-  return groups;
-}
-
-function getFrozenBlockedGroupAt(row, col) {
-  return buildFrozenBlockedGroups().find(group => group.cells.some(cell => cell.row === row && cell.col === col)) || null;
-}
-
-function isFrozenBlockedGroupAnchor(group, row, col) {
-  return Boolean(group) && group.minRow === row && group.minCol === col;
-}
-
-function frozenBlockedLabel(group) {
-  if (group.type === 'sink') return 'Wasch-<br>becken';
-  if (group.type === 'exit') return 'Notaus-<br>gang';
-  return group.label;
-}
-
 const step1Data = loadStep1Data();
 const ruleState = {
   currentIndex: 0,
@@ -140,6 +89,60 @@ function getStudent(id) {
 
 function getBlockedCell(row, col) {
   return (step1Data.blockedCells || []).find(item => item.row === row && item.col === col) || null;
+}
+
+function buildBlockedGroups() {
+  const blocked = step1Data.blockedCells || [];
+  const groups = [];
+  const visited = new Set();
+  blocked.forEach(cell => {
+    const key = `${cell.row},${cell.col},${cell.type}`;
+    if (visited.has(key)) return;
+
+    const horizontal = blocked.filter(c => c.type === cell.type && c.row === cell.row).sort((a,b)=>a.col-b.col);
+    const vertical = blocked.filter(c => c.type === cell.type && c.col === cell.col).sort((a,b)=>a.row-b.row);
+
+    const hRun = [cell];
+    let c = cell.col - 1;
+    while (horizontal.some(x => x.col === c)) { hRun.unshift(horizontal.find(x => x.col === c)); c--; }
+    c = cell.col + 1;
+    while (horizontal.some(x => x.col === c)) { hRun.push(horizontal.find(x => x.col === c)); c++; }
+
+    const vRun = [cell];
+    let r = cell.row - 1;
+    while (vertical.some(x => x.row === r)) { vRun.unshift(vertical.find(x => x.row === r)); r--; }
+    r = cell.row + 1;
+    while (vertical.some(x => x.row === r)) { vRun.push(vertical.find(x => x.row === r)); r++; }
+
+    const cells = hRun.length >= vRun.length ? hRun : vRun;
+    cells.forEach(gc => visited.add(`${gc.row},${gc.col},${gc.type}`));
+    const rows = cells.map(gc => gc.row);
+    const cols = cells.map(gc => gc.col);
+    groups.push({
+      type: cell.type,
+      label: cell.label,
+      cells,
+      minRow: Math.min(...rows),
+      minCol: Math.min(...cols),
+      rowSpan: Math.max(...rows) - Math.min(...rows) + 1,
+      colSpan: Math.max(...cols) - Math.min(...cols) + 1
+    });
+  });
+  return groups;
+}
+
+function getBlockedGroupAt(row, col) {
+  return buildBlockedGroups().find(group => group.cells.some(cell => cell.row === row && cell.col === col)) || null;
+}
+
+function isBlockedGroupAnchor(group, row, col) {
+  return Boolean(group) && group.minRow === row && group.minCol === col;
+}
+
+function formatFrozenBlockedLabel(group) {
+  if (group.type === 'sink') return 'Wasch-<br>becken';
+  if (group.type === 'exit') return 'Notaus-<br>gang';
+  return group.label;
 }
 
 function getRoomObjectAt(row, col) {
@@ -205,15 +208,16 @@ function renderFrozenGrid() {
       const cell = document.createElement('div');
       cell.className = 'frozen-cell';
       const block = getBlockedCell(row, col);
+      const blockGroup = block ? getBlockedGroupAt(row, col) : null;
       if (block) {
-        const group = getFrozenBlockedGroupAt(row, col);
         cell.classList.add('frozen-blocked', `frozen-blocked-${block.type}`);
-        if (group && isFrozenBlockedGroupAnchor(group, row, col)) {
+        if (blockGroup && isBlockedGroupAnchor(blockGroup, row, col)) {
           const blockEl = document.createElement('span');
-          blockEl.className = `frozen-blocked-label frozen-${group.type}${['window','door','exit'].includes(group.type) ? ' side-label' : ''}`;
-          blockEl.style.setProperty('--span-cols', String(group.colSpan));
-          blockEl.style.setProperty('--span-rows', String(group.rowSpan));
-          blockEl.innerHTML = frozenBlockedLabel(group);
+          const sideLabel = ['window', 'door', 'exit'].includes(blockGroup.type);
+          blockEl.className = `frozen-blocked-label${sideLabel ? ' side-label' : ''}`;
+          blockEl.style.setProperty('--span-cols', String(blockGroup.colSpan));
+          blockEl.style.setProperty('--span-rows', String(blockGroup.rowSpan));
+          blockEl.innerHTML = formatFrozenBlockedLabel(blockGroup);
           cell.appendChild(blockEl);
         }
       }
@@ -275,20 +279,20 @@ function renderCurrentRule() {
   const current = getCurrentRule();
   if (current) {
     currentRuleCard.hidden = false;
-    currentRuleCard.classList.remove('empty-deck');
+    currentRuleCard.classList.remove('deck-empty');
     currentRuleCard.dataset.ruleId = current.id;
     currentRuleCard.draggable = true;
     progressText.textContent = `Regel ${assignedCount + 1}/${TOTAL_RULES}`;
     currentRuleText.textContent = current.text;
-    currentRuleHint.textContent = 'Ziehe die Regel per Drag & Drop in eine der Listen.';
+    currentRuleHint.textContent = 'Ziehe diese Regel per Drag & Drop in eine der Listen.';
   } else {
     currentRuleCard.hidden = false;
-    currentRuleCard.classList.add('empty-deck');
+    currentRuleCard.classList.add('deck-empty');
     currentRuleCard.removeAttribute('data-rule-id');
     currentRuleCard.draggable = false;
     progressText.textContent = 'Alle 15 Regeln zugeordnet';
     currentRuleText.textContent = 'Keine neue Regel mehr im Stapel.';
-    currentRuleHint.textContent = 'Ordne ggf. Regeln zwischen den Listen um, bis genau sechs Klassenregeln gewählt sind.';
+    currentRuleHint.textContent = 'Ordne nun ggf. Regeln zwischen den Listen um, bis genau sechs Klassenregeln gewählt sind.';
   }
 }
 
@@ -322,6 +326,14 @@ function renderList(listName, container) {
 }
 
 function bindEvents() {
+  document.querySelectorAll('.rule-action').forEach(button => {
+    button.addEventListener('click', () => {
+      const current = getCurrentRule();
+      if (!current) return;
+      moveRule(current.id, button.dataset.target);
+    });
+  });
+
   currentRuleCard.addEventListener('dragstart', event => {
     const current = getCurrentRule();
     if (!current) return;

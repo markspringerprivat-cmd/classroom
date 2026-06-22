@@ -552,9 +552,6 @@ function removeStudentFromDesk(deskId) {
   delete state.assignments[deskId];
   state.selectedStudentId = null;
   clearResults();
-  stopPreparationTimer();
-  preparationTimeLeft = 300;
-  updatePreparationTimerDisplay();
   render();
 }
 
@@ -580,9 +577,6 @@ function assignStudentToDesk(studentId, deskId) {
   state.assignments[deskId] = studentId;
   state.selectedStudentId = null;
   clearResults();
-  stopPreparationTimer();
-  preparationTimeLeft = 300;
-  updatePreparationTimerDisplay();
   render();
 }
 
@@ -1013,6 +1007,7 @@ function addFeedback(feedback, type, delta, text, detail = '') {
 }
 
 function evaluatePreparation() {
+  stopPreparationTimer();
   if (!allStudentsPlaced()) {
     clearResults();
     const missing = students.length - Object.keys(state.assignments).length;
@@ -1545,7 +1540,6 @@ function clearResults() {
   scoreValue.textContent = '–';
   resultsPanel.hidden = true;
   if (evaluationOverlay) evaluationOverlay.hidden = true;
-  if (overlayCloseBtn) overlayCloseBtn.hidden = false;
   if (evaluationActionArea) evaluationActionArea.hidden = true;
 }
 
@@ -1607,11 +1601,12 @@ function tutorialVisualMarkup(type) {
       <div class="mini-arrow">→</div><div class="mini-score"><span></span><span></span><span></span><span></span><span></span></div>
     </div>`;
   if (type === 'teacher') return `
-    <div class="tutorial-viz-grid viz-teacher">
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell"></span><span class="viz-cell green-3"></span><span class="viz-cell green-4"></span><span class="viz-cell green-3"></span><span class="viz-cell"></span>
-      <span class="viz-cell green-2"></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell green-2"></span>
-      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
+    <div class="tutorial-mini-grid teacher-demo teacher-fan-demo">
+      <span></span><span></span><span class="mini-teacher-square">LK ↓</span><span></span><span></span>
+      <span></span><span class="mini-desk demo-desk-small"></span><span class="mini-desk demo-desk-small"></span><span class="mini-desk demo-desk-small"></span><span></span>
+      <span class="v4"></span><span class="v3"></span><span class="v2"></span><span class="v3"></span><span class="v4"></span>
+      <span class="v4"></span><span class="v3"></span><span class="desk-blocked-demo">Tisch</span><span class="v3"></span><span class="v4"></span>
+      <span class="v4"></span><span class="v4"></span><span class="weakened-demo"></span><span class="v4"></span><span class="v4"></span>
     </div>`;
   if (type === 'risk') return `
     <div class="tutorial-mini-grid risk-demo">
@@ -1626,23 +1621,22 @@ function tutorialVisualMarkup(type) {
       <span class="g2"></span><span class="g2"></span><span class="g2"></span>
     </div>`;
   if (type === 'neutralize') return `
-    <div class="tutorial-viz-grid viz-neutralize">
-      <span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell red-2"></span><span class="viz-cell desk-mini">Tisch 1<span class="remove-x">×</span><br><strong>Ben</strong></span><span class="viz-cell neutral-1"></span><span class="viz-cell desk-mini">Tisch 4<span class="remove-x">×</span><br><strong>Sara</strong></span><span class="viz-cell green-2"></span>
-      <span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
+    <div class="tutorial-mini-grid neutral-grid-demo">
+      <span class="r1"></span><span class="yellow-neutral">neutral</span><span class="g1"></span>
+      <span class="neutral-label">Rot</span><span class="student-neutral">Sitzplatz</span><span class="neutral-label">Grün</span>
+      <span></span><span></span><span></span>
     </div>`;
   if (type === 'spacing') return `
-    <div class="tutorial-viz-grid viz-spacing">
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell teacher-mini">Lehrkraft<br>↓</span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell desk-mini">Tisch 2<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 1<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 4<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 9<br><small>freier Platz</small></span>
-      <span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span><span class="viz-cell green-1"></span>
-      <span class="viz-cell desk-mini">Tisch 6<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 5<br><small>freier Platz</small></span><span class="viz-cell green-2"></span><span class="viz-cell desk-mini">Tisch 7<br><small>freier Platz</small></span><span class="viz-cell desk-mini">Tisch 8<br><small>freier Platz</small></span>
+    <div class="tutorial-spacing-grid-demo">
+      <span class="demo-desk">Tisch</span><span></span><span class="demo-desk">Tisch</span><span class="demo-note">Gang freihalten</span>
+      <span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span></span>
+      <span class="demo-desk muted-desk">Tisch</span><span></span><span class="demo-desk muted-desk">Tisch</span><span></span>
     </div>`;
   if (type === 'trash') return `
-    <div class="tutorial-viz-grid viz-trash">
-      <span class="viz-cell red-2 trash-home">🗑️</span><span class="viz-cell red-2"></span><span class="viz-cell"></span>
-      <span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home">🧹</span>
+    <div class="tutorial-mini-grid trash-demo">
+      <span class="r1">🗑️</span><span class="r1"></span><span></span>
+      <span class="r1"></span><span></span><span></span>
+      <span></span><span></span><button type="button" class="mini-broom">🧹</button>
     </div>`;
   return `
     <div class="tutorial-check-demo">
@@ -1752,10 +1746,7 @@ function showTimeUpState() {
   if (overlayCloseBtn) overlayCloseBtn.hidden = true;
   if (evaluationTitle) evaluationTitle.textContent = 'Zeit abgelaufen';
   if (evaluationStepCounter) evaluationStepCounter.textContent = 'Zeitlimit erreicht';
-  if (evaluationStepDelta) {
-    evaluationStepDelta.textContent = '0';
-    evaluationStepDelta.className = 'step-delta neutral';
-  }
+  setStepDelta(0);
   if (evaluationCurrentText) evaluationCurrentText.textContent = 'Die fünf Minuten für die Vorbereitung sind vorbei.';
   if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Die Stunde beginnt jetzt. Für diese Runde ist die Vorbereitungsphase beendet.';
   if (evaluationNextBtn) evaluationNextBtn.hidden = true;
@@ -1881,6 +1872,7 @@ function bindGlobalEvents() {
     if (evaluationOverlay) evaluationOverlay.hidden = true;
     if (evaluationNextBtn) evaluationNextBtn.hidden = false;
     if (step2Btn) step2Btn.hidden = false;
+    if (overlayCloseBtn) overlayCloseBtn.hidden = false;
     evaluationSession = null;
     initLayout('rows', false);
     openStartGate();

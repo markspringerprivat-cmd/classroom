@@ -7,11 +7,11 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar compact-topbar">
     <div>
       <p class="eyebrow">Interaktive Phase · Schritt 1</p>
       <h1>Klassenraum vorbereiten</h1>
-      <p class="subtitle">Sitzordnung wählen, Schüler*innen platzieren, Lehrkraft positionieren und Startstabilität berechnen.</p>
+      <p class="subtitle">Ordne Tische, Schüler*innen und Lehrkraft so an, dass Störungen präventiv reduziert werden.</p>
     </div>
     <div class="score-card" aria-live="polite">
       <span class="score-label">Startstabilität</span>
@@ -20,56 +20,25 @@
     </div>
   </header>
 
-  <main class="app-shell">
+  <main class="app-shell single-column">
     <section class="workspace" aria-label="Klassenraum">
-      <div class="controls panel">
-        <div class="control-group">
-          <label for="layoutSelect">1. Sitzordnung / Raster</label>
-          <select id="layoutSelect">
-            <option value="rows">Reihensitzordnung</option>
-            <option value="uform">U-Form</option>
-            <option value="groups">Gruppentische</option>
-            <option value="pairs">Partnerinseln</option>
-          </select>
-        </div>
-
-        <div class="control-group">
-          <label>2. Lehrkraft platzieren</label>
-          <p class="hint">Ziehe die Lehrkraft in ein freies Feld. Die Blickrichtung bestimmt den Sichtbereich.</p>
-          <div class="teacher-tools">
-            <div id="teacherToken" class="teacher-token" draggable="true" title="Lehrkraft ziehen">Lehrkraft</div>
-            <div class="direction-tools" aria-label="Blickrichtung wählen">
-              <button type="button" class="dir-btn" data-dir="up" aria-label="Blickrichtung nach oben">↑</button>
-              <button type="button" class="dir-btn" data-dir="left" aria-label="Blickrichtung nach links">←</button>
-              <button type="button" class="dir-btn active" data-dir="down" aria-label="Blickrichtung nach unten">↓</button>
-              <button type="button" class="dir-btn" data-dir="right" aria-label="Blickrichtung nach rechts">→</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="control-group">
-          <label for="teacherMode">3. Lehrkraftverhalten im Raum</label>
-          <select id="teacherMode">
-            <option value="frontStanding">vorne stehend / leitend</option>
-            <option value="moving">bewegend im Raum</option>
-            <option value="deskSitting">sitzend am Pult</option>
-          </select>
-        </div>
-
+      <div class="controls panel compact-controls">
+        <button type="button" id="prepStepBtn" class="prep-chip active" aria-current="step">Vorbereitung</button>
         <div class="button-stack">
           <div class="button-row">
             <button type="button" id="evaluateBtn" class="primary-btn" disabled>Vorbereitung auswerten</button>
             <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
+            <button type="button" id="showTutorialBtn" class="ghost-btn">Anleitung</button>
           </div>
           <p id="evalHint" class="eval-hint">Platziere zuerst alle 10 Schüler*innen im Raum.</p>
         </div>
       </div>
 
       <div class="room-wrap panel">
-        <div class="room-header">
-          <div>
+        <div class="room-header centered-room-header">
+          <div class="room-title-block">
             <h2>Klassenraum</h2>
-            <p>Ziehe Tische in freie Felder und setze Schüler*innen auf Tischplätze.</p>
+            <p>Ziehe Tische in freie Felder und ziehe Schüler*innen auf Tischplätze.</p>
           </div>
           <div class="legend" aria-label="Legende">
             <span><i class="legend-desk"></i> Tisch</span>
@@ -79,7 +48,32 @@
             <span><i class="legend-neutral"></i> neutralisiert</span>
           </div>
         </div>
-        <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
+
+        <div class="play-area">
+          <div class="play-stage">
+            <div class="board-topbar"><div class="board-marker" aria-label="Tafel vorne">Tafel / vorne</div><div class="prep-timer" aria-live="polite"><span class="timer-label">Zeit</span><strong id="prepTimerValue">05:00</strong></div></div>
+            <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
+          </div>
+          <section class="embedded-students" aria-label="Schülerprofile">
+            <div class="section-title-row">
+              <h2>Schülerprofile</h2>
+              <span id="placedCounter" class="pill">0/10 platziert</span>
+            </div>
+            <p class="hint">Ziehe die Kacheln auf Tische. Bereits platzierte Schüler*innen verschwinden aus der Liste und rücken nach oben nach.</p>
+            <div id="studentPalette" class="student-palette compact-student-palette"></div>
+          </section>
+        </div>
+
+        <div id="teacherDirectionPopover" class="teacher-direction-popover" hidden>
+          <p>Blickrichtung wählen</p>
+          <div class="direction-tools popover-direction-tools" aria-label="Blickrichtung wählen">
+            <button type="button" class="dir-btn" data-dir="up" aria-label="Blickrichtung nach oben">↑</button>
+            <button type="button" class="dir-btn" data-dir="left" aria-label="Blickrichtung nach links">←</button>
+            <button type="button" class="dir-btn active" data-dir="down" aria-label="Blickrichtung nach unten">↓</button>
+            <button type="button" class="dir-btn" data-dir="right" aria-label="Blickrichtung nach rechts">→</button>
+          </div>
+        </div>
+        <div id="studentHoverCard" class="student-hover-card" hidden></div>
 
         <div id="evaluationOverlay" class="evaluation-overlay" hidden aria-live="polite">
           <div class="evaluation-card evaluation-card-game" role="dialog" aria-modal="true" aria-labelledby="evaluationTitle">
@@ -90,66 +84,65 @@
               </div>
               <button type="button" id="overlayCloseBtn" class="overlay-close" aria-label="Auswertung schließen">×</button>
             </div>
-
             <section class="evaluation-stage" aria-live="polite">
-              <div class="step-meta">
-                <span id="evaluationStepCounter">Schritt 0/0</span>
-                <span id="evaluationStepDelta" class="step-delta neutral">0</span>
+              <div id="evaluationSlide" class="evaluation-slide">
+                <div class="step-meta">
+                  <span id="evaluationStepCounter">Schritt 0/0</span>
+                  <span id="evaluationStepDelta" class="step-delta neutral">0</span>
+                </div>
+                <div class="evaluation-message">
+                  <h3 id="evaluationCurrentText">Berechnung startet …</h3>
+                  <p id="evaluationCurrentDetail">Die einzelnen Entscheidungen werden nacheinander bewertet.</p>
+                </div>
               </div>
-              <h3 id="evaluationCurrentText">Berechnung startet …</h3>
-              <p id="evaluationCurrentDetail">Die einzelnen Entscheidungen werden nacheinander bewertet.</p>
+              <button type="button" id="evaluationNextBtn" class="stage-next-btn">Weiter</button>
             </section>
-
             <section class="life-panel" aria-label="Lebensleiste der Unterrichtsstabilität">
-              <div class="life-panel-topline">
-                <strong>Lebensleiste</strong>
-                <span id="animatedCurrentScore">Punkte aktuell: 0</span>
-              </div>
+              <div class="life-panel-topline"><strong>Lebensleiste</strong><span id="animatedCurrentScore">Punkte aktuell: 0</span></div>
               <div id="lifeSegments" class="life-segments" aria-label="0 von 10 Stabilitätsbalken"></div>
-              <div class="life-panel-footline">
-                <span>Minimum 0 Balken · Maximum 10 Balken</span>
-                <span id="animatedFinalScore">Endwert: –</span>
-              </div>
+              <div class="life-panel-footline"><span>Minimum 0 Balken · Maximum 10 Balken</span><span id="animatedFinalScore">Endwert: –</span></div>
             </section>
-
             <section id="evaluationActionArea" class="evaluation-action-area" hidden>
               <h3 id="evaluationOutcomeTitle">Auswertung abgeschlossen</h3>
               <p id="evaluationOutcomeMessage"></p>
-              <button type="button" id="step2Btn" class="primary-btn">Weiter zu Schritt 2: Klassenregeln aufstellen</button>
+              <div class="evaluation-action-buttons">
+                <button type="button" id="step2Btn" class="primary-btn">Weiter zu Schritt 2: Klassenregeln aufstellen</button>
+                <button type="button" id="newAttemptBtn" class="ghost-btn" hidden>Neuer Versuch</button>
+              </div>
             </section>
           </div>
         </div>
+
+        <section class="results" id="resultsPanel" hidden aria-label="Detaildaten der Auswertung">
+          <h2>Auswertung</h2>
+          <div class="meter" aria-label="Startstabilität"><div id="meterFill" class="meter-fill"></div></div>
+          <ul id="feedbackList" class="feedback-list"></ul>
+          <details class="export-box"><summary>Daten für spätere Szenarien anzeigen</summary><pre id="stateOutput"></pre></details>
+        </section>
       </div>
     </section>
-
-    <aside class="side-panel panel" aria-label="Schülerprofile und Auswertung">
-      <section>
-        <div class="section-title-row">
-          <h2>Schülerprofile</h2>
-          <span id="placedCounter" class="pill">0/10 platziert</span>
-        </div>
-        <p class="hint">Ziehe die Kacheln auf Tische. Alternativ: Kachel anklicken, dann Tisch anklicken.</p>
-        <div id="studentPalette" class="student-palette"></div>
-      </section>
-
-      <section class="results" id="resultsPanel" hidden>
-        <h2>Auswertung</h2>
-        <div class="meter" aria-label="Startstabilität">
-          <div id="meterFill" class="meter-fill"></div>
-        </div>
-        <ul id="feedbackList" class="feedback-list"></ul>
-        <details class="export-box">
-          <summary>Daten für spätere Szenarien anzeigen</summary>
-          <pre id="stateOutput"></pre>
-        </details>
-      </section>
-    </aside>
   </main>
 
-  <footer class="footer-note">
-    <strong>Hinweis:</strong> Dieser Prototyp bildet nur Schritt 1 ab. Die berechneten Variablen können später genutzt werden, um passende Störungsszenarien auszuwählen.
-  </footer>
+  <footer class="footer-note"><strong>Hinweis:</strong> Dieser Prototyp bildet Schritt 1 ab. Die berechneten Variablen können später genutzt werden, um passende Störungsszenarien auszuwählen.</footer>
 
+  <div id="tutorialOverlay" class="tutorial-overlay" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="tutorialTitle">
+    <div class="tutorial-backdrop"></div>
+    <article class="tutorial-book" role="document">
+      <div class="tutorial-topline"><span id="tutorialProgress" class="tutorial-progress-pill">1/8</span><button type="button" id="tutorialSkipBtn" class="tutorial-skip">Überspringen</button></div>
+      <div class="tutorial-viewport">
+        <section id="tutorialSlide" class="tutorial-slide-card">
+          <div id="tutorialVisual" class="tutorial-visual" aria-hidden="true"></div>
+          <div class="tutorial-content">
+            <p class="eyebrow">Spielerklärung</p>
+            <h2 id="tutorialTitle">Klassenraum vorbereiten</h2>
+            <p id="tutorialText">Du gestaltest den Raum, bevor die Stunde beginnt. Gute Prävention erhöht die Startstabilität.</p>
+            <ul id="tutorialList" class="tutorial-list"></ul>
+          </div>
+        </section>
+      </div>
+      <div class="tutorial-controls"><button type="button" id="tutorialPrevBtn" class="ghost-btn">Zurück</button><div id="tutorialDots" class="tutorial-dots" aria-label="Fortschritt der Spielerklärung"></div><button type="button" id="tutorialNextBtn" class="primary-btn">Weiter</button></div>
+    </article>
+  </div>
 
   <div id="startGateOverlay" class="start-gate-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="startGateTitle">
     <div class="tutorial-backdrop"></div>
@@ -157,11 +150,7 @@
       <p class="eyebrow">Vor dem Spielstart</p>
       <h2 id="startGateTitle">Der Unterricht beginnt in fünf Minuten.</h2>
       <p>Nutze diese Zeit, um den Klassenraum vorzubereiten: Tische sinnvoll platzieren, Schüler*innen passend setzen, Müll entfernen und den Sichtbereich der Lehrkraft beachten.</p>
-      <ul>
-        <li>Alle 10 Schüler*innen müssen einen Platz erhalten.</li>
-        <li>Störanfällige Schüler*innen sollten möglichst gut sichtbar sitzen.</li>
-        <li>Stabilisierende Nachbarschaften können Risiken ausgleichen.</li>
-      </ul>
+      <ul><li>Alle 10 Schüler*innen müssen einen Platz erhalten.</li><li>Störanfällige Schüler*innen sollten möglichst gut sichtbar sitzen.</li><li>Stabilisierende Nachbarschaften können Risiken ausgleichen.</li></ul>
       <button type="button" id="startGameBtn" class="primary-btn">Spiel starten</button>
     </article>
   </div>
