@@ -565,15 +565,15 @@ function renderScenarioCatalog() {
         </div>
         <span class="scenario-fit">${escapeHtml(scenarioFitLabel(scenarioItem))}</span>
       </div>
-      <p class="scenario-scene">${escapeHtml(scenarioItem.scene)}</p>
+      <p class="scenario-scene">${escapeHtml(polishGerman(scenarioItem.scene))}</p>
       ${scenarioItem.contextNote ? `<p class="scenario-context-note">${escapeHtml(scenarioItem.contextNote)}</p>` : ''}
       <div class="scenario-focus">${(scenarioItem.focus || []).map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>
       <div class="scenario-answers">
         ${scenarioItem.answers.map(answer => `
           <div class="scenario-answer delta-${answer.delta > 0 ? 'plus' : answer.delta < 0 ? 'minus' : 'zero'}">
             <strong>${answer.delta > 0 ? '+1' : answer.delta < 0 ? '-1' : '0'}</strong>
-            <p>${escapeHtml(answer.text)}</p>
-            <small>${escapeHtml(answer.feedback)}</small>
+            <p>${escapeHtml(polishGerman(answer.text))}</p>
+            <small>${escapeHtml(polishGerman(answer.feedback))}</small>
           </div>
         `).join('')}
       </div>
@@ -604,6 +604,7 @@ const startLessonBtn = document.getElementById('startLessonBtn');
 const incidentCounter = document.getElementById('incidentCounter');
 const incidentList = document.getElementById('incidentList');
 const branchLog = document.getElementById('branchLog');
+const branchEventCards = document.getElementById('branchEventCards');
 const activeMethodLabel = document.getElementById('activeMethodLabel');
 const scenarioModal = document.getElementById('scenarioModal');
 const scenarioModalArea = document.getElementById('scenarioModalArea');
@@ -643,6 +644,7 @@ const game = {
   scenarioCountdown: null,
   answerLeft: ANSWER_SECONDS,
   scenarioOpen: false,
+  pausedAt: null,
   eventSeq: 0,
   usedScenarioIds: new Set()
 };
@@ -724,11 +726,12 @@ function startLesson() {
 }
 
 function tickLesson() {
-  if (game.finished) return;
+  if (game.finished || game.scenarioOpen) return;
   game.lessonLeft = Math.max(0, game.lessonLeft - 0.25);
   updateLessonTimer();
   checkIncidentTimeouts();
-  renderIncidents();
+  if (game.activeIncidents.length) renderBranchGame();
+  else renderIncidents();
   maybeSpawnIncident();
   if (game.lessonLeft <= 0) finishLesson();
 }
@@ -741,14 +744,22 @@ function updateLessonTimer() {
   lessonTimerEl.textContent = `${minutes}:${seconds}`;
 }
 
-function finishLesson() {
+function finishLesson(reason = 'time') {
+  if (game.finished) return;
   game.finished = true;
   stopTeacherMovement();
   clearInterval(game.lessonTimer);
   clearTimeout(game.spawnTimer);
   stopTimerAudio();
-  logEvent(`Unterricht beendet. Endstabilität: ${game.score}/10.`, game.score > 5 ? 'good' : game.score < 3 ? 'bad' : 'neutral');
-  if (teacherStatus) teacherStatus.textContent = 'Unterricht beendet.';
+  if (reason === 'lost') {
+    logEvent('Die Unterrichtsstabilität ist auf 0 gefallen. Die Runde ist verloren.', 'bad');
+    if (teacherStatus) teacherStatus.textContent = 'Runde verloren: Die Unterrichtsstabilität ist auf 0 gefallen.';
+  } else {
+    logEvent(`Unterricht beendet. Endstabilität: ${game.score}/10.`, game.score > 5 ? 'good' : game.score < 3 ? 'bad' : 'neutral');
+    if (teacherStatus) teacherStatus.textContent = 'Unterricht beendet.';
+  }
+  renderLife();
+  renderIncidents();
 }
 
 function currentDifficultyLimit() {
@@ -896,9 +907,16 @@ function renderBranchGame() {
       if (desk) {
         const studentId = context.assignments?.[desk.id];
         const student = studentId ? context.studentById[studentId] : null;
+        const activeIncident = student ? activeByStudent.get(student.id) : null;
         const deskEl = document.createElement('div');
-        deskEl.className = `branch-desk${student && activeByStudent.has(student.id) ? ' incident-pulse' : ''}`;
-        deskEl.innerHTML = `<span>${escapeHtml(desk.id.replace('desk-', 'T'))}</span><strong>${escapeHtml(student?.name || 'frei')}</strong>`;
+        deskEl.className = `branch-desk${activeIncident ? ' incident-pulse' : ''}`;
+        if (activeIncident) {
+          const left = Math.max(0, Math.ceil((activeIncident.deadline - Date.now()) / 1000));
+          deskEl.innerHTML = `<strong class="incident-countdown-number">${left}</strong>`;
+          cell.setAttribute('aria-label', `${student.name}: Störung, noch ${left} Sekunden`);
+        } else {
+          deskEl.innerHTML = `<span>${escapeHtml(desk.id.replace('desk-', 'T'))}</span><strong>${escapeHtml(student?.name || 'frei')}</strong>`;
+        }
         cell.appendChild(deskEl);
         if (student) cell.dataset.studentId = student.id;
       }
@@ -935,7 +953,8 @@ function handleBranchCellClick(row, col) {
   }
   const path = findPath(game.teacher, target);
   if (!path.length) {
-    if (teacherStatus) teacherStatus.textContent = 'Kein freier Weg gefunden. Tische und Raumobjekte blockieren den Weg.';
+    checkArrivalAtIncident();
+    if (teacherStatus && !game.scenarioOpen) teacherStatus.textContent = 'Die Lehrkraft steht bereits an diesem erreichbaren Feld.';
     return;
   }
   game.teacherPath = path;
@@ -963,8 +982,11 @@ function startTeacherMovement() {
     }
     game.teacher = { ...game.teacher, ...next };
     renderBranchGame();
-    checkArrivalAtIncident();
-    if (!game.teacherPath.length) stopTeacherMovement();
+    if (!game.teacherPath.length) {
+      stopTeacherMovement();
+      checkArrivalAtIncident();
+      renderBranchGame();
+    }
   }, TEACHER_STEP_MS);
 }
 
@@ -974,19 +996,19 @@ function stopTeacherMovement() {
 }
 
 function checkArrivalAtIncident() {
-  if (!game.activeIncidents.length || game.scenarioOpen) return;
+  if (!game.activeIncidents.length || game.scenarioOpen || game.teacherMoveTimer) return;
   const reachable = game.activeIncidents.find(incident => manhattan(game.teacher, incident.desk) <= 1);
   if (!reachable) return;
-  removeIncident(reachable.id);
-  stopTeacherMovement();
-  renderBranchGame();
-  renderIncidents();
   if (Date.now() > reachable.deadline) {
     failIncidentLate(reachable);
     return;
   }
+  removeIncident(reachable.id);
+  stopTeacherMovement();
+  renderBranchGame();
+  renderIncidents();
   if (Math.random() < 0.5) {
-    logEvent(`${reachable.student.name} bemerkt die Nähe der Lehrkraft und findet ohne weiteres Gespräch zur Aufgabe zurück.`, 'good');
+    logEvent(`${reachable.student.name} bemerkt die ruhige Präsenz der Lehrkraft und findet ohne weiteres Gespräch zur Aufgabe zurück.`, 'good');
   } else {
     openScenarioModal(reachable);
   }
@@ -995,12 +1017,13 @@ function checkArrivalAtIncident() {
 function openScenarioModal(incident) {
   game.currentScenarioIncident = incident;
   game.scenarioOpen = true;
+  game.pausedAt = Date.now();
   stopTeacherMovement();
   const scenarioItem = incident.scenario;
   if (activeMethodLabel) activeMethodLabel.textContent = scenarioItem.type || 'Kooperative Verhaltensmodifikation';
   if (scenarioModalArea) scenarioModalArea.textContent = scenarioItem.type || 'Kooperative Verhaltensmodifikation';
   if (scenarioModalTitle) scenarioModalTitle.textContent = scenarioItem.title;
-  if (scenarioModalScene) scenarioModalScene.textContent = scenarioItem.scene;
+  if (scenarioModalScene) scenarioModalScene.textContent = polishGerman(scenarioItem.scene);
   if (scenarioResultBox) {
     scenarioResultBox.hidden = true;
     scenarioResultBox.innerHTML = '';
@@ -1017,7 +1040,7 @@ function renderScenarioAnswerButtons(scenarioItem) {
   scenarioAnswerList.innerHTML = answers.map((answer, index) => `
     <button type="button" class="branch-answer-btn" data-answer-index="${index}">
       <span>Option ${String.fromCharCode(65 + index)}</span>
-      <strong>${escapeHtml(answer.text)}</strong>
+      <strong>${escapeHtml(polishGerman(answer.text))}</strong>
     </button>
   `).join('');
   scenarioAnswerList.querySelectorAll('button').forEach((button, index) => {
@@ -1034,14 +1057,68 @@ function prepareAnswerSet(scenarioItem) {
   return shuffle(adjusted);
 }
 
+
+function toIchForm(text) {
+  let result = String(text || '');
+  const replacements = [
+    [/^Du wartest\b/i, 'Ich warte'],
+    [/^Du gehst\b/i, 'Ich gehe'],
+    [/^Du erinnerst\b/i, 'Ich erinnere'],
+    [/^Du hältst\b/i, 'Ich halte'],
+    [/^Du beschreibst\b/i, 'Ich beschreibe'],
+    [/^Du klärst\b/i, 'Ich kläre'],
+    [/^Du vereinbarst\b/i, 'Ich vereinbare'],
+    [/^Du gibst\b/i, 'Ich gebe'],
+    [/^Du nutzt\b/i, 'Ich nutze'],
+    [/^Du lässt\b/i, 'Ich lasse'],
+    [/^Du stellst\b/i, 'Ich stelle'],
+    [/^Du sprichst\b/i, 'Ich spreche'],
+    [/^Du fragst\b/i, 'Ich frage'],
+    [/^Du lobst\b/i, 'Ich gebe eine kurze positive Rückmeldung'],
+    [/^Du greifst\b/i, 'Ich greife'],
+    [/^Du bittest\b/i, 'Ich bitte'],
+    [/^Du verweist\b/i, 'Ich verweise'],
+    [/^Du setzt\b/i, 'Ich setze'],
+    [/^Du stoppst\b/i, 'Ich stoppe'],
+    [/^Du öffnest\b/i, 'Ich öffne'],
+    [/^Du formulierst\b/i, 'Ich formuliere'],
+    [/^Du bestätigst\b/i, 'Ich bestätige'],
+    [/^Du nimmst\b/i, 'Ich nehme'],
+    [/^Du sammelst\b/i, 'Ich sammle'],
+    [/^Du trennst\b/i, 'Ich trenne']
+  ];
+  for (const [pattern, replacement] of replacements) {
+    if (pattern.test(result)) return result.replace(pattern, replacement);
+  }
+  return result.replace(/^Du\s+/i, 'Ich ');
+}
+
+function polishGerman(text) {
+  return String(text || '')
+    .replace(/Einige Blicke gehen zu\s+/g, 'Einige Blicke wandern zu ')
+    .replace(/Ich wartest\b/g, 'Ich warte')
+    .replace(/Ich erinnerst\b/g, 'Ich erinnere')
+    .replace(/Ich hältst\b/g, 'Ich halte')
+    .replace(/Ich beschreibst\b/g, 'Ich beschreibe')
+    .replace(/Ich klärst\b/g, 'Ich kläre')
+    .replace(/Ich vereinbarst\b/g, 'Ich vereinbare')
+    .replace(/Ich gehst\b/g, 'Ich gehe')
+    .replace(/Ich gibst\b/g, 'Ich gebe')
+    .replace(/Ich nutzt\b/g, 'Ich nutze')
+    .replace(/Ich lässt\b/g, 'Ich lasse')
+    .replace(/Ich stellst\b/g, 'Ich stelle')
+    .replace(/Ich sprichst\b/g, 'Ich spreche')
+    .replace(/Ich fragst\b/g, 'Ich frage');
+}
+
 function makeLessObviousPositive(scenarioItem, answer) {
-  const base = answer.text.replace(/^Du /, 'Ich ');
-  if (scenarioItem.type === 'Classroom Management' && scenarioItem.focus?.some(item => String(item).includes('Regel'))) return base;
-  return base.replace('konkretes', 'kleines, beobachtbares').replace('vereinbarst', 'vereinbare').replace('Du ', 'Ich ');
+  const base = toIchForm(answer.text);
+  if (scenarioItem.type === 'Classroom Management' && scenarioItem.focus?.some(item => String(item).includes('Regel'))) return polishGerman(base);
+  return polishGerman(base.replace('konkretes', 'kleines, beobachtbares'));
 }
 
 function makeNeutralOption(scenarioItem, answer) {
-  return answer.text.replace(/^Du /, 'Ich ').replace('erst einmal', 'für den Moment').replace('warte ab', 'halte kurz inne und beobachte');
+  return polishGerman(toIchForm(answer.text).replace('erst einmal', 'für den Moment').replace('warte ab', 'halte kurz inne und beobachte'));
 }
 
 function makePlausibleMisconception(scenarioItem, answer) {
@@ -1051,7 +1128,7 @@ function makePlausibleMisconception(scenarioItem, answer) {
   if (text.includes('sicht') || text.includes('blind') || text.includes('hinten')) return 'Ich stelle mich demonstrativ in die Nähe und mache deutlich, dass ich diesen Bereich jetzt besonders kontrolliere.';
   if (text.includes('konflikt') || text.includes('einander') || text.includes('streit')) return 'Ich trenne die Beteiligten sofort und bestimme direkt, wer für den Rest der Stunde wo arbeitet.';
   if (text.includes('handy')) return 'Ich sammle das Handy sichtbar ein und nutze den Moment als klares Beispiel für die Klasse.';
-  return answer.text.replace(/^Du /, 'Ich ').replace('sofort', 'direkt').replace('öffentlich', 'klar sichtbar');
+  return polishGerman(toIchForm(answer.text).replace('sofort', 'direkt').replace('öffentlich', 'klar sichtbar'));
 }
 
 function makeNegativeConsequence(scenarioItem, answer) {
@@ -1112,13 +1189,18 @@ function showScenarioResult(text, delta, type) {
     scenarioResultBox.className = `scenario-result-box ${type}`;
     scenarioResultBox.innerHTML = `<strong>${delta > 0 ? 'Stabilisierung' : delta < 0 ? 'Eskalation' : 'Zwischenstand'}</strong><p>${escapeHtml(text)}</p>`;
   }
-  if (continueScenarioBtn) continueScenarioBtn.hidden = false;
+  if (continueScenarioBtn) continueScenarioBtn.hidden = game.finished;
   logEvent(text, type);
 }
 
 function closeScenarioModal() {
   clearAnswerCountdown();
   if (scenarioModal) scenarioModal.hidden = true;
+  const pauseDuration = game.pausedAt ? Date.now() - game.pausedAt : 0;
+  if (pauseDuration > 0) {
+    game.activeIncidents.forEach(incident => { incident.deadline += pauseDuration; });
+  }
+  game.pausedAt = null;
   game.scenarioOpen = false;
   game.currentScenarioIncident = null;
   if (!game.finished) game.nextIncidentAt = Date.now() + randomInt(3000, 5000);
@@ -1127,16 +1209,17 @@ function closeScenarioModal() {
 
 function renderIncidents() {
   if (incidentCounter) incidentCounter.textContent = String(game.activeIncidents.length);
-  if (!incidentList) return;
-  if (!game.activeIncidents.length) {
-    incidentList.innerHTML = '<p class="hint">Keine akute Störung.</p>';
-    return;
-  }
   const now = Date.now();
-  incidentList.innerHTML = game.activeIncidents.map(incident => {
+  const cards = game.activeIncidents.map(incident => {
     const left = Math.max(0, Math.ceil((incident.deadline - now) / 1000));
-    return `<article class="incident-item"><strong>${escapeHtml(incident.student.name)}</strong><span>${left}s bis Eskalation</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
+    return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)}</strong><span>${left}s bis Eskalation</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
   }).join('');
+  if (incidentList) {
+    incidentList.innerHTML = game.activeIncidents.length ? cards : '<p class="hint">Keine akute Störung.</p>';
+  }
+  if (branchEventCards) {
+    branchEventCards.innerHTML = game.activeIncidents.length ? cards : '<p class="hint">Noch keine Ereigniskarte aktiv.</p>';
+  }
 }
 
 function renderLife() {
@@ -1152,6 +1235,7 @@ function renderLife() {
 function changeScore(delta) {
   game.score = Math.max(0, Math.min(10, game.score + delta));
   renderLife();
+  if (game.score <= 0 && !game.finished) finishLesson('lost');
 }
 
 function logEvent(text, type = 'neutral') {
