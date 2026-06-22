@@ -1,6 +1,31 @@
 const ROWS = 9;
 const COLS = 10;
 
+const blockedCells = [
+  { row: 0, col: 3, type: 'board', label: 'Tafel' },
+  { row: 0, col: 4, type: 'board', label: 'Tafel' },
+  { row: 0, col: 5, type: 'board', label: 'Tafel' },
+  { row: 0, col: 6, type: 'board', label: 'Tafel' },
+  { row: 1, col: 9, type: 'door', label: 'Tür' },
+  { row: 2, col: 9, type: 'door', label: 'Tür' },
+  { row: 6, col: 9, type: 'exit', label: 'Notausgang' },
+  { row: 7, col: 9, type: 'exit', label: 'Notausgang' },
+  { row: 2, col: 0, type: 'window', label: 'Fenster' },
+  { row: 3, col: 0, type: 'window', label: 'Fenster' },
+  { row: 5, col: 0, type: 'window', label: 'Fenster' },
+  { row: 6, col: 0, type: 'window', label: 'Fenster' },
+  { row: 8, col: 2, type: 'cabinet', label: 'Schrank' },
+  { row: 8, col: 3, type: 'cabinet', label: 'Schrank' },
+  { row: 8, col: 4, type: 'cabinet', label: 'Schrank' },
+  { row: 8, col: 7, type: 'sink', label: 'Waschbecken' },
+  { row: 8, col: 8, type: 'sink', label: 'Waschbecken' }
+];
+
+const roomObjectConfig = {
+  trashCount: 3,
+  broomPreferred: { row: 8, col: 9 }
+};
+
 const students = [
   { id: 'julius', name: 'Julius', age: 12, note: 'verträgt sich schlecht mit anderen Jungs', hidden: { gender: 'm', risk: 3, conflictWithBoys: true, needsMonitoring: true } },
   { id: 'petra', name: 'Petra', age: 15, note: 'lenkt häufig Sitznachbar*innen ab', hidden: { gender: 'f', risk: 3, distractor: true, needsMonitoring: true } },
@@ -18,7 +43,7 @@ const layouts = {
   rows: {
     label: 'Reihensitzordnung',
     deskPositions: [[2,1], [2,3], [2,6], [2,8], [4,1], [4,3], [4,6], [4,8], [6,3], [6,6]],
-    teacher: { row: 0, col: 4, dir: 'down' }
+    teacher: { row: 1, col: 4, dir: 'down' }
   },
   uform: {
     label: 'U-Form',
@@ -28,12 +53,12 @@ const layouts = {
   groups: {
     label: 'Gruppentische',
     deskPositions: [[1,1], [1,2], [1,6], [1,7], [4,1], [4,2], [4,6], [4,7], [7,4], [7,5]],
-    teacher: { row: 0, col: 4, dir: 'down' }
+    teacher: { row: 1, col: 4, dir: 'down' }
   },
   pairs: {
     label: 'Partnerinseln',
     deskPositions: [[1,2], [1,3], [3,1], [3,2], [3,7], [3,8], [6,2], [6,3], [6,6], [6,7]],
-    teacher: { row: 0, col: 4, dir: 'down' }
+    teacher: { row: 1, col: 4, dir: 'down' }
   }
 };
 
@@ -41,7 +66,9 @@ const state = {
   layout: 'rows',
   desks: [],
   assignments: {},
-  teacher: { row: 0, col: 4, dir: 'down', mode: 'frontStanding' },
+  teacher: { row: 1, col: 4, dir: 'down', mode: 'frontStanding' },
+  objects: { trash: [], broom: null },
+  cleaningMode: false,
   selectedStudentId: null,
   placingTeacher: false,
   score: null,
@@ -119,7 +146,9 @@ function initLayout(layoutKey, keepAssignments = false) {
     });
   }
 
-  state.teacher = { ...layout.teacher, mode: (teacherModeSelect && teacherModeSelect.value) || state.teacher.mode || 'frontStanding' };
+  state.teacher = { ...layout.teacher, mode: 'frontStanding' };
+  state.objects = generateRoomObjects();
+  state.cleaningMode = false;
   state.placingTeacher = false;
   setDirectionActive(state.teacher.dir);
   updateTeacherPlacementButton();
@@ -155,10 +184,20 @@ function renderGrid() {
       const influence = influenceMap.get(cellKey(row, col));
       if (influence) applyInfluenceClasses(cell, influence);
 
-      if (state.placingTeacher) cell.classList.add('teacher-placement-active');
+      const block = getBlockedCell(row, col);
+      if (block) {
+        cell.classList.add('blocked-cell', `blocked-${block.type}`);
+        cell.dataset.blockedType = block.type;
+        cell.appendChild(createBlockedElement(block));
+      }
+
+      if (state.placingTeacher && !block) cell.classList.add('teacher-placement-active');
 
       const desk = getDeskAt(row, col);
       if (desk) cell.appendChild(createDeskElement(desk, influence));
+
+      const object = getRoomObjectAt(row, col);
+      if (object) cell.appendChild(createRoomObjectElement(object));
 
       if (state.teacher.row === row && state.teacher.col === col) cell.appendChild(createTeacherInRoom());
 
@@ -176,6 +215,47 @@ function applyInfluenceClasses(el, influence) {
   if (influence.kind === 'good') el.classList.add(`influence-good-${influence.level}`);
   if (influence.kind === 'risk') el.classList.add(`influence-risk-${influence.level}`);
   if (influence.kind === 'neutral') el.classList.add(`influence-neutral-${influence.level}`);
+}
+
+
+function createBlockedElement(block) {
+  const el = document.createElement('div');
+  el.className = `blocked-marker blocked-${block.type}`;
+  el.textContent = block.label;
+  el.title = `${block.label}: Dieses Feld ist nicht nutzbar.`;
+  return el;
+}
+
+function createRoomObjectElement(object) {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = `room-object room-object-${object.type}${state.cleaningMode && object.type === 'broom' ? ' active' : ''}`;
+  el.dataset.objectId = object.id;
+  el.textContent = object.type === 'broom' ? '🧹' : '🗑️';
+  el.title = object.type === 'broom'
+    ? 'Besen anklicken, dann Müll anklicken, um ihn zu entfernen.'
+    : 'Müll: erzeugt Störrisiko. Mit dem Besen entfernen.';
+  el.addEventListener('click', event => {
+    event.stopPropagation();
+    if (object.type === 'broom') {
+      state.cleaningMode = !state.cleaningMode;
+      showTemporaryHint(state.cleaningMode ? 'Besen ausgewählt: Klicke Müll an, um ihn zu entfernen.' : 'Besen abgewählt.');
+      renderGrid();
+      return;
+    }
+    if (object.type === 'trash') {
+      if (!state.cleaningMode) {
+        showTemporaryHint('Klicke zuerst den Besen an, um Müll entfernen zu können.');
+        return;
+      }
+      object.removed = true;
+      state.cleaningMode = false;
+      clearResults();
+      showTemporaryHint('Müll entfernt: Der Störreiz im Raum wurde reduziert.');
+      renderGrid();
+    }
+  });
+  return el;
 }
 
 function createDeskElement(desk, influence = null) {
@@ -446,15 +526,29 @@ function moveDesk(deskId, row, col) {
 
 function canPlaceDeskAt(deskId, row, col) {
   if (!insideGrid(row, col)) return { ok: false, reason: 'Das Ziel liegt außerhalb des Rasters.' };
+  const block = getBlockedCell(row, col);
+  if (block) return { ok: false, reason: `${block.label}: Dieses Feld ist blockiert.` };
+  const targetObject = getRoomObjectAt(row, col);
+  if (targetObject) return { ok: false, reason: targetObject.type === 'trash' ? 'Hier liegt Müll. Entferne ihn zuerst mit dem Besen.' : 'Hier liegt der Besen.' };
   const targetDesk = getDeskAt(row, col);
   if (targetDesk && targetDesk.id !== deskId) return { ok: false, reason: 'Hier steht bereits ein Tisch.' };
   if (state.teacher.row === row && state.teacher.col === col) return { ok: false, reason: 'Hier steht die Lehrkraft.' };
-  const verticalBlocker = state.desks.find(other => other.id !== deskId && other.col === col && Math.abs(other.row - row) === 1);
-  if (verticalBlocker) return { ok: false, reason: 'Vor und hinter einem Tisch muss ein Rasterfeld frei bleiben.' };
   return { ok: true, reason: '' };
 }
 
 function placeTeacher(row, col) {
+  const block = getBlockedCell(row, col);
+  if (block) {
+    flashCell(row, col, 'invalid');
+    showTemporaryHint(`${block.label}: Die Lehrkraft kann hier nicht stehen.`);
+    return;
+  }
+  const object = getRoomObjectAt(row, col);
+  if (object) {
+    flashCell(row, col, 'invalid');
+    showTemporaryHint(object.type === 'trash' ? 'Die Lehrkraft kann nicht auf Müll stehen.' : 'Die Lehrkraft kann nicht auf dem Besenfeld stehen.');
+    return;
+  }
   if (getDeskAt(row, col)) {
     flashCell(row, col, 'invalid');
     showTemporaryHint('Die Lehrkraft kann nicht auf einem Tischfeld stehen.');
@@ -507,6 +601,48 @@ function updateEvaluateButton() {
   }
 }
 function cellKey(row, col) { return `${row},${col}`; }
+function getBlockedCell(row, col) { return blockedCells.find(item => item.row === row && item.col === col) || null; }
+function isBlockedCell(row, col) { return Boolean(getBlockedCell(row, col)); }
+function getRoomObjectAt(row, col) {
+  if (state.objects?.broom && state.objects.broom.row === row && state.objects.broom.col === col) return state.objects.broom;
+  return (state.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;
+}
+function getActiveTrash() { return (state.objects?.trash || []).filter(item => !item.removed); }
+function isCellOccupiedForObjects(row, col) {
+  return isBlockedCell(row, col) || getDeskAt(row, col) || (state.teacher.row === row && state.teacher.col === col) || getRoomObjectAt(row, col);
+}
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+function generateRoomObjects() {
+  const broom = { id: 'broom-1', type: 'broom', row: roomObjectConfig.broomPreferred.row, col: roomObjectConfig.broomPreferred.col, removed: false };
+  if (isBlockedCell(broom.row, broom.col) || getDeskAt(broom.row, broom.col) || (state.teacher.row === broom.row && state.teacher.col === broom.col)) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+      for (let col = COLS - 1; col >= 0; col--) {
+        if (!isBlockedCell(row, col) && !getDeskAt(row, col) && !(state.teacher.row === row && state.teacher.col === col)) {
+          broom.row = row; broom.col = col; row = -1; break;
+        }
+      }
+    }
+  }
+  const candidates = [];
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (isBlockedCell(row, col)) continue;
+      if (getDeskAt(row, col)) continue;
+      if (state.teacher.row === row && state.teacher.col === col) continue;
+      if (broom.row === row && broom.col === col) continue;
+      candidates.push({ row, col });
+    }
+  }
+  const trash = shuffle(candidates).slice(0, roomObjectConfig.trashCount).map((pos, index) => ({ id: `trash-${index + 1}`, type: 'trash', row: pos.row, col: pos.col, removed: false }));
+  return { broom, trash };
+}
 
 function directionLabel(dir) {
   return ({ up: 'Lehrkraft ↑', down: 'Lehrkraft ↓', left: 'Lehrkraft ←', right: 'Lehrkraft →' })[dir] || 'Lehrkraft';
@@ -725,6 +861,14 @@ function getCombinedInfluenceMap(visionMap = getVisionMap()) {
     }
   });
 
+  getActiveTrash().forEach(trash => {
+    add(trash.row, trash.col, 'red', 3, 'Müll: unruhige Lernumgebung');
+    add(trash.row - 1, trash.col, 'red', 4, 'Müll: Störreiz oben');
+    add(trash.row + 1, trash.col, 'red', 4, 'Müll: Störreiz unten');
+    add(trash.row, trash.col - 1, 'red', 4, 'Müll: Störreiz links');
+    add(trash.row, trash.col + 1, 'red', 4, 'Müll: Störreiz rechts');
+  });
+
   const combined = new Map();
   raw.forEach((value, key) => {
     const green = value.green || 0;
@@ -802,6 +946,8 @@ function evaluatePreparation() {
     neutralizedRiskPairs: [],
     stabilizingPairs: [],
     spacing: evaluateDeskSpacing(),
+    roomObjects: evaluateRoomObjects(),
+    blockedCells,
     backRowRisks: [],
     futureScenarioHooks: []
   };
@@ -817,11 +963,16 @@ function evaluatePreparation() {
   const spacingResult = metrics.spacing;
   if (spacingResult.invalidPairs.length === 0) {
     score += 1;
-    addFeedback(feedback, 'good', +1, 'Gang- und Sitzabstände sind eingehalten.', 'Vor und hinter Tischen bleibt jeweils ein Rasterfeld frei; nebeneinander dürfen Tische direkt stehen.');
+    addFeedback(feedback, 'good', +1, 'Laufwege zwischen Tischreihen sind frei.', 'Vor und hinter Tischen bleibt ein Gang; die Lehrkraft kann sich besser bewegen und Hilfe leisten.');
   } else {
     score -= spacingResult.invalidPairs.length;
-    addFeedback(feedback, 'bad', -spacingResult.invalidPairs.length, `${spacingResult.invalidPairs.length} unzulässige Tischabstände erkannt.`, 'Vor und hinter Tischen muss ein Rasterfeld frei bleiben, damit Stühle und Wege nicht blockiert werden.');
+    addFeedback(feedback, 'bad', -spacingResult.invalidPairs.length, `${spacingResult.invalidPairs.length} blockierte Laufwege erkannt.`, 'Jeder direkt hintereinander gesetzte Tisch erschwert Wege, Präsenz und schnelle Unterstützung. Jeder blockierte Gang zählt einzeln.');
   }
+
+  const roomObjectResult = metrics.roomObjects;
+  score += roomObjectResult.delta;
+  feedback.push(...roomObjectResult.feedback);
+  metrics.futureScenarioHooks.push(...roomObjectResult.hooks);
 
   const visionResult = evaluateRiskStudentVision();
   score += visionResult.delta;
@@ -878,6 +1029,21 @@ function evaluateDeskSpacing() {
     }
   }
   return { invalidPairs };
+}
+
+
+function evaluateRoomObjects() {
+  const active = getActiveTrash();
+  const result = { delta: 0, feedback: [], activeTrash: active.map(item => ({ id: item.id, row: item.row, col: item.col })), hooks: [] };
+  if (active.length === 0) {
+    result.delta += 1;
+    addFeedback(result.feedback, 'good', +1, 'Der Klassenraum wurde von Müll befreit.', 'Störreize im Raum sind reduziert; das unterstützt eine geordnete Lernumgebung.');
+  } else {
+    result.delta -= active.length;
+    result.hooks.push('room-trash-distraction');
+    addFeedback(result.feedback, 'bad', -active.length, `${active.length} Müllfeld(er) liegen noch im Raum.`, 'Müll erzeugt rote Störfelder auf angrenzenden Plätzen und kann Aufmerksamkeit, Wege und Lernklima beeinträchtigen.');
+  }
+  return result;
 }
 
 function evaluateRiskStudentVision() {
@@ -1013,9 +1179,7 @@ function evaluateBackRowRisks() {
 }
 
 function evaluateTeacherMode() {
-  if (state.teacher.mode === 'moving') return { delta: 1, hooks: ['teacher-moving-presence'], feedback: { type: 'good', delta: +1, text: 'Lehrkraftverhalten: bewegend im Raum.', detail: 'Die lineare Präsenzzone kann verdeckte Störungen früh sichtbar machen, ist aber räumlich enger als ein Leitungsfächer.' } };
-  if (state.teacher.mode === 'deskSitting') return { delta: -1, hooks: ['teacher-desk-blindspots'], feedback: { type: 'warning', delta: -1, text: 'Lehrkraftverhalten: sitzend am Pult.', detail: 'Der Sicht- und Handlungsradius ist auf zwei Reihen eingeschränkt; blinde Bereiche werden wahrscheinlicher.' } };
-  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftverhalten: vorne stehend / leitend.', detail: 'Es entsteht ein breiter Leitungsfächer. Entscheidend ist, ob risikorelevante Plätze darin liegen.' } };
+  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftpositionierung wurde berücksichtigt.', detail: 'Entscheidend ist hier vor allem die Blickrichtung: Der grüne Sichtfächer zeigt, welche Plätze schnell wahrgenommen werden.' } };
 }
 
 
@@ -1040,6 +1204,8 @@ function buildStepState() {
     teacher: state.teacher,
     desks: state.desks,
     assignments: state.assignments,
+    blockedCells,
+    objects: state.objects,
     visionByDesk,
     influenceByCell,
     metrics: state.metrics,
@@ -1078,6 +1244,8 @@ function showResults(score, rawScore, feedback, metrics) {
     teacher: state.teacher,
     desks: state.desks,
     assignments: state.assignments,
+    blockedCells,
+    objects: state.objects,
     visionByDesk,
     influenceByCell,
     metrics,
@@ -1296,8 +1464,8 @@ const tutorialSlides = [
   },
   {
     title: 'Lehrkraft und Sichtbereich',
-    text: 'Die Lehrkraft kann frei im Raum platziert werden. Blickrichtung und Verhalten erzeugen unterschiedliche Sicht- und Präsenzbereiche.',
-    bullets: ['vorne stehend: breiter Leitungsfächer', 'bewegend: schmaler Präsenzkorridor', 'sitzend: kurzer Sichtbereich', 'Tische schwächen dahinterliegende Felder ab', 'Lehrkraft anklicken: Blickrichtung ändern'],
+    text: 'Die Lehrkraft kann frei im Raum platziert werden. Ihr Sichtfeld fächert sich in Blickrichtung nach vorne auf.',
+    bullets: ['dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Tische schwächen dahinterliegende Felder ab', 'Lehrkraft anklicken: Blickrichtung ändern', 'störanfällige Schüler*innen sollten möglichst im wirksamen Sichtfeld sitzen'],
     visual: 'teacher'
   },
   {
@@ -1320,14 +1488,20 @@ const tutorialSlides = [
   },
   {
     title: 'Gänge zwischen Tischreihen',
-    text: 'Vor und hinter jedem Tisch muss ein Feld frei bleiben. Das simuliert Stühle, Laufwege und den Zugang der Lehrkraft.',
-    bullets: ['nebeneinander dürfen Tische direkt stehen', 'untereinander braucht es einen freien Gang', 'blockierte Wege erschweren Präsenz und schnelle Unterstützung', 'ungültige Abstände werden einzeln abgezogen'],
+    text: 'Achte darauf, dass vor und hinter Tischreihen ein Gang frei bleibt. Das simuliert Stühle, Laufwege und den Zugang der Lehrkraft.',
+    bullets: ['nebeneinander dürfen Tische direkt stehen', 'nach vorne und hinten sollte ein freier Gang bleiben', 'blockierte Wege erschweren Präsenz und schnelle Unterstützung'],
     visual: 'spacing'
+  },
+  {
+    title: 'Raumsauberkeit und Störreize',
+    text: 'Müll im Klassenraum erzeugt rote Störfelder. Mit dem Besen kannst du Müll entfernen und die Lernumgebung ordnen.',
+    bullets: ['Besen anklicken, danach Müll anklicken', 'Müll wirkt auf angrenzende Felder als Störreiz', 'ein aufgeräumter Raum reduziert Ablenkung und Wegeprobleme'],
+    visual: 'trash'
   },
   {
     title: 'Worauf du achten solltest',
     text: 'Die Vorbereitung wird streng bewertet. Einzelne riskante Nachbarschaften geben jeweils Abzug, gute Sichtbarkeit und stabile Nachbarschaften geben Punkte.',
-    bullets: ['alle 10 Schüler*innen müssen platziert sein', 'vor und hinter Tischen muss ein Feld frei bleiben', 'störanfällige Schüler*innen sollten wirksam sichtbar sein', 'riskante Paare möglichst trennen oder stabilisieren', 'danach folgt Schritt 2: Klassenregeln auswählen'],
+    bullets: ['alle 10 Schüler*innen müssen platziert sein', 'Laufwege zwischen Tischreihen frei halten', 'Müll mit dem Besen entfernen', 'störanfällige Schüler*innen sollten wirksam sichtbar sein', 'riskante Paare möglichst trennen oder stabilisieren', 'danach folgt Schritt 2: Klassenregeln auswählen'],
     visual: 'checklist'
   }
 ];
@@ -1339,11 +1513,11 @@ function tutorialVisualMarkup(type) {
       <div class="mini-arrow">→</div><div class="mini-score"><span></span><span></span><span></span><span></span><span></span></div>
     </div>`;
   if (type === 'teacher') return `
-    <div class="tutorial-mini-grid teacher-demo">
+    <div class="tutorial-mini-grid teacher-demo teacher-fan-demo">
       <span></span><span></span><span class="mini-teacher-square">LK ↓</span><span></span><span></span>
       <span></span><span class="v2"></span><span class="v1"></span><span class="v2"></span><span></span>
-      <span class="v4"></span><span class="v3"></span><span class="v2"></span><span class="v3"></span><span class="v4"></span>
-      <span class="v4"></span><span></span><span class="v3"></span><span></span><span class="v4"></span>
+      <span class="v4"></span><span class="v3"></span><span class="v2 desk-blocked-demo">T</span><span class="v3"></span><span class="v4"></span>
+      <span class="v4"></span><span class="v4"></span><span class="v4 weakened-demo"></span><span class="v4"></span><span class="v4"></span>
     </div>`;
   if (type === 'risk') return `
     <div class="tutorial-mini-grid risk-demo">
@@ -1358,17 +1532,22 @@ function tutorialVisualMarkup(type) {
       <span class="g2"></span><span class="g2"></span><span class="g2"></span>
     </div>`;
   if (type === 'neutralize') return `
-    <div class="tutorial-neutral-demo">
-      <div class="neutral-layer red-layer">Risiko</div>
-      <div class="neutral-plus">+</div>
-      <div class="neutral-layer green-layer">Schutz</div>
-      <div class="neutral-equals">=</div>
-      <div class="neutral-layer yellow-layer">abgefedert</div>
+    <div class="tutorial-mini-grid neutral-grid-demo">
+      <span class="r1">Rot</span><span class="yellow-neutral">neutral</span><span class="g1">Grün</span>
+      <span></span><span class="student-neutral">Sitzplatz</span><span></span>
+      <span></span><span></span><span></span>
     </div>`;
   if (type === 'spacing') return `
-    <div class="tutorial-spacing-demo">
-      <span class="demo-desk">Tisch</span><span class="demo-gap">Gang</span><span class="demo-desk">Tisch</span>
-      <span class="demo-ok">✓ nebeneinander möglich</span><span class="demo-gap vertical">frei</span><span class="demo-warn">! nicht direkt dahinter</span>
+    <div class="tutorial-spacing-grid-demo">
+      <span class="demo-desk">Tisch</span><span class="demo-desk">Tisch</span><span></span>
+      <span class="demo-gap-mark">!</span><span class="demo-gap-mark">!</span><span class="demo-note">Gang freihalten</span>
+      <span class="demo-desk muted-desk">Tisch</span><span class="demo-desk muted-desk">Tisch</span><span></span>
+    </div>`;
+  if (type === 'trash') return `
+    <div class="tutorial-mini-grid trash-demo">
+      <span></span><span class="r1">🗑️</span><span></span>
+      <span class="r1">rot</span><button type="button" class="mini-broom">🧹</button><span class="r1">rot</span>
+      <span></span><span class="r1">rot</span><span></span>
     </div>`;
   return `
     <div class="tutorial-check-demo">

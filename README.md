@@ -1,57 +1,62 @@
-# Classroom-Management-Spiel – Schritt 1 und 2
+# Classroom-Management-Spiel – Prototyp
 
-Interaktiver Prototyp für die Präsentation zu Classroom Management und kooperativer Verhaltensmodifikation.
+Interaktive Webseite für eine Präsentationsphase zu Classroom Management und kooperativer Verhaltensmodifikation.
 
 ## Dateien
 
 - `index.html` – Schritt 1: Klassenraum vorbereiten
 - `rules.html` – Schritt 2: Klassenregeln auswählen
-- `styles.css` – Gestaltung für beide Seiten
+- `styles.css` – gemeinsames Styling
 - `script.js` – Spiellogik für Schritt 1
-- `rules.js` – Logik für Schritt 2
+- `rules.js` – Spiellogik für Schritt 2
 
 ## Schritt 1: Klassenraum vorbereiten
 
 Umgesetzt:
 
-- moderner dunkler Blau-/Anthrazit-Look mit Kacheloptik
-- Start-Anleitung als Slider mit abgedunkeltem Hintergrund
-- Tafelmarkierung am oberen Spielfeldrand
-- quadratisches Klassenraumraster
-- Tische per Drag & Drop verschiebbar
-- vor und hinter Tischen muss ein Rasterfeld frei bleiben; nebeneinander dürfen Tische direkt stehen
-- 10 Schülerprofile direkt im Spielfeldbereich unter der Legende
-- alle Schüler*innen müssen platziert werden, bevor ausgewertet werden kann
-- Schüler*innen können per Drag & Drop gesetzt, verschoben oder über ein rotes X wieder entfernt werden
-- Mouseover über besetzte Tische zeigt erneut die Schülerkarte mit relevanten Hinweisen
-- Lehrkraft ist frei per Drag & Drop platzierbar
-- Lehrkraft wird durch Anklicken gedreht; ein kleines Bedienfeld öffnet die Blickrichtungswahl
-- Sichtbereich der Lehrkraft wird grün angezeigt und durch Tische abgeschwächt
-- rote Risikofelder, grüne Stabilisierungsfelder und gelb-orange Neutralisierung werden visualisiert
-- detaillierte Auswertung als Slider mit Lebensbalken
-- Lebensbalken: rot bei 0–3, gelb bei 4–6, grün bei 7–10 Balken
-- Game Over enthält einen Button „Neuer Versuch“
-- bei erfolgreicher Vorbereitung geht es weiter zu `rules.html`
+- Klassenraumraster mit quadratischen Feldern
+- feste Raumzonen: Tafel, Tür, Notausgang, Fenster, Klassenschrank, Waschbecken
+- freie Drag-and-drop-Platzierung von Tischen im Raster
+- freie Drag-and-drop-Platzierung der Lehrkraft im Raster
+- Blickrichtung der Lehrkraft durch Klick auf die Lehrkraft veränderbar
+- grüner Sichtfächer der Lehrkraft mit Abschwächung durch Tische
+- Schülerprofile rechts neben dem Raster
+- Schüler*innen per Drag & Drop auf Tische setzen, verschieben oder über X entfernen
+- Mouseover über besetzte Tische zeigt das Schülerprofil
+- rote Risikofelder, grüne Stabilisierung und gelb/orange Neutralisierung
+- zufällig platzierter Müll als Störreiz
+- Besen anklicken, danach Müll anklicken, um Müll zu entfernen
+- Auswertung mit manuellem Slider und Lebensbalken
+- Game-over-Screen mit Button „Neuer Versuch“
+- Übergang zu `rules.html`, wenn die Vorbereitung tragfähig ist
 
-## Schritt 2: Klassenregeln auswählen
+## Bewertungsidee
+
+Die Vorbereitung erzeugt eine Startstabilität von 0 bis 10 Balken. Bewertet werden unter anderem:
+
+- ob alle Schüler*innen platziert wurden
+- ob Laufwege zwischen Tischreihen frei bleiben
+- ob störanfällige Schüler*innen im wirksamen Sichtbereich sitzen
+- ob riskante Sitznachbarschaften entstehen
+- ob stabilisierende Nachbarschaften Risiken abfedern
+- ob Müll als Störreiz entfernt wurde
+
+## Schritt 2: Klassenregeln
 
 Umgesetzt:
 
-- fertiges Klassenraster wird nicht beweglich übernommen
+- vorbereitetes Klassenraster wird eingefroren übernommen
 - Schülerliste bleibt sichtbar
-- 15 vorgefertigte Regeln werden einzeln angezeigt
-- Regeln können in drei Listen sortiert werden:
-  - Klassenregeln
-  - Später zuordnen
-  - Aussortiert
-- Ziel: genau 6 Regeln in Klassenregeln, 9 in Aussortiert, 0 in Später zuordnen
-- Regeln können zwischen den Listen verschoben werden
-- Auswahl wird im Browser gespeichert, damit spätere Szenarien darauf zugreifen können
+- 15 vorgefertigte Regeln werden nacheinander angezeigt
+- Zuordnung in drei Listen: Klassenregeln, Später zuordnen, Aussortiert
+- Ziel: genau 6 Klassenregeln, 9 aussortierte Regeln, keine Regel in „Später zuordnen“
+- Auswahl wird im lokalen Browser-Speicher gesichert
 
 ## Nutzung
 
-Die ZIP entpacken und `index.html` im Browser öffnen. Für GitHub Pages reicht es, alle Dateien in dasselbe Verzeichnis zu legen.
+1. ZIP entpacken.
+2. `index.html` im Browser öffnen.
+3. Für GitHub Pages alle Dateien gemeinsam in ein Repository legen.
+4. Als Startseite `index.html` verwenden.
 
-## Hinweis
-
-Der Prototyp bildet noch nicht die Unterrichtsphase mit Branching-Szenarien ab. Er legt aber bereits Variablen an, die später für Szenarien genutzt werden können, zum Beispiel Sichtfeld, Risikokonstellationen, stabilisierende Nachbarschaften und ausgewählte Klassenregeln.
+Die Daten zwischen Schritt 1 und Schritt 2 werden über `localStorage` gespeichert.

@@ -2446,3 +2446,303 @@ body.tutorial-open {
     grid-template-columns: 1fr;
   }
 }
+
+/* Layout-Update: kompakte Arbeitsfläche mit Schülerliste rechts neben dem Raster */
+.app-shell.single-column,
+.compact-topbar {
+  max-width: 1500px;
+}
+
+.room-wrap {
+  max-width: 1420px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.classroom-work-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.grid-column {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.embedded-students {
+  flex: 0 0 320px;
+  width: 320px;
+  max-height: 720px;
+  margin: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.compact-student-palette {
+  grid-template-columns: 1fr;
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.compact-student-palette .student-card,
+.student-card {
+  min-height: 76px;
+}
+
+.classroom-grid {
+  --cell-size: 64px;
+  padding: 10px;
+  gap: 6px;
+}
+
+.grid-cell {
+  border-radius: 11px;
+}
+
+.board-marker {
+  width: 100%;
+  margin: 0;
+}
+
+.blocked-cell {
+  background: rgba(30, 41, 59, 0.88) !important;
+  border-style: solid;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+.blocked-marker {
+  position: absolute;
+  inset: 5px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  padding: 3px;
+  font-size: 0.54rem;
+  line-height: 1.05;
+  text-align: center;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #dbeafe;
+  pointer-events: none;
+}
+
+.blocked-board { background: rgba(37, 99, 235, 0.32); border-color: rgba(147, 197, 253, 0.42) !important; }
+.blocked-door { background: rgba(14, 165, 233, 0.18); }
+.blocked-exit { background: rgba(34, 197, 94, 0.16); }
+.blocked-window { background: rgba(125, 211, 252, 0.13); }
+.blocked-cabinet { background: rgba(120, 113, 108, 0.24); }
+.blocked-sink { background: rgba(59, 130, 246, 0.18); }
+
+.room-object {
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 1.45rem;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.room-object:hover,
+.room-object:focus-visible {
+  transform: translateY(-1px) scale(1.03);
+  outline: none;
+}
+
+.room-object-trash {
+  inset: 9px;
+  background: rgba(127, 29, 29, 0.72);
+  box-shadow: 0 12px 22px rgba(127, 29, 29, 0.28), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.room-object-broom {
+  inset: 10px;
+  background: rgba(234, 179, 8, 0.32);
+  box-shadow: 0 12px 22px rgba(234, 179, 8, 0.16), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.room-object-broom.active {
+  border-color: rgba(253, 224, 71, 0.88);
+  box-shadow: 0 0 0 3px rgba(253, 224, 71, 0.18), 0 16px 30px rgba(234, 179, 8, 0.30);
+}
+
+.teacher-demo.teacher-fan-demo {
+  grid-template-columns: repeat(5, 66px);
+  grid-template-rows: repeat(4, 66px);
+}
+
+.teacher-demo .desk-blocked-demo {
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(251, 191, 36, 0.85);
+  color: #172033;
+  font-weight: 950;
+}
+
+.teacher-demo .weakened-demo {
+  opacity: 0.48;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.12);
+}
+
+.neutral-grid-demo {
+  grid-template-columns: repeat(3, 96px);
+  grid-template-rows: repeat(3, 96px);
+}
+
+.neutral-grid-demo .yellow-neutral {
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(245, 158, 11, 0.46);
+  color: #fff7ed;
+  font-weight: 950;
+  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.28);
+}
+
+.neutral-grid-demo .student-neutral {
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.84);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  color: #e5edf8;
+  font-weight: 900;
+}
+
+.tutorial-spacing-grid-demo {
+  width: min(520px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr;
+  grid-template-rows: repeat(3, 92px);
+  gap: 10px;
+}
+
+.tutorial-spacing-grid-demo span {
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  font-weight: 900;
+  text-align: center;
+}
+
+.tutorial-spacing-grid-demo .demo-desk {
+  background: rgba(234, 179, 8, 0.60);
+  color: #172033;
+}
+
+.tutorial-spacing-grid-demo .muted-desk {
+  opacity: 0.74;
+}
+
+.tutorial-spacing-grid-demo .demo-gap-mark {
+  background: rgba(14, 165, 233, 0.18);
+  border: 2px dashed rgba(147, 197, 253, 0.55);
+  color: #93c5fd;
+  font-size: 2rem;
+}
+
+.tutorial-spacing-grid-demo .demo-note {
+  background: rgba(14, 165, 233, 0.13);
+  color: #dbeafe;
+  padding: 10px;
+}
+
+.trash-demo {
+  grid-template-columns: repeat(3, 86px);
+  grid-template-rows: repeat(3, 86px);
+}
+
+.trash-demo .mini-broom {
+  border: 1px solid rgba(253, 224, 71, 0.55);
+  border-radius: 18px;
+  background: rgba(234, 179, 8, 0.28);
+  color: #fef3c7;
+  font-size: 2rem;
+}
+
+@media (max-width: 1180px) {
+  .classroom-work-row {
+    flex-direction: column;
+    align-items: center;
+  }
+  .embedded-students {
+    width: min(760px, 100%);
+    flex-basis: auto;
+    max-height: 260px;
+  }
+  .compact-student-palette {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    max-height: 175px;
+  }
+}
+
+/* Schritt-2-Darstellung blockierter Felder und Raumobjekte */
+.frozen-blocked {
+  background: rgba(30, 41, 59, 0.86);
+  border-style: solid;
+}
+
+.frozen-blocked-label {
+  position: absolute;
+  inset: 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-size: 0.45rem;
+  line-height: 1.05;
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: #dbeafe;
+  opacity: 0.85;
+}
+
+.frozen-object {
+  position: absolute;
+  inset: 5px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 0.82rem;
+}
+
+.frozen-object-trash { background: rgba(127, 29, 29, 0.62); }
+.frozen-object-broom { background: rgba(234, 179, 8, 0.30); }
+
+/* zusätzliche Verdichtung, damit die Arbeitsseite möglichst ohne Scrollen auskommt */
+.compact-topbar {
+  padding-top: 16px;
+  padding-bottom: 10px;
+}
+.compact-topbar h1 {
+  font-size: clamp(1.45rem, 2.2vw, 2.3rem);
+  margin-bottom: 5px;
+}
+.app-shell {
+  padding-top: 0;
+  padding-bottom: 14px;
+}
+.room-header.centered-room-header {
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.room-title-block h2 {
+  margin-bottom: 2px;
+}
+.room-title-block p {
+  margin-bottom: 2px;
+}

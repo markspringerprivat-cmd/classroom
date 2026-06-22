@@ -40,7 +40,7 @@ const defaultStep1 = {
   preparationScore: null,
   rawPreparationScore: null,
   chosenLayout: { key: 'rows', label: 'Reihensitzordnung' },
-  teacher: { row: 0, col: 4, dir: 'down', mode: 'frontStanding' },
+  teacher: { row: 1, col: 4, dir: 'down', mode: 'frontStanding' },
   desks: [[2,1], [2,3], [2,6], [2,8], [4,1], [4,3], [4,6], [4,8], [6,3], [6,6]].map((pos, index) => ({ id: `desk-${index + 1}`, row: pos[0], col: pos[1] })),
   assignments: {}
 };
@@ -85,6 +85,16 @@ function loadStep1Data() {
 
 function getStudent(id) {
   return (step1Data.students || fallbackStudents).find(student => student.id === id);
+}
+
+function getBlockedCell(row, col) {
+  return (step1Data.blockedCells || []).find(item => item.row === row && item.col === col) || null;
+}
+
+function getRoomObjectAt(row, col) {
+  const broom = step1Data.objects?.broom;
+  if (broom && broom.row === row && broom.col === col) return broom;
+  return (step1Data.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;
 }
 
 function init() {
@@ -143,6 +153,14 @@ function renderFrozenGrid() {
     for (let col = 0; col < cols; col++) {
       const cell = document.createElement('div');
       cell.className = 'frozen-cell';
+      const block = getBlockedCell(row, col);
+      if (block) {
+        cell.classList.add('frozen-blocked', `frozen-blocked-${block.type}`);
+        const blockEl = document.createElement('span');
+        blockEl.className = 'frozen-blocked-label';
+        blockEl.textContent = block.label;
+        cell.appendChild(blockEl);
+      }
       const desk = (step1Data.desks || []).find(item => item.row === row && item.col === col);
       if (desk) {
         const deskEl = document.createElement('div');
@@ -151,6 +169,13 @@ function renderFrozenGrid() {
         const student = studentId ? getStudent(studentId) : null;
         deskEl.innerHTML = `<span>${desk.id.replace('desk-', 'T')}</span><strong>${student ? student.name : 'frei'}</strong>`;
         cell.appendChild(deskEl);
+      }
+      const object = getRoomObjectAt(row, col);
+      if (object) {
+        const objectEl = document.createElement('span');
+        objectEl.className = `frozen-object frozen-object-${object.type}`;
+        objectEl.textContent = object.type === 'broom' ? '🧹' : '🗑️';
+        cell.appendChild(objectEl);
       }
       const teacher = step1Data.teacher || {};
       if (teacher.row === row && teacher.col === col) {
