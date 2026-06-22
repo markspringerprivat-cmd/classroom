@@ -668,6 +668,8 @@ const game = {
   highscoreBase: 0,
   lifeBonus: 0,
   finalHighscore: 0,
+  finalBonusAdded: false,
+  finishReason: null,
   scoreEvents: []
 };
 
@@ -742,6 +744,8 @@ function startLesson() {
   game.highscoreBase = 0;
   game.lifeBonus = 0;
   game.finalHighscore = 0;
+  game.finalBonusAdded = false;
+  game.finishReason = null;
   game.scoreEvents = [];
   game.nextIncidentAt = Date.now() + randomInt(3000, 5000);
   if (startLessonBtn) {
@@ -755,14 +759,19 @@ function startLesson() {
 }
 
 function tickLesson() {
-  if (game.finished || game.scenarioOpen) return;
+  if (game.finished) return;
+  if (game.score <= 0) {
+    finishLesson('lost');
+    return;
+  }
+  if (game.scenarioOpen) return;
   game.lessonLeft = Math.max(0, game.lessonLeft - 0.25);
   updateLessonTimer();
   checkIncidentTimeouts();
   if (game.activeIncidents.length) renderBranchGame();
   else renderIncidents();
   maybeSpawnIncident();
-  if (game.lessonLeft <= 0) finishLesson();
+  if (game.lessonLeft <= 0) finishLesson('time');
 }
 
 function updateLessonTimer() {
@@ -775,7 +784,10 @@ function updateLessonTimer() {
 
 function finishLesson(reason = 'time') {
   if (game.finished) return;
+  const lost = reason === 'lost' || game.score <= 0;
   game.finished = true;
+  game.finishReason = lost ? 'lost' : 'won';
+  game.lessonLeft = Math.max(0, game.lessonLeft);
   stopTeacherMovement();
   clearInterval(game.lessonTimer);
   clearTimeout(game.spawnTimer);
@@ -784,19 +796,27 @@ function finishLesson(reason = 'time') {
   game.activeIncidents = [];
   game.scenarioOpen = false;
   game.currentScenarioIncident = null;
-  if (scenarioModal) scenarioModal.hidden = true;
+  if (scenarioModal) {
+    scenarioModal.hidden = true;
+    scenarioModal.setAttribute('hidden', '');
+  }
   if (continueScenarioBtn) continueScenarioBtn.hidden = true;
+
+  const scoreBeforeLifeBonus = game.highscoreBase;
+  game.lifeBonus = Math.max(0, Math.min(10, game.score)) * SCORE_PER_LIFE;
+  if (!game.finalBonusAdded) {
+    game.finalBonusAdded = true;
+    if (game.lifeBonus > 0) {
+      addHighscoreEvent(game.lifeBonus, `Lebensbonus am Ende: ${game.score} × ${SCORE_PER_LIFE} Punkte`, 'good', { finalBonus: true });
+    } else {
+      addHighscoreEvent(0, 'Kein Lebensbonus: 0 verbleibende Leben.', 'bad', { finalBonus: true });
+    }
+  }
+  game.finalHighscore = scoreBeforeLifeBonus + game.lifeBonus;
+  game.highscoreBase = game.finalHighscore;
+
   renderBranchGame();
   renderIncidents();
-
-  const lost = reason === 'lost' || game.score <= 0;
-  game.lifeBonus = Math.max(0, game.score) * SCORE_PER_LIFE;
-  if (game.lifeBonus > 0) {
-    addHighscoreEvent(game.lifeBonus, `Lebensbonus am Ende: ${game.score} × ${SCORE_PER_LIFE} Punkte`, 'good', { finalBonus: true });
-  } else {
-    addHighscoreEvent(0, 'Kein Lebensbonus: 0 verbleibende Leben.', 'bad', { finalBonus: true });
-  }
-  game.finalHighscore = game.highscoreBase;
 
   if (lost) {
     logEvent('Die Unterrichtsstabilität ist auf 0 gefallen. Die Runde ist verloren.', 'bad');
@@ -1214,18 +1234,19 @@ function scenarioAnswerTimeout() {
   const incident = game.currentScenarioIncident;
   if (!incident) return closeScenarioModal();
   addHighscoreEvent(SCORE_BAD_ANSWER, `${incident.student.name}: Szenario nicht rechtzeitig beantwortet.`, 'bad');
-  changeScore(-1);
+  const ended = changeScore(-1);
   playBadAudio();
-  showScenarioResult(incident.escalation, -1, 'bad');
+  if (!ended) showScenarioResult(incident.escalation, -1, 'bad');
 }
 
 function chooseScenarioAnswer(answer) {
   clearAnswerCountdown();
   const scenarioPoints = answer.delta > 0 ? SCORE_GOOD_ANSWER : answer.delta < 0 ? SCORE_BAD_ANSWER : 0;
   addHighscoreEvent(scenarioPoints, `Szenarioantwort: ${scenarioPoints > 0 ? 'wirksame Intervention' : scenarioPoints < 0 ? 'problematische Intervention' : 'keine Punkteveränderung'}.`, answer.delta > 0 ? 'good' : answer.delta < 0 ? 'bad' : 'neutral');
-  changeScore(answer.delta);
+  const ended = changeScore(answer.delta);
   if (answer.delta > 0) playGoodAudio();
   if (answer.delta < 0) playBadAudio();
+  if (ended) return;
   const resultType = answer.delta > 0 ? 'good' : answer.delta < 0 ? 'bad' : 'neutral';
   const deltaText = answer.delta > 0 ? '+1 Stabilität' : answer.delta < 0 ? '-1 Stabilität' : 'keine Veränderung';
   showScenarioResult(`${answer.feedback} (${deltaText})`, answer.delta, resultType);
@@ -1331,10 +1352,11 @@ function addHighscoreEvent(points, label, type = 'neutral', options = {}) {
 }
 
 function renderHighscore() {
-  if (currentHighscoreEl) currentHighscoreEl.textContent = String(game.highscoreBase);
+  const visibleScore = game.finished ? game.finalHighscore : game.highscoreBase;
+  if (currentHighscoreEl) currentHighscoreEl.textContent = String(visibleScore);
   if (highscoreNote) {
     highscoreNote.textContent = game.finished
-      ? `Endwert inklusive Lebensbonus: ${game.finalHighscore || game.highscoreBase} Punkte.`
+      ? `Endwert inklusive Lebensbonus: ${visibleScore} Punkte.`
       : 'Lebensbonus wird erst am Ende addiert.';
   }
   if (scoreEventCounter) scoreEventCounter.textContent = String(game.scoreEvents.length);
@@ -1352,7 +1374,7 @@ function renderHighscore() {
 
 function showOutcomeModal(result) {
   const won = result === 'won';
-  const finalScore = game.finalHighscore || game.highscoreBase;
+  const finalScore = Number.isFinite(game.finalHighscore) ? game.finalHighscore : game.highscoreBase;
   if (outcomeImage) {
     outcomeImage.src = won ? 'assets/outcomes/win.png' : 'assets/outcomes/lose.png';
     outcomeImage.alt = won ? 'Gewonnener Unterrichtsverlauf' : 'Verlorener Unterrichtsverlauf';
@@ -1372,14 +1394,24 @@ function showOutcomeModal(result) {
   if (outcomeHighscore) outcomeHighscore.textContent = String(finalScore);
   if (outcomeBreakdown) outcomeBreakdown.textContent = `Interventionen/Reaktionen: ${finalScore - game.lifeBonus} · Lebensbonus: ${game.lifeBonus} (${game.score} × ${SCORE_PER_LIFE})`;
   if (restartOutcomeBtn) restartOutcomeBtn.textContent = won ? 'Nochmal spielen' : 'Neuer Versuch';
-  if (outcomeModal) outcomeModal.hidden = false;
+  if (outcomeModal) {
+    outcomeModal.hidden = false;
+    outcomeModal.removeAttribute('hidden');
+    outcomeModal.classList.add('is-visible');
+    outcomeModal.setAttribute('data-result', won ? 'won' : 'lost');
+  }
 }
 
 function changeScore(delta) {
+  if (game.finished) return true;
   game.score = Math.max(0, Math.min(10, game.score + delta));
   renderLife();
   renderHighscore();
-  if (game.score <= 0 && !game.finished) finishLesson('lost');
+  if (game.score <= 0 && !game.finished) {
+    finishLesson('lost');
+    return true;
+  }
+  return false;
 }
 
 function logEvent(text, type = 'neutral') {

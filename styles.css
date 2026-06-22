@@ -4603,3 +4603,8 @@ body.rules-page {
     grid-column: 1 / -1;
   }
 }
+
+/* Robustes Ergebnisfenster: wird auch dann sichtbar, wenn hidden zuvor gesetzt war. */
+.branch-outcome-modal.is-visible {
+  display: grid !important;
+}
