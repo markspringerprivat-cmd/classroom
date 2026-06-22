@@ -3,27 +3,70 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Unterrichtsszenarien | Classroom-Management-Spiel</title>
+  <title>Unterrichtsverlauf | Classroom-Management-Spiel</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="scenarios-page">
-  <header class="topbar compact-topbar scenarios-topbar">
+<body class="scenarios-page branching-page">
+  <header class="topbar compact-topbar branching-topbar">
     <div>
       <p class="eyebrow">Interaktive Phase · Schritt 3</p>
-      <h1>Unterrichtsverlauf vorbereiten</h1>
-      <p class="subtitle">Der Branching-Modus ist noch nicht aktiv. Der Katalog wird bereits dynamisch aus Sitzplan, Regeln und Profilen aufgebaut.</p>
+      <h1>Unterrichtsverlauf</h1>
+      <p class="subtitle">Reagiere auf Störungen im laufenden Unterricht. Klicke ein erreichbares Feld an; die Lehrkraft läuft automatisch dorthin.</p>
     </div>
     <div class="scenario-top-actions">
-      <button type="button" id="openScenarioBtn" class="primary-btn">Szenarien einsehen</button>
+      <div class="lesson-clock" aria-live="polite">
+        <span>Unterrichtszeit</span>
+        <strong id="lessonTimer">05:00</strong>
+      </div>
+      <button type="button" id="openScenarioBtn" class="ghost-btn">Szenarien einsehen</button>
     </div>
   </header>
 
-  <main class="scenario-shell">
-    <section class="panel scenario-intro">
-      <div>
-        <p class="eyebrow">Nächster Schritt</p>
-        <h2>Branching-Szenario wird später hier angeschlossen.</h2>
-        <p>Diese Seite übernimmt die vorbereitete Klasse und die gewählten Klassenregeln. Der Button oben rechts öffnet den dynamisch befüllten Szenario-Katalog für den späteren Unterrichtsverlauf.</p>
+  <main class="branch-shell">
+    <aside class="branch-hud panel" aria-label="Unterrichtsstabilität">
+      <div class="branch-method-chip">
+        <span>Aktueller Schwerpunkt</span>
+        <strong id="activeMethodLabel">Kooperative Verhaltensmodifikation</strong>
+      </div>
+
+      <section>
+        <div class="section-title-row">
+          <h2>Lebensleiste</h2>
+          <span id="branchScorePill" class="pill">–/10</span>
+        </div>
+        <div id="branchLifeSegments" class="branch-life-segments" aria-label="Stabilitätsleiste"></div>
+        <p id="branchScoreNote" class="hint">Startwert wird aus Schritt 1 übernommen.</p>
+      </section>
+
+      <section>
+        <div class="section-title-row">
+          <h2>Akute Störungen</h2>
+          <span id="incidentCounter" class="pill">0</span>
+        </div>
+        <div id="incidentList" class="incident-list">
+          <p class="hint">Noch keine akute Störung.</p>
+        </div>
+      </section>
+
+      <button type="button" id="startLessonBtn" class="primary-btn full-width">Unterricht starten</button>
+      <p class="hint">Bei einer blinkenden Störung hast du 5 Sekunden, um die Lehrkraft in die Nähe zu bewegen. Bei einem Szenario bleiben 20 Sekunden für die Antwort.</p>
+    </aside>
+
+    <section class="branch-room-panel panel" aria-label="Klassenzimmer im Unterrichtsverlauf">
+      <div class="branch-room-head">
+        <div>
+          <p class="eyebrow">Klassenzimmer</p>
+          <h2>Live-Verwaltung</h2>
+          <p id="teacherStatus" class="hint">Klicke nach dem Start ein freies Feld an. Die Lehrkraft läuft automatisch den kürzesten freien Weg.</p>
+        </div>
+      </div>
+      <div id="branchClassroomGrid" class="branch-classroom-grid" aria-label="Spielbrett Unterrichtsverlauf"></div>
+    </section>
+
+    <aside class="branch-log-panel panel" aria-label="Verlauf">
+      <div class="section-title-row">
+        <h2>Unterrichtslog</h2>
+        <span class="pill">live</span>
       </div>
       <div class="scenario-context-grid">
         <article>
@@ -36,25 +79,26 @@
           <ul id="selectedRulesList" class="scenario-rule-list"></ul>
         </article>
       </div>
-    </section>
-
-    <section class="panel scenario-student-panel">
-      <div class="section-title-row">
-        <h2>Schülerkontext</h2>
-        <span class="pill">aus Sitzplan übernommen</span>
-      </div>
-      <ul id="studentContextList" class="scenario-student-list"></ul>
-    </section>
+      <div id="branchLog" class="branch-log"></div>
+    </aside>
   </main>
+
+  <section class="panel scenario-student-panel branch-context-students" aria-label="Schülerkontext">
+    <div class="section-title-row">
+      <h2>Schülerkontext</h2>
+      <span class="pill">aus Sitzplan übernommen</span>
+    </div>
+    <ul id="studentContextList" class="scenario-student-list"></ul>
+  </section>
 
   <section id="scenarioDrawer" class="scenario-drawer" hidden aria-label="Szenario-Katalog">
     <div class="scenario-drawer-backdrop"></div>
     <div class="scenario-drawer-panel">
       <div class="scenario-drawer-head">
         <div>
-          <p class="eyebrow">Katalog für spätere Branching-Logik</p>
-          <h2>40 Szenarien</h2>
-          <p>Jedes Szenario wird mit Variablen aus Sitzplan, Schülerprofilen, Klassenregeln und Auswertung befüllt.</p>
+          <p class="eyebrow">Katalog / Prüfansicht</p>
+          <h2>40 dynamische Szenarien</h2>
+          <p>Die Szenarien werden mit Variablen aus Sitzplan, Schülerprofilen, Klassenregeln und Auswertung befüllt.</p>
         </div>
         <div class="scenario-drawer-actions">
           <span id="scenarioCount" class="pill">40 Szenarien</span>
@@ -63,6 +107,26 @@
       </div>
       <div id="scenarioList" class="scenario-list"></div>
     </div>
+  </section>
+
+  <section id="scenarioModal" class="branch-modal" hidden aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="scenarioModalTitle">
+    <div class="branch-modal-backdrop"></div>
+    <article class="branch-modal-card">
+      <div class="branch-modal-head">
+        <div>
+          <p id="scenarioModalArea" class="eyebrow">Kooperative Verhaltensmodifikation</p>
+          <h2 id="scenarioModalTitle">Szenario</h2>
+        </div>
+        <div class="answer-countdown">
+          <span>Antwortzeit</span>
+          <strong id="answerTimer">20</strong>
+        </div>
+      </div>
+      <p id="scenarioModalScene" class="branch-scene-text"></p>
+      <div id="scenarioAnswerList" class="branch-answer-list"></div>
+      <div id="scenarioResultBox" class="scenario-result-box" hidden></div>
+      <button type="button" id="continueScenarioBtn" class="primary-btn" hidden>Weiter im Unterricht</button>
+    </article>
   </section>
 
   <script src="scenarios.js"></script>

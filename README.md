@@ -79,3 +79,8 @@ Beispielhafte Routinen:
 ## Schritt 3: Szenario-Katalog
 
 Neu ergänzt sind `scenarios.html` und `scenarios.js`. Nach dem Speichern der Klassenregeln wird die Szenario-Seite geöffnet. Der Branching-Modus ist noch nicht aktiv; über „Szenarien einsehen“ wird zunächst ein Katalog mit 40 möglichen Unterrichtsszenarien angezeigt.
+
+
+## Schritt 3: Branching-Prototyp
+
+`scenarios.html` enthält das Live-Klassenzimmer mit 5-Minuten-Timer, dynamischen Störungen, automatischer Lehrkraftbewegung und Szenario-Katalog.
