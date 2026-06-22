@@ -27,16 +27,16 @@ const roomObjectConfig = {
 };
 
 const students = [
-  { id: 'julius', name: 'Julius', age: 12, avatar: 'assets/students/julius.png', note: 'verträgt sich schlecht mit anderen Jungs', hidden: { gender: 'm', risk: 3, conflictWithBoys: true, needsMonitoring: true } },
-  { id: 'petra', name: 'Petra', age: 15, avatar: 'assets/students/petra.png', note: 'lenkt häufig Sitznachbar*innen ab', hidden: { gender: 'f', risk: 3, distractor: true, needsMonitoring: true } },
-  { id: 'mehmet', name: 'Mehmet', age: 13, avatar: 'assets/students/mehmet.png', note: 'arbeitet ruhig und stabilisiert Gruppen', hidden: { gender: 'm', risk: 1, stabilizer: true } },
-  { id: 'lina', name: 'Lina', age: 12, avatar: 'assets/students/lina.png', note: 'reagiert empfindlich auf Kritik und Spott', hidden: { gender: 'f', risk: 2, sensitive: true, needsSafety: true } },
-  { id: 'ben', name: 'Ben', age: 14, avatar: 'assets/students/ben.png', note: 'testet gerne Grenzen aus', hidden: { gender: 'm', risk: 3, boundaryTesting: true, needsMonitoring: true } },
-  { id: 'sara', name: 'Sara', age: 13, avatar: 'assets/students/sara.png', note: 'arbeitet zuverlässig und hilft anderen', hidden: { gender: 'f', risk: 1, stabilizer: true } },
-  { id: 'tom', name: 'Tom', age: 12, avatar: 'assets/students/tom.png', note: 'sucht Aufmerksamkeit durch Zwischenrufe', hidden: { gender: 'm', risk: 3, callsOut: true, needsMonitoring: true } },
-  { id: 'emily', name: 'Emily', age: 13, avatar: 'assets/students/emily.png', note: 'braucht klare Orientierung bei Übergängen', hidden: { gender: 'f', risk: 2, needsStructure: true } },
-  { id: 'niklas', name: 'Niklas', age: 14, avatar: 'assets/students/niklas.png', note: 'versteckt gern das Handy unter dem Tisch', hidden: { gender: 'm', risk: 3, phoneRisk: true, needsMonitoring: true } },
-  { id: 'amira', name: 'Amira', age: 12, avatar: 'assets/students/amira.png', note: 'vermittelt oft zwischen Mitschüler*innen', hidden: { gender: 'f', risk: 1, mediator: true, stabilizer: true } }
+  { id: 'julius', name: 'Julius', age: 12, note: 'verträgt sich schlecht mit anderen Jungs', hidden: { gender: 'm', risk: 3, conflictWithBoys: true, needsMonitoring: true } },
+  { id: 'petra', name: 'Petra', age: 15, note: 'lenkt häufig Sitznachbar*innen ab', hidden: { gender: 'f', risk: 3, distractor: true, needsMonitoring: true } },
+  { id: 'mehmet', name: 'Mehmet', age: 13, note: 'arbeitet ruhig und stabilisiert Gruppen', hidden: { gender: 'm', risk: 1, stabilizer: true } },
+  { id: 'lina', name: 'Lina', age: 12, note: 'reagiert empfindlich auf Kritik und Spott', hidden: { gender: 'f', risk: 2, sensitive: true, needsSafety: true } },
+  { id: 'ben', name: 'Ben', age: 14, note: 'testet gerne Grenzen aus', hidden: { gender: 'm', risk: 3, boundaryTesting: true, needsMonitoring: true } },
+  { id: 'sara', name: 'Sara', age: 13, note: 'arbeitet zuverlässig und hilft anderen', hidden: { gender: 'f', risk: 1, stabilizer: true } },
+  { id: 'tom', name: 'Tom', age: 12, note: 'sucht Aufmerksamkeit durch Zwischenrufe', hidden: { gender: 'm', risk: 3, callsOut: true, needsMonitoring: true } },
+  { id: 'emily', name: 'Emily', age: 13, note: 'braucht klare Orientierung bei Übergängen', hidden: { gender: 'f', risk: 2, needsStructure: true } },
+  { id: 'niklas', name: 'Niklas', age: 14, note: 'versteckt gern das Handy unter dem Tisch', hidden: { gender: 'm', risk: 3, phoneRisk: true, needsMonitoring: true } },
+  { id: 'amira', name: 'Amira', age: 12, note: 'vermittelt oft zwischen Mitschüler*innen', hidden: { gender: 'f', risk: 1, mediator: true, stabilizer: true } }
 ];
 
 const layouts = {
@@ -82,17 +82,6 @@ const dragState = {
   studentId: null,
   deskId: null
 };
-
-function studentAvatarSrc(student) {
-  return student?.avatar || (student?.id ? `assets/students/${student.id}.png` : '');
-}
-
-function studentAvatarMarkup(student, className = 'student-avatar', altSuffix = '') {
-  const src = studentAvatarSrc(student);
-  const alt = `${student?.name || 'Schüler*in'}${altSuffix}`;
-  return src ? `<img class="${className}" src="${src}" alt="${alt}" />` : `<span class="${className} avatar-fallback">${(student?.name || '?').charAt(0)}</span>`;
-}
-
 
 const blockedGroups = buildBlockedGroups();
 
@@ -363,20 +352,20 @@ function createDeskElement(desk, influence = null) {
 
   const label = document.createElement('div');
   label.className = 'desk-label';
-  label.innerHTML = `<span>Tisch</span><span>↕</span>`;
+  label.innerHTML = `<span>${desk.id.replace('desk-', 'Tisch ')}</span><span>↕</span>`;
 
   const assignedStudentId = state.assignments[desk.id];
   const seat = document.createElement('div');
   if (assignedStudentId) {
     const student = getStudent(assignedStudentId);
-    seat.className = 'student-chip student-chip-photo';
+    seat.className = 'student-chip';
     seat.draggable = true;
     seat.dataset.studentId = student.id;
     seat.title = `${student.name} (${student.age}) · ${student.note}`;
 
-    const avatarWrap = document.createElement('div');
-    avatarWrap.className = 'student-chip-avatar-wrap';
-    avatarWrap.innerHTML = studentAvatarMarkup(student, 'student-chip-avatar', ' am Tisch');
+    const name = document.createElement('span');
+    name.className = 'student-chip-name';
+    name.textContent = student.name;
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
@@ -392,7 +381,7 @@ function createDeskElement(desk, influence = null) {
     });
     removeBtn.addEventListener('dragstart', event => event.preventDefault());
 
-    seat.appendChild(avatarWrap);
+    seat.appendChild(name);
     seat.appendChild(removeBtn);
     seat.addEventListener('dragstart', event => {
       event.stopPropagation();
@@ -485,12 +474,7 @@ function renderPalette() {
     if (state.selectedStudentId === student.id) card.classList.add('selected');
     card.draggable = true;
     card.dataset.studentId = student.id;
-    card.innerHTML = `
-      <div class="student-card-avatar-wrap">${studentAvatarMarkup(student, 'student-card-avatar')}</div>
-      <div class="student-card-copy">
-        <div class="student-name">${student.name} (${student.age})</div>
-        <div class="student-note">${student.note}</div>
-      </div>`;
+    card.innerHTML = `<div class="student-name">${student.name} (${student.age})</div><div class="student-note">${student.note}</div>`;
     card.addEventListener('dragstart', event => {
       startDrag(event, { type: 'student', studentId: student.id });
       card.classList.add('dragging');

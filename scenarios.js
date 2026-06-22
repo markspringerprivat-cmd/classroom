@@ -1,14 +1,14 @@
 const fallbackStudents = [
-  { id: 'julius', name: 'Julius', age: 12, avatar: 'assets/students/julius.png', note: 'verträgt sich schlecht mit anderen Jungs' },
-  { id: 'petra', name: 'Petra', age: 15, avatar: 'assets/students/petra.png', note: 'lenkt häufig Sitznachbar*innen ab' },
-  { id: 'mehmet', name: 'Mehmet', age: 13, avatar: 'assets/students/mehmet.png', note: 'arbeitet ruhig und stabilisiert Gruppen' },
-  { id: 'lina', name: 'Lina', age: 12, avatar: 'assets/students/lina.png', note: 'reagiert empfindlich auf Kritik und Spott' },
-  { id: 'ben', name: 'Ben', age: 14, avatar: 'assets/students/ben.png', note: 'testet gerne Grenzen aus' },
-  { id: 'sara', name: 'Sara', age: 13, avatar: 'assets/students/sara.png', note: 'arbeitet zuverlässig und hilft anderen' },
-  { id: 'tom', name: 'Tom', age: 12, avatar: 'assets/students/tom.png', note: 'sucht Aufmerksamkeit durch Zwischenrufe' },
-  { id: 'emily', name: 'Emily', age: 13, avatar: 'assets/students/emily.png', note: 'braucht klare Orientierung bei Übergängen' },
-  { id: 'niklas', name: 'Niklas', age: 14, avatar: 'assets/students/niklas.png', note: 'versteckt gern das Handy unter dem Tisch' },
-  { id: 'amira', name: 'Amira', age: 12, avatar: 'assets/students/amira.png', note: 'vermittelt oft zwischen Mitschüler*innen' }
+  { id: 'julius', name: 'Julius', age: 12, note: 'verträgt sich schlecht mit anderen Jungs' },
+  { id: 'petra', name: 'Petra', age: 15, note: 'lenkt häufig Sitznachbar*innen ab' },
+  { id: 'mehmet', name: 'Mehmet', age: 13, note: 'arbeitet ruhig und stabilisiert Gruppen' },
+  { id: 'lina', name: 'Lina', age: 12, note: 'reagiert empfindlich auf Kritik und Spott' },
+  { id: 'ben', name: 'Ben', age: 14, note: 'testet gerne Grenzen aus' },
+  { id: 'sara', name: 'Sara', age: 13, note: 'arbeitet zuverlässig und hilft anderen' },
+  { id: 'tom', name: 'Tom', age: 12, note: 'sucht Aufmerksamkeit durch Zwischenrufe' },
+  { id: 'emily', name: 'Emily', age: 13, note: 'braucht klare Orientierung bei Übergängen' },
+  { id: 'niklas', name: 'Niklas', age: 14, note: 'versteckt gern das Handy unter dem Tisch' },
+  { id: 'amira', name: 'Amira', age: 12, note: 'vermittelt oft zwischen Mitschüler*innen' }
 ];
 
 const hiddenDefaults = {
@@ -66,17 +66,6 @@ const step1 = readJson('classroomGame.step1', {});
 const rulesData = readJson('classroomGame.step2.rules', { acceptedRules: [], acceptedRuleIds: [] });
 const context = buildContext(step1, rulesData);
 const SCENARIOS = buildDynamicScenarios(context);
-
-
-function studentAvatarSrc(student) {
-  return student?.avatar || (student?.id ? `assets/students/${student.id}.png` : '');
-}
-
-function studentAvatarMarkup(student, className = 'student-avatar', altSuffix = '') {
-  const src = studentAvatarSrc(student);
-  const alt = `${student?.name || 'Schüler*in'}${altSuffix}`;
-  return src ? `<img class="${className}" src="${src}" alt="${escapeHtml(alt)}" />` : `<span class="${className} avatar-fallback">${escapeHtml((student?.name || '?').charAt(0))}</span>`;
-}
 
 function buildContext(stepData, ruleData) {
   const students = enrichStudents(Array.isArray(stepData?.students) ? stepData.students : fallbackStudents);
@@ -164,7 +153,6 @@ function buildContext(stepData, ruleData) {
 function enrichStudents(input) {
   return input.map(student => ({
     ...student,
-    avatar: student.avatar || `assets/students/${student.id}.png`,
     hidden: { ...(hiddenDefaults[student.id] || {}), ...(student.hidden || {}) }
   }));
 }
@@ -553,7 +541,7 @@ function renderContext() {
       if (student.hidden?.stabilizer) markers.push('stabilisierend');
       if (student.hidden?.mediator) markers.push('vermittelnd');
       if (student.hidden?.phoneRisk) markers.push('Handy-Risiko');
-      return `<li>${studentAvatarMarkup(student, 'scenario-student-avatar')}<div><strong>${escapeHtml(student.name)} (${student.age})</strong><span>${escapeHtml(student.note || '')}</span><small>${escapeHtml(place)}${markers.length ? ` · ${markers.join(', ')}` : ''}</small></div></li>`;
+      return `<li><strong>${escapeHtml(student.name)} (${student.age})</strong><span>${escapeHtml(student.note || '')}</span><small>${escapeHtml(place)}${markers.length ? ` · ${markers.join(', ')}` : ''}</small></li>`;
     }).join('');
   }
 }
@@ -643,14 +631,12 @@ const outcomeBreakdown = document.getElementById('outcomeBreakdown');
 const restartOutcomeBtn = document.getElementById('restartOutcomeBtn');
 
 const LESSON_SECONDS = 300;
-const INCIDENT_REACTION_MS = 7000;
+const INCIDENT_REACTION_MS = 5000;
 const ANSWER_SECONDS = 20;
-const TEACHER_FIRST_STEP_MS = 100;
-const TEACHER_STEP_MS = 400;
+const TEACHER_STEP_MS = 500;
 const SCORE_PER_LIFE = 500;
 const SCORE_GOOD_ANSWER = 200;
 const SCORE_BAD_ANSWER = -200;
-const TRASH_EVENT_CHANCE = 0.28;
 
 const audioState = {
   unlocked: false,
@@ -668,7 +654,6 @@ const game = {
   teacher: normalizeTeacher(context.stepData?.teacher),
   teacherPath: [],
   teacherMoveTimer: null,
-  teacherMoveStepIndex: 0,
   lessonTimer: null,
   spawnTimer: null,
   nextIncidentAt: 0,
@@ -685,10 +670,7 @@ const game = {
   finalHighscore: 0,
   finalBonusAdded: false,
   finishReason: null,
-  scoreEvents: [],
-  cleaningMode: false,
-  dynamicTrash: [],
-  broom: context.stepData?.objects?.broom || { id: 'broom-fixed', type: 'broom', row: (context.stepData?.rows || 9) - 1, col: (context.stepData?.cols || 10) - 1 }
+  scoreEvents: []
 };
 
 function init() {
@@ -766,15 +748,11 @@ function startLesson() {
   game.finishReason = null;
   game.scoreEvents = [];
   game.nextIncidentAt = Date.now() + randomInt(3000, 5000);
-  game.dynamicTrash = [];
-  game.cleaningMode = false;
-  game.teacherPath = [];
-  game.teacherMoveStepIndex = 0;
   if (startLessonBtn) {
     startLessonBtn.disabled = true;
     startLessonBtn.textContent = 'Unterricht läuft';
   }
-  logEvent('Der Unterricht beginnt. Reagiere auf blinkende Störungen innerhalb von 7 Sekunden.', 'info');
+  logEvent('Der Unterricht beginnt. Reagiere auf blinkende Störungen innerhalb von 5 Sekunden.', 'info');
   game.lessonTimer = window.setInterval(tickLesson, 250);
   renderBranchGame();
   renderHighscore();
@@ -869,7 +847,7 @@ function maybeSpawnIncident() {
   const freeSlots = Math.max(0, limit - game.activeIncidents.length);
   if (freeSlots > 0) {
     const spawnCount = Math.max(1, Math.min(freeSlots, progressBasedSpawnCount()));
-    for (let i = 0; i < spawnCount; i++) spawnRandomIncident();
+    for (let i = 0; i < spawnCount; i++) spawnIncident();
   }
   const delay = game.lessonLeft < 90 ? randomInt(3000, 4000) : randomInt(3500, 5000);
   game.nextIncidentAt = now + delay;
@@ -882,21 +860,12 @@ function progressBasedSpawnCount() {
   return 1;
 }
 
-
-function spawnRandomIncident() {
-  const preferTrash = Math.random() < TRASH_EVENT_CHANCE;
-  if (preferTrash && spawnTrashIncident()) return;
-  spawnIncident();
-}
-
-
 function spawnIncident() {
   const candidate = pickIncidentCandidate();
-  if (!candidate) return false;
+  if (!candidate) return;
   const id = `incident-${++game.eventSeq}`;
   const incident = {
     id,
-    kind: 'student',
     student: candidate.student,
     desk: candidate.desk,
     scenario: candidate.scenario,
@@ -907,99 +876,24 @@ function spawnIncident() {
   };
   game.activeIncidents.push(incident);
   playAlertAudio();
-  logEvent(`${candidate.student.name} zeigt ein Warnsignal. Du hast 7 Sekunden, um die Lehrkraft in die Nähe zu bewegen.`, 'warn');
+  logEvent(`${candidate.student.name} zeigt ein Warnsignal. Du hast 5 Sekunden, um die Lehrkraft in die Nähe zu bewegen.`, 'warn');
   renderBranchGame();
   renderIncidents();
-  return true;
-}
-
-
-function teacherRadiusCells() {
-  const positions = [];
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      if (dr === 0 && dc === 0) continue;
-      const row = game.teacher.row + dr;
-      const col = game.teacher.col + dc;
-      if (insideLocal(row, col)) positions.push({ row, col });
-    }
-  }
-  return positions;
-}
-
-function isDeskWithinTeacherRadius(desk) {
-  return Math.max(Math.abs((desk?.row ?? 0) - game.teacher.row), Math.abs((desk?.col ?? 0) - game.teacher.col)) <= 1;
-}
-
-function pickTrashCandidate() {
-  const seatedStudents = context.students
-    .map(student => ({ student, desk: context.deskByStudentId[student.id] }))
-    .filter(item => item.desk);
-  const candidates = [];
-  const seen = new Set();
-  seatedStudents.forEach(item => {
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        if (dr === 0 && dc === 0) continue;
-        const row = item.desk.row + dr;
-        const col = item.desk.col + dc;
-        const key = `${row},${col}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        if (!insideLocal(row, col)) continue;
-        if (context.desks.some(desk => desk.row === row && desk.col === col)) continue;
-        if (getBlockedCellLocal(row, col)) continue;
-        if (game.teacher.row === row && game.teacher.col === col) continue;
-        if (getObjectAtLocal(row, col)) continue;
-        candidates.push({ row, col, nearStudent: item.student, nearDesk: item.desk });
-      }
-    }
-  });
-  if (!candidates.length) return null;
-  return candidates[randomInt(0, candidates.length - 1)];
-}
-
-function spawnTrashIncident() {
-  const candidate = pickTrashCandidate();
-  if (!candidate) return false;
-  const id = `incident-${++game.eventSeq}`;
-  const incident = {
-    id,
-    kind: 'trash',
-    label: 'Müll blockiert den Weg',
-    student: candidate.nearStudent,
-    desk: candidate.nearDesk,
-    row: candidate.row,
-    col: candidate.col,
-    createdAt: Date.now(),
-    deadline: Date.now() + INCIDENT_REACTION_MS,
-    handled: false,
-    escalation: 'Der Müll bleibt liegen, blockiert weiter den Laufweg und verstärkt die Unruhe im Raum.'
-  };
-  game.dynamicTrash.push({ id, type: 'trash', row: candidate.row, col: candidate.col, removed: false });
-  game.activeIncidents.push(incident);
-  playAlertAudio();
-  logEvent(`Müll taucht nahe bei ${candidate.nearStudent.name} auf. Aktiviere unten rechts den Besen und entferne den Müll innerhalb von 7 Sekunden.`, 'warn');
-  renderBranchGame();
-  renderIncidents();
-  return true;
 }
 
 function pickIncidentCandidate() {
   const seatedStudents = context.students
     .map(student => ({ student, desk: context.deskByStudentId[student.id] }))
     .filter(item => item.desk)
-    .filter(item => !game.activeIncidents.some(incident => incident.kind === 'student' && incident.student?.id === item.student.id));
+    .filter(item => !game.activeIncidents.some(incident => incident.student.id === item.student.id));
   if (!seatedStudents.length) return null;
 
-  const outsideRadius = seatedStudents.filter(item => !isDeskWithinTeacherRadius(item.desk));
-  const eligible = outsideRadius.length ? outsideRadius : seatedStudents;
   const weighted = [];
-  eligible.forEach(item => {
+  seatedStudents.forEach(item => {
     const weight = (item.student.hidden?.risk || 1) + (item.student.hidden?.needsMonitoring ? 2 : 0) + (item.student.hidden?.stabilizer ? 0 : 1);
     for (let i = 0; i < weight; i++) weighted.push(item);
   });
-  const chosen = weighted[randomInt(0, weighted.length - 1)] || eligible[0];
+  const chosen = weighted[randomInt(0, weighted.length - 1)] || seatedStudents[0];
   return { ...chosen, scenario: pickScenarioForStudent(chosen.student) };
 }
 
@@ -1033,12 +927,7 @@ function checkIncidentTimeouts() {
 
 function failIncidentLate(incident) {
   removeIncident(incident.id);
-  if (incident.kind === 'trash') {
-    removeDynamicTrash(incident.id);
-    addHighscoreEvent(0, 'Müll nicht rechtzeitig entfernt, keine Reaktionspunkte.', 'neutral');
-  } else {
-    addHighscoreEvent(0, `${incident.student.name}: zu spät erreicht, keine Reaktionspunkte.`, 'neutral');
-  }
+  addHighscoreEvent(0, `${incident.student.name}: zu spät erreicht, keine Reaktionspunkte.`, 'neutral');
   changeScore(-1);
   playBadAudio();
   logEvent(incident.escalation, 'bad');
@@ -1050,10 +939,6 @@ function removeIncident(id) {
   game.activeIncidents = game.activeIncidents.filter(incident => incident.id !== id);
 }
 
-function removeDynamicTrash(id) {
-  game.dynamicTrash = (game.dynamicTrash || []).filter(item => item.id !== id);
-}
-
 function renderBranchGame() {
   if (!branchGrid) return;
   const rows = context.stepData?.rows || 9;
@@ -1062,8 +947,7 @@ function renderBranchGame() {
   branchGrid.style.setProperty('--branch-rows', rows);
   branchGrid.innerHTML = '';
   const blockedGroups = buildBlockedGroups(context.stepData?.blockedCells || []);
-  const activeByStudent = new Map(game.activeIncidents.filter(incident => incident.kind !== 'trash' && incident.student).map(incident => [incident.student.id, incident]));
-  const activeTrashByCell = new Map(game.activeIncidents.filter(incident => incident.kind === 'trash').map(incident => [`${incident.row},${incident.col}`, incident]));
+  const activeByStudent = new Map(game.activeIncidents.map(incident => [incident.student.id, incident]));
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -1095,15 +979,13 @@ function renderBranchGame() {
         const student = studentId ? context.studentById[studentId] : null;
         const activeIncident = student ? activeByStudent.get(student.id) : null;
         const deskEl = document.createElement('div');
-        deskEl.className = `branch-desk${activeIncident ? ' incident-pulse' : ''}${student ? ' has-student' : ''}`;
-        if (student) {
-          deskEl.innerHTML = `${studentAvatarMarkup(student, 'branch-student-avatar', ' am Tisch')}${activeIncident ? `<strong class="incident-countdown-number">${Math.max(0, Math.ceil((activeIncident.deadline - Date.now()) / 1000))}</strong>` : '<strong class="sr-only">'+ escapeHtml(student.name) +'</strong>'}`;
-        } else {
-          deskEl.innerHTML = `<strong>frei</strong>`;
-        }
+        deskEl.className = `branch-desk${activeIncident ? ' incident-pulse' : ''}`;
         if (activeIncident) {
           const left = Math.max(0, Math.ceil((activeIncident.deadline - Date.now()) / 1000));
+          deskEl.innerHTML = `<strong class="incident-countdown-number">${left}</strong>`;
           cell.setAttribute('aria-label', `${student.name}: Störung, noch ${left} Sekunden`);
+        } else {
+          deskEl.innerHTML = `<span>${escapeHtml(desk.id.replace('desk-', 'T'))}</span><strong>${escapeHtml(student?.name || 'frei')}</strong>`;
         }
         cell.appendChild(deskEl);
         if (student) cell.dataset.studentId = student.id;
@@ -1112,9 +994,8 @@ function renderBranchGame() {
       const object = getObjectAtLocal(row, col);
       if (object) {
         const obj = document.createElement('span');
-        const trashIncident = object.type === 'trash' ? activeTrashByCell.get(`${row},${col}`) : null;
-        obj.className = `branch-object branch-object-${object.type}${game.cleaningMode && object.type === 'broom' ? ' active-cleaning' : ''}`;
-        obj.innerHTML = `${object.type === 'broom' ? '🧹' : '🗑️'}${trashIncident ? `<strong class="incident-countdown-badge">${Math.max(0, Math.ceil((trashIncident.deadline - Date.now()) / 1000))}</strong>` : ''}`;
+        obj.className = `branch-object branch-object-${object.type}`;
+        obj.textContent = object.type === 'broom' ? '🧹' : '🗑️';
         cell.appendChild(obj);
       }
 
@@ -1125,7 +1006,7 @@ function renderBranchGame() {
         cell.appendChild(teacher);
       }
 
-      cell.addEventListener('pointerdown', event => { event.preventDefault(); handleBranchCellClick(row, col); });
+      cell.addEventListener('click', () => handleBranchCellClick(row, col));
       branchGrid.appendChild(cell);
     }
   }
@@ -1135,24 +1016,6 @@ function renderBranchGame() {
 
 function handleBranchCellClick(row, col) {
   if (!game.started || game.finished || game.scenarioOpen) return;
-  const object = getObjectAtLocal(row, col);
-  if (object?.type === 'broom') {
-    game.cleaningMode = !game.cleaningMode;
-    if (teacherStatus) teacherStatus.textContent = game.cleaningMode
-      ? 'Besen aktiviert. Klicke jetzt auf den Müll, um das Feld freizuräumen.'
-      : 'Besen wieder abgelegt.';
-    renderBranchGame();
-    return;
-  }
-  if (object?.type === 'trash') {
-    if (!game.cleaningMode) {
-      if (teacherStatus) teacherStatus.textContent = 'Klicke zuerst unten rechts auf den Besen und dann auf das Müllfeld.';
-      return;
-    }
-    clearTrashIncidentAt(row, col);
-    return;
-  }
-
   const target = resolveReachableTarget(row, col);
   if (!target) {
     if (teacherStatus) teacherStatus.textContent = 'Dieses Ziel ist nicht erreichbar. Wähle ein freies Feld oder ein erreichbares Nachbarfeld.';
@@ -1165,38 +1028,8 @@ function handleBranchCellClick(row, col) {
     return;
   }
   game.teacherPath = path;
-  game.teacherMoveStepIndex = 0;
   if (teacherStatus) teacherStatus.textContent = `Lehrkraft läuft zu Reihe ${target.row + 1}, Feld ${target.col + 1}.`;
   startTeacherMovement();
-}
-
-
-function clearTrashIncidentAt(row, col) {
-  const incident = game.activeIncidents.find(item => item.kind === 'trash' && item.row === row && item.col === col);
-  if (!incident) {
-    const staticTrash = (context.stepData?.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col);
-    if (staticTrash) {
-      staticTrash.removed = true;
-      if (teacherStatus) teacherStatus.textContent = 'Müll entfernt. Das Feld ist wieder frei.';
-    }
-    game.cleaningMode = false;
-    renderBranchGame();
-    return;
-  }
-  if (Date.now() > incident.deadline) {
-    game.cleaningMode = false;
-    failIncidentLate(incident);
-    return;
-  }
-  const points = reactionPointsForIncident(incident);
-  removeIncident(incident.id);
-  removeDynamicTrash(incident.id);
-  game.cleaningMode = false;
-  addHighscoreEvent(points, 'Müll rechtzeitig entfernt.', points > 0 ? 'good' : 'neutral');
-  playGoodAudio();
-  logEvent(`Der Weg nahe bei ${incident.student?.name || 'einem Tisch'} ist wieder frei.`, 'good');
-  renderBranchGame();
-  renderIncidents();
 }
 
 function resolveReachableTarget(row, col) {
@@ -1209,19 +1042,7 @@ function resolveReachableTarget(row, col) {
 
 function startTeacherMovement() {
   stopTeacherMovement();
-  game.teacherMoveStepIndex = 0;
-  queueNextTeacherStep();
-}
-
-function queueNextTeacherStep() {
-  if (!game.teacherPath.length) {
-    stopTeacherMovement();
-    checkArrivalAtIncident();
-    renderBranchGame();
-    return;
-  }
-  const delay = game.teacherMoveStepIndex === 0 ? TEACHER_FIRST_STEP_MS : TEACHER_STEP_MS;
-  game.teacherMoveTimer = window.setTimeout(() => {
+  game.teacherMoveTimer = window.setInterval(() => {
     const next = game.teacherPath.shift();
     if (!next) {
       stopTeacherMovement();
@@ -1229,27 +1050,24 @@ function queueNextTeacherStep() {
       renderBranchGame();
       return;
     }
-    game.teacherMoveStepIndex += 1;
     game.teacher = { ...game.teacher, ...next };
     renderBranchGame();
     if (!game.teacherPath.length) {
       stopTeacherMovement();
       checkArrivalAtIncident();
       renderBranchGame();
-      return;
     }
-    queueNextTeacherStep();
-  }, delay);
+  }, TEACHER_STEP_MS);
 }
 
 function stopTeacherMovement() {
-  if (game.teacherMoveTimer) window.clearTimeout(game.teacherMoveTimer);
+  if (game.teacherMoveTimer) window.clearInterval(game.teacherMoveTimer);
   game.teacherMoveTimer = null;
 }
 
 function checkArrivalAtIncident() {
   if (!game.activeIncidents.length || game.scenarioOpen || game.teacherMoveTimer) return;
-  const reachable = game.activeIncidents.find(incident => incident.kind !== 'trash' && manhattan(game.teacher, incident.desk) <= 1);
+  const reachable = game.activeIncidents.find(incident => manhattan(game.teacher, incident.desk) <= 1);
   if (!reachable) return;
   if (Date.now() > reachable.deadline) {
     failIncidentLate(reachable);
@@ -1470,9 +1288,6 @@ function renderIncidents() {
   const now = Date.now();
   const cards = game.activeIncidents.map(incident => {
     const left = Math.max(0, Math.ceil((incident.deadline - now) / 1000));
-    if (incident.kind === 'trash') {
-      return `<article class="incident-item event-card"><strong>Müll</strong><span>${left}s bis Eskalation</span><small>nahe bei ${escapeHtml(incident.student?.name || 'einem Tisch')}</small></article>`;
-    }
     return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)}</strong><span>${left}s bis Eskalation</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
   }).join('');
   if (incidentList) {
@@ -1517,8 +1332,8 @@ function updateTeacherMoodImage() {
 
 function reactionPointsForIncident(incident) {
   const left = Math.max(0, Math.ceil((incident.deadline - Date.now()) / 1000));
-  const capped = Math.max(0, Math.min(7, left));
-  return capped * 10;
+  const capped = Math.max(0, Math.min(5, left));
+  return capped * 20;
 }
 
 function addHighscoreEvent(points, label, type = 'neutral', options = {}) {
@@ -1672,10 +1487,8 @@ function getBlockedCellLocal(row, col) {
 }
 
 function getObjectAtLocal(row, col) {
-  const broom = game.broom || context.stepData?.objects?.broom;
-  if (broom && broom.row === row && broom.col === col) return { ...broom, type: 'broom' };
-  const dynamicTrash = (game.dynamicTrash || []).find(item => !item.removed && item.row === row && item.col === col);
-  if (dynamicTrash) return dynamicTrash;
+  const broom = context.stepData?.objects?.broom;
+  if (broom && broom.row === row && broom.col === col) return broom;
   return (context.stepData?.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;
 }
 

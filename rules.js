@@ -3,16 +3,16 @@ const REQUIRED_ACCEPTED = 6;
 const REQUIRED_REJECTED = 9;
 
 const fallbackStudents = [
-  { id: 'julius', name: 'Julius', age: 12, avatar: 'assets/students/julius.png', note: 'verträgt sich schlecht mit anderen Jungs' },
-  { id: 'petra', name: 'Petra', age: 15, avatar: 'assets/students/petra.png', note: 'lenkt häufig Sitznachbar*innen ab' },
-  { id: 'mehmet', name: 'Mehmet', age: 13, avatar: 'assets/students/mehmet.png', note: 'arbeitet ruhig und stabilisiert Gruppen' },
-  { id: 'lina', name: 'Lina', age: 12, avatar: 'assets/students/lina.png', note: 'reagiert empfindlich auf Kritik und Spott' },
-  { id: 'ben', name: 'Ben', age: 14, avatar: 'assets/students/ben.png', note: 'testet gerne Grenzen aus' },
-  { id: 'sara', name: 'Sara', age: 13, avatar: 'assets/students/sara.png', note: 'arbeitet zuverlässig und hilft anderen' },
-  { id: 'tom', name: 'Tom', age: 12, avatar: 'assets/students/tom.png', note: 'sucht Aufmerksamkeit durch Zwischenrufe' },
-  { id: 'emily', name: 'Emily', age: 13, avatar: 'assets/students/emily.png', note: 'braucht klare Orientierung bei Übergängen' },
-  { id: 'niklas', name: 'Niklas', age: 14, avatar: 'assets/students/niklas.png', note: 'versteckt gern das Handy unter dem Tisch' },
-  { id: 'amira', name: 'Amira', age: 12, avatar: 'assets/students/amira.png', note: 'vermittelt oft zwischen Mitschüler*innen' }
+  { id: 'julius', name: 'Julius', age: 12, note: 'verträgt sich schlecht mit anderen Jungs' },
+  { id: 'petra', name: 'Petra', age: 15, note: 'lenkt häufig Sitznachbar*innen ab' },
+  { id: 'mehmet', name: 'Mehmet', age: 13, note: 'arbeitet ruhig und stabilisiert Gruppen' },
+  { id: 'lina', name: 'Lina', age: 12, note: 'reagiert empfindlich auf Kritik und Spott' },
+  { id: 'ben', name: 'Ben', age: 14, note: 'testet gerne Grenzen aus' },
+  { id: 'sara', name: 'Sara', age: 13, note: 'arbeitet zuverlässig und hilft anderen' },
+  { id: 'tom', name: 'Tom', age: 12, note: 'sucht Aufmerksamkeit durch Zwischenrufe' },
+  { id: 'emily', name: 'Emily', age: 13, note: 'braucht klare Orientierung bei Übergängen' },
+  { id: 'niklas', name: 'Niklas', age: 14, note: 'versteckt gern das Handy unter dem Tisch' },
+  { id: 'amira', name: 'Amira', age: 12, note: 'vermittelt oft zwischen Mitschüler*innen' }
 ];
 
 const rules = [
@@ -71,17 +71,6 @@ const rejectedCounter = document.getElementById('rejectedCounter');
 const statusText = document.getElementById('rulesStatusText');
 const finishBtn = document.getElementById('finishRulesBtn');
 const backBtn = document.getElementById('backToRoomBtn');
-
-
-function studentAvatarSrc(student) {
-  return student?.avatar || (student?.id ? `assets/students/${student.id}.png` : '');
-}
-
-function studentAvatarMarkup(student, className = 'student-avatar', altSuffix = '') {
-  const src = studentAvatarSrc(student);
-  const alt = `${student?.name || 'Schüler*in'}${altSuffix}`;
-  return src ? `<img class="${className}" src="${src}" alt="${alt}" />` : `<span class="${className} avatar-fallback">${(student?.name || '?').charAt(0)}</span>`;
-}
 
 function loadStep1Data() {
   try {
@@ -253,12 +242,10 @@ function renderFrozenGrid() {
       const desk = (step1Data.desks || []).find(item => item.row === row && item.col === col);
       if (desk) {
         const deskEl = document.createElement('div');
+        deskEl.className = 'frozen-desk';
         const studentId = step1Data.assignments?.[desk.id];
         const student = studentId ? getStudent(studentId) : null;
-        deskEl.className = `frozen-desk${student ? ' has-student' : ''}`;
-        deskEl.innerHTML = student
-          ? `${studentAvatarMarkup(student, 'frozen-student-avatar', ' am Tisch')}<strong class="sr-only">${student.name}</strong>`
-          : `<strong>frei</strong>`;
+        deskEl.innerHTML = `<span>${desk.id.replace('desk-', 'T')}</span><strong>${student ? student.name : 'frei'}</strong>`;
         cell.appendChild(deskEl);
       }
       const object = getRoomObjectAt(row, col);
@@ -291,13 +278,7 @@ function renderStudents() {
     item.className = 'rules-student-card';
     const deskId = Object.entries(step1Data.assignments || {}).find(([, sid]) => sid === student.id)?.[0] || null;
     const desk = deskId ? (step1Data.desks || []).find(d => d.id === deskId) : null;
-    item.innerHTML = `
-      <div class="rules-student-avatar-wrap">${studentAvatarMarkup(student, 'rules-student-avatar')}</div>
-      <div class="rules-student-copy">
-        <strong>${student.name} (${student.age})</strong>
-        <span>${student.note}</span>
-        <small>${desk ? `Platz: Reihe ${desk.row + 1}, Feld ${desk.col + 1}` : 'nicht platziert'}</small>
-      </div>`;
+    item.innerHTML = `<strong>${student.name} (${student.age})</strong><span>${student.note}</span><small>${desk ? `Platz: Reihe ${desk.row + 1}, Feld ${desk.col + 1}` : 'nicht platziert'}</small>`;
     studentList.appendChild(item);
   });
 }
