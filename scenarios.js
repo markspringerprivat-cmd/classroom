@@ -42,15 +42,31 @@ const ruleCatalog = {
   pausen: 'Private Gespräche werden auf Pausen verschoben.'
 };
 
+const lessonGrid = document.getElementById('lessonGrid');
+const lessonTimer = document.getElementById('lessonTimer');
+const lessonPhase = document.getElementById('lessonPhase');
+const lessonScoreText = document.getElementById('lessonScoreText');
+const lessonLifeSegments = document.getElementById('lessonLifeSegments');
+const lessonLifeHint = document.getElementById('lessonLifeHint');
+const eventStatusTitle = document.getElementById('eventStatusTitle');
+const eventStatusText = document.getElementById('eventStatusText');
+const startLessonBtn = document.getElementById('startLessonBtn');
+const stepSummary = document.getElementById('stepSummary');
+const selectedRulesList = document.getElementById('selectedRulesList');
+const ruleCountPill = document.getElementById('ruleCountPill');
+const scenarioModal = document.getElementById('scenarioModal');
+const scenarioModalType = document.getElementById('scenarioModalType');
+const scenarioModalTitle = document.getElementById('scenarioModalTitle');
+const scenarioModalSource = document.getElementById('scenarioModalSource');
+const scenarioModalScene = document.getElementById('scenarioModalScene');
+const scenarioModalAnswers = document.getElementById('scenarioModalAnswers');
+const scenarioModalOutcome = document.getElementById('scenarioModalOutcome');
+const continueLessonBtn = document.getElementById('continueLessonBtn');
 const scenarioList = document.getElementById('scenarioList');
 const scenarioCount = document.getElementById('scenarioCount');
 const scenarioDrawer = document.getElementById('scenarioDrawer');
 const openScenarioBtn = document.getElementById('openScenarioBtn');
 const closeScenarioBtn = document.getElementById('closeScenarioBtn');
-const stepSummary = document.getElementById('stepSummary');
-const ruleSummary = document.getElementById('ruleSummary');
-const selectedRulesList = document.getElementById('selectedRulesList');
-const studentContextList = document.getElementById('studentContextList');
 
 function readJson(key, fallback = null) {
   try {
@@ -67,17 +83,40 @@ const rulesData = readJson('classroomGame.step2.rules', { acceptedRules: [], acc
 const context = buildContext(step1, rulesData);
 const SCENARIOS = buildDynamicScenarios(context);
 
+const lessonState = {
+  started: false,
+  ended: false,
+  timeLeft: 600,
+  score: clampScore(context.startScore),
+  teacher: { ...context.teacher },
+  activeEvent: null,
+  currentScenario: null,
+  usedScenarioIds: new Set(),
+  timerId: null,
+  eventTimeoutId: null,
+  responseTimeoutId: null,
+  responseIntervalId: null,
+  responseLeft: 0,
+  dragTeacher: false
+};
+
 function buildContext(stepData, ruleData) {
   const students = enrichStudents(Array.isArray(stepData?.students) ? stepData.students : fallbackStudents);
-  const desks = Array.isArray(stepData?.desks) ? stepData.desks : [];
+  const rows = Number(stepData?.rows || 9);
+  const cols = Number(stepData?.cols || 10);
+  const desks = Array.isArray(stepData?.desks) && stepData.desks.length ? stepData.desks : defaultDesks();
   const assignments = stepData?.assignments || {};
   const metrics = stepData?.metrics || {};
+  const blockedCells = Array.isArray(stepData?.blockedCells) ? stepData.blockedCells : defaultBlockedCells();
+  const objects = stepData?.objects || { trash: [], broom: null };
+  const teacher = stepData?.teacher ? { ...stepData.teacher } : { row: 1, col: 4, dir: 'down', mode: 'frontStanding' };
   const studentById = Object.fromEntries(students.map(student => [student.id, student]));
+  const deskById = Object.fromEntries(desks.map(desk => [desk.id, desk]));
   const deskByStudentId = {};
 
   Object.entries(assignments).forEach(([deskId, studentId]) => {
-    const desk = desks.find(item => item.id === deskId);
-    if (desk) deskByStudentId[studentId] = desk;
+    const desk = deskById[deskId];
+    if (desk && studentById[studentId]) deskByStudentId[studentId] = desk;
   });
 
   const acceptedRules = Array.isArray(ruleData?.acceptedRules) ? ruleData.acceptedRules : [];
@@ -87,13 +126,13 @@ function buildContext(stepData, ruleData) {
 
   const riskStudents = students.filter(student => (student.hidden?.risk || 0) >= 3 || student.hidden?.needsMonitoring);
   const supportStudents = students.filter(student => student.hidden?.stabilizer || student.hidden?.mediator);
-  const sensitiveStudent = students.find(student => student.hidden?.sensitive) || students.find(student => student.id === 'lina') || students[0];
   const callsOutStudent = students.find(student => student.hidden?.callsOut) || students.find(student => student.id === 'tom') || riskStudents[0] || students[0];
   const phoneStudent = students.find(student => student.hidden?.phoneRisk) || students.find(student => student.id === 'niklas') || riskStudents[0] || students[0];
   const distractorStudent = students.find(student => student.hidden?.distractor) || students.find(student => student.id === 'petra') || riskStudents[0] || students[0];
   const boundaryStudent = students.find(student => student.hidden?.boundaryTesting) || students.find(student => student.id === 'ben') || riskStudents[0] || students[0];
   const transitionStudent = students.find(student => student.hidden?.transitions || student.hidden?.needsStructure) || students.find(student => student.id === 'emily') || students[0];
   const conflictStudent = students.find(student => student.hidden?.conflictWithBoys) || students.find(student => student.id === 'julius') || riskStudents[0] || students[0];
+  const sensitiveStudent = students.find(student => student.hidden?.sensitive) || students.find(student => student.id === 'lina') || students[0];
   const mediatorStudent = students.find(student => student.hidden?.mediator) || students.find(student => student.id === 'amira') || supportStudents[0] || students[0];
   const stabilizerStudent = students.find(student => student.hidden?.stabilizer) || students.find(student => student.id === 'sara') || supportStudents[0] || students[0];
 
@@ -101,25 +140,31 @@ function buildContext(stepData, ruleData) {
   const weaklyVisibleRiskStudents = normalizeStudentRecords(metrics.weaklyVisibleRiskStudents, studentById);
   const visibleRiskStudents = normalizeStudentRecords(metrics.visionRiskStudents, studentById);
   const backRowRisks = normalizeStudentRecords(metrics.backRowRisks, studentById);
-
   const riskyPairs = normalizePairs(metrics.riskyPairs, studentById);
   const neutralizedRiskPairs = normalizePairs(metrics.neutralizedRiskPairs, studentById);
   const stabilizingPairs = normalizePairs(metrics.stabilizingPairs, studentById);
+  const computedPairs = computeAdjacencyPairs(desks, assignments, studentById);
 
-  const fallbackRiskPair = makeFallbackPair([conflictStudent, boundaryStudent, distractorStudent, callsOutStudent], studentById, 'typische riskante Kombination');
-  const fallbackSupportPair = makeFallbackPair([stabilizerStudent, callsOutStudent, mediatorStudent, distractorStudent], studentById, 'stabilisierende Ressource');
-
-  const activeTrash = metrics.roomObjects?.activeTrash || (stepData?.objects?.trash || []).filter(item => !item.removed) || [];
+  const fallbackRiskPair = riskyPairs[0] || computedPairs.risky[0] || makeFallbackPair([conflictStudent, boundaryStudent, distractorStudent, callsOutStudent], studentById, 'typische riskante Sitzkonstellation');
+  const fallbackSupportPair = stabilizingPairs[0] || computedPairs.support[0] || makeFallbackPair([stabilizerStudent, callsOutStudent, mediatorStudent, distractorStudent], studentById, 'mögliche Ressource durch Sitznachbarschaft');
+  const activeTrash = metrics.roomObjects?.activeTrash || (objects?.trash || []).filter(item => !item.removed) || [];
   const invalidSpacing = metrics.spacing?.invalidPairs || [];
-  const hooks = Array.isArray(stepData?.suggestedScenarioHooks) ? stepData.suggestedScenarioHooks : [];
+  const startScore = stepData?.rawPreparationScore ?? stepData?.preparationScore ?? 5;
 
   return {
     stepData,
     ruleData,
     students,
-    studentById,
+    rows,
+    cols,
     desks,
     assignments,
+    blockedCells,
+    blockedGroups: buildBlockedGroups(blockedCells),
+    objects,
+    teacher,
+    studentById,
+    deskById,
     deskByStudentId,
     metrics,
     acceptedRules,
@@ -142,29 +187,38 @@ function buildContext(stepData, ruleData) {
     riskyPairs,
     neutralizedRiskPairs,
     stabilizingPairs,
+    computedPairs,
     fallbackRiskPair,
     fallbackSupportPair,
     activeTrash,
     invalidSpacing,
-    hooks
+    startScore
   };
 }
 
 function enrichStudents(input) {
-  return input.map(student => ({
-    ...student,
-    hidden: { ...(hiddenDefaults[student.id] || {}), ...(student.hidden || {}) }
-  }));
+  return input.map(student => ({ ...student, hidden: { ...(hiddenDefaults[student.id] || {}), ...(student.hidden || {}) } }));
+}
+
+function defaultDesks() {
+  return [[2,1], [2,3], [2,6], [2,8], [4,1], [4,3], [4,6], [4,8], [6,3], [6,6]].map((pos, index) => ({ id: `desk-${index + 1}`, row: pos[0], col: pos[1] }));
+}
+
+function defaultBlockedCells() {
+  return [
+    { row: 0, col: 3, type: 'board', label: 'Tafel' }, { row: 0, col: 4, type: 'board', label: 'Tafel' }, { row: 0, col: 5, type: 'board', label: 'Tafel' }, { row: 0, col: 6, type: 'board', label: 'Tafel' },
+    { row: 1, col: 9, type: 'door', label: 'Tür' }, { row: 2, col: 9, type: 'door', label: 'Tür' },
+    { row: 6, col: 9, type: 'exit', label: 'Notausgang' }, { row: 7, col: 9, type: 'exit', label: 'Notausgang' },
+    { row: 2, col: 0, type: 'window', label: 'Fenster' }, { row: 3, col: 0, type: 'window', label: 'Fenster' }, { row: 5, col: 0, type: 'window', label: 'Fenster' }, { row: 6, col: 0, type: 'window', label: 'Fenster' },
+    { row: 8, col: 2, type: 'cabinet', label: 'Schrank' }, { row: 8, col: 3, type: 'cabinet', label: 'Schrank' }, { row: 8, col: 4, type: 'cabinet', label: 'Schrank' },
+    { row: 8, col: 7, type: 'sink', label: 'Waschbecken' }, { row: 8, col: 8, type: 'sink', label: 'Waschbecken' }
+  ];
 }
 
 function normalizeStudentRecords(records = [], studentById) {
   return records.map(record => {
     const student = studentById[record.studentId] || studentById[record.id] || null;
-    return {
-      ...record,
-      studentId: record.studentId || record.id || student?.id,
-      name: record.name || student?.name || 'Schüler*in'
-    };
+    return { ...record, studentId: record.studentId || record.id || student?.id, name: record.name || student?.name || 'Schüler*in' };
   });
 }
 
@@ -173,15 +227,29 @@ function normalizePairs(records = [], studentById) {
     const ids = Array.isArray(record.pair) ? record.pair : [];
     const students = ids.map(id => studentById[id]).filter(Boolean);
     const names = Array.isArray(record.names) && record.names.length ? record.names : students.map(student => student.name);
-    return {
-      ...record,
-      pair: ids,
-      students,
-      names,
-      label: names.join(' und ') || 'zwei Schüler*innen',
-      reason: record.reason || 'Die Sitznachbarschaft ist pädagogisch relevant.'
-    };
+    return { ...record, pair: ids, students, names, label: names.join(' und ') || 'zwei Schüler*innen', reason: record.reason || 'Die Sitznachbarschaft ist pädagogisch relevant.' };
   });
+}
+
+function computeAdjacencyPairs(desks, assignments, studentById) {
+  const placed = desks.map(desk => ({ desk, student: studentById[assignments[desk.id]] })).filter(item => item.student);
+  const risky = [];
+  const support = [];
+  for (let i = 0; i < placed.length; i += 1) {
+    for (let j = i + 1; j < placed.length; j += 1) {
+      const a = placed[i];
+      const b = placed[j];
+      const distance = Math.abs(a.desk.row - b.desk.row) + Math.abs(a.desk.col - b.desk.col);
+      if (distance > 2) continue;
+      const oneRisk = (a.student.hidden?.risk || 0) >= 3 || (b.student.hidden?.risk || 0) >= 3;
+      const bothRisk = (a.student.hidden?.risk || 0) >= 2 && (b.student.hidden?.risk || 0) >= 2;
+      const oneSupport = a.student.hidden?.stabilizer || a.student.hidden?.mediator || b.student.hidden?.stabilizer || b.student.hidden?.mediator;
+      const record = { pair: [a.student.id, b.student.id], students: [a.student, b.student], names: [a.student.name, b.student.name], label: `${a.student.name} und ${b.student.name}`, reason: 'aus Sitznähe berechnet' };
+      if (bothRisk || oneRisk) risky.push(record);
+      if (oneRisk && oneSupport) support.push(record);
+    }
+  }
+  return { risky, support };
 }
 
 function makeFallbackPair(candidates, studentById, reason) {
@@ -189,391 +257,676 @@ function makeFallbackPair(candidates, studentById, reason) {
   candidates.forEach(student => {
     if (student && !unique.some(item => item.id === student.id)) unique.push(student);
   });
-  const pairStudents = unique.slice(0, 2);
-  if (pairStudents.length < 2) {
-    const additional = Object.values(studentById).find(student => !pairStudents.some(item => item.id === student.id));
-    if (additional) pairStudents.push(additional);
-  }
-  return {
-    pair: pairStudents.map(student => student.id),
-    students: pairStudents,
-    names: pairStudents.map(student => student.name),
-    label: pairStudents.map(student => student.name).join(' und ') || 'zwei Schüler*innen',
-    reason
-  };
+  if (unique.length < 2) Object.values(studentById).forEach(student => { if (unique.length < 2 && !unique.some(item => item.id === student.id)) unique.push(student); });
+  return { pair: unique.slice(0, 2).map(student => student.id), students: unique.slice(0, 2), names: unique.slice(0, 2).map(student => student.name), label: unique.slice(0, 2).map(student => student.name).join(' und ') || 'zwei Schüler*innen', reason };
 }
 
-function hasRule(ruleId) {
-  return context.acceptedRuleIds.includes(ruleId);
+function buildBlockedGroups(blockedCells) {
+  const groups = [];
+  const visited = new Set();
+  blockedCells.forEach(cell => {
+    const key = `${cell.row},${cell.col},${cell.type}`;
+    if (visited.has(key)) return;
+    const same = blockedCells.filter(item => item.type === cell.type);
+    const sameRow = same.filter(item => item.row === cell.row).sort((a, b) => a.col - b.col);
+    const sameCol = same.filter(item => item.col === cell.col).sort((a, b) => a.row - b.row);
+    const hRun = [cell];
+    let col = cell.col - 1;
+    while (sameRow.some(item => item.col === col)) { hRun.unshift(sameRow.find(item => item.col === col)); col -= 1; }
+    col = cell.col + 1;
+    while (sameRow.some(item => item.col === col)) { hRun.push(sameRow.find(item => item.col === col)); col += 1; }
+    const vRun = [cell];
+    let row = cell.row - 1;
+    while (sameCol.some(item => item.row === row)) { vRun.unshift(sameCol.find(item => item.row === row)); row -= 1; }
+    row = cell.row + 1;
+    while (sameCol.some(item => item.row === row)) { vRun.push(sameCol.find(item => item.row === row)); row += 1; }
+    const cells = hRun.length >= vRun.length ? hRun : vRun;
+    cells.forEach(item => visited.add(`${item.row},${item.col},${item.type}`));
+    const rows = cells.map(item => item.row);
+    const cols = cells.map(item => item.col);
+    groups.push({
+      type: cell.type,
+      label: cell.label,
+      cells,
+      minRow: Math.min(...rows),
+      minCol: Math.min(...cols),
+      rowSpan: Math.max(...rows) - Math.min(...rows) + 1,
+      colSpan: Math.max(...cols) - Math.min(...cols) + 1
+    });
+  });
+  return groups;
 }
 
+function hasRule(ruleId) { return context.acceptedRuleIds.includes(ruleId); }
 function ruleText(ruleId) {
   const accepted = context.acceptedRules.find(rule => rule.id === ruleId);
   return accepted?.text || ruleCatalog[ruleId] || ruleId;
 }
-
-function studentName(studentOrRecord, fallback = 'ein*e Schüler*in') {
-  if (!studentOrRecord) return fallback;
-  if (studentOrRecord.name) return studentOrRecord.name;
-  if (studentOrRecord.studentId && context.studentById[studentOrRecord.studentId]) return context.studentById[studentOrRecord.studentId].name;
+function studentName(value, fallback = 'ein*e Schüler*in') {
+  if (!value) return fallback;
+  if (value.name) return value.name;
+  if (value.studentId && context.studentById[value.studentId]) return context.studentById[value.studentId].name;
+  if (value.id && context.studentById[value.id]) return context.studentById[value.id].name;
   return fallback;
 }
-
-function deskPlace(studentOrRecord) {
-  const studentId = studentOrRecord?.studentId || studentOrRecord?.id;
-  const desk = studentId ? context.deskByStudentId[studentId] : null;
-  if (!desk) return 'ohne eindeutig gespeicherten Platz';
+function studentId(value) { return value?.studentId || value?.id || null; }
+function deskPlace(value) {
+  const id = studentId(value);
+  const desk = id ? context.deskByStudentId[id] : null;
+  if (!desk) return 'ohne gespeicherten Platz';
   return `Reihe ${desk.row + 1}, Feld ${desk.col + 1}`;
 }
+function firstStudentFromPair(pair, fallback) { return pair?.students?.[0] || context.studentById[pair?.pair?.[0]] || fallback || context.students[0]; }
+function clampScore(value) { return Math.max(0, Math.min(10, Number.isFinite(Number(value)) ? Math.round(Number(value)) : 5)); }
 
-function selectedOrCatalog(ruleId) {
-  return hasRule(ruleId) ? 'ausgewählte Klassenregel' : 'nicht ausgewählte Regelvariante';
+function answer(kind, text, feedback) {
+  const delta = kind === 'plus' ? 1 : kind === 'minus' ? -1 : 0;
+  return { kind, delta, text, feedback };
+}
+function good(text, feedback) { return answer('plus', text, feedback); }
+function neutral(text, feedback) { return answer('zero', text, feedback); }
+function poor(text, feedback) { return answer('minus', text, feedback); }
+
+function scenario(id, type, matched, source, title, scene, target, answers, focus = [], contextNote = '') {
+  return { id, type, matched: Boolean(matched), source, title, scene, targetStudentId: studentId(target), answers, focus, contextNote };
 }
 
-function scenario(id, type, matched, source, title, scene, answers, focus = [], contextNote = '') {
-  return { id, type, matched: Boolean(matched), source, title, scene, answers, focus, contextNote };
-}
-
-function plus(text, feedback) { return { delta: 1, text, feedback }; }
-function zero(text, feedback) { return { delta: 0, text, feedback }; }
-function minus(text, feedback) { return { delta: -1, text, feedback }; }
-
-function kvPositive(name, target = 'ein konkretes Arbeitsziel') {
-  return `Du beschreibst das beobachtbare Verhalten ruhig, klärst kurz mit ${name}, was hilft, und vereinbarst ${target}.`;
-}
+function focusRule(ruleId) { return `${hasRule(ruleId) ? 'gewählte Regel' : 'nicht gewählt'}: ${ruleText(ruleId)}`; }
 
 function buildDynamicScenarios(ctx) {
-  const blind = ctx.blindRiskStudents[0] || ctx.backRowRisks[0] || ctx.weaklyVisibleRiskStudents[0] || ctx.riskStudents[0];
-  const weak = ctx.weaklyVisibleRiskStudents[0] || ctx.blindRiskStudents[0] || ctx.riskStudents[0];
-  const visible = ctx.visibleRiskStudents[0] || ctx.riskStudents[0];
-  const riskyPair = ctx.riskyPairs[0] || ctx.fallbackRiskPair;
-  const riskyPair2 = ctx.riskyPairs[1] || ctx.fallbackRiskPair;
+  const blind = ctx.blindRiskStudents[0] || ctx.backRowRisks[0] || ctx.weaklyVisibleRiskStudents[0] || ctx.riskStudents[0] || ctx.students[0];
+  const weak = ctx.weaklyVisibleRiskStudents[0] || ctx.blindRiskStudents[0] || ctx.riskStudents[0] || ctx.students[0];
+  const visible = ctx.visibleRiskStudents[0] || ctx.riskStudents[0] || ctx.students[0];
+  const riskyPair = ctx.riskyPairs[0] || ctx.computedPairs.risky[0] || ctx.fallbackRiskPair;
+  const riskyPair2 = ctx.riskyPairs[1] || ctx.computedPairs.risky[1] || ctx.fallbackRiskPair;
   const neutralPair = ctx.neutralizedRiskPairs[0] || ctx.fallbackSupportPair;
-  const supportPair = ctx.stabilizingPairs[0] || ctx.fallbackSupportPair;
-  const support = ctx.stabilizerStudent || ctx.mediatorStudent;
-  const risk = ctx.riskStudents[0] || ctx.callsOutStudent;
+  const supportPair = ctx.stabilizingPairs[0] || ctx.computedPairs.support[0] || ctx.fallbackSupportPair;
+  const support = ctx.stabilizerStudent || ctx.mediatorStudent || ctx.students[0];
+  const risk = ctx.riskStudents[0] || ctx.callsOutStudent || ctx.students[0];
+  const targetRiskPairStudent = firstStudentFromPair(riskyPair, risk);
+  const targetSupportPairStudent = firstStudentFromPair(supportPair, support);
 
   const s = [];
 
-  s.push(scenario('D01', 'Kooperative Verhaltensmodifikation', ctx.blindRiskStudents.length > 0, 'blindRiskStudents', `${studentName(blind)} entzieht sich im blinden Bereich`, `${studentName(blind)} arbeitet leise nicht weiter. Der Platz liegt außerhalb oder nur schwach im Sichtfeld (${deskPlace(blind)}).`, [
-    plus(kvPositive(studentName(blind), 'ein kurzes Kontrollsignal für die nächste Aufgabe'), 'Das Verhalten wird konkret bearbeitet, ohne den Schüler öffentlich festzulegen.'),
-    zero('Du gehst kurz näher an den Tisch und arbeitest danach weiter.', 'Die Präsenz kann kurz wirken, verändert aber das Muster noch nicht.'),
-    minus(`Du rufst quer durch den Raum, dass ${studentName(blind)} endlich arbeiten soll.`, 'Die öffentliche Korrektur erhöht Widerstand und nutzt die ungünstige Sitzposition nicht produktiv.')
-  ], ['blindRiskStudents', studentName(blind)], `Dynamisch aus Sichtfeld-Auswertung: ${studentName(blind)}.`));
+  s.push(scenario('D01', 'Kooperative Verhaltensmodifikation', ctx.blindRiskStudents.length > 0, 'blindRiskStudents', `${studentName(blind)} verliert im blinden Bereich den Anschluss`, `${studentName(blind)} arbeitet kaum weiter. Der Platz liegt ungünstig im Sichtfeld (${deskPlace(blind)}).`, blind, [
+    good(`Du gehst nah heran, beschreibst kurz die Beobachtung und vereinbarst mit ${studentName(blind)} ein überprüfbares Zwischenziel.`, `${studentName(blind)} weiß, woran gearbeitet wird; die Störung wird ohne Bloßstellung bearbeitbar.`),
+    neutral('Du stellst dich für einen Moment in die Nähe und wiederholst die Aufgabe für den Tisch.', 'Die Nähe wirkt kurzfristig, aber das Muster wird noch nicht gemeinsam geklärt.'),
+    poor(`Du markierst ${studentName(blind)} vor der Klasse als jemanden, den man ständig kontrollieren muss.`, 'Die öffentliche Zuschreibung verstärkt Widerstand und macht kooperative Veränderung unwahrscheinlicher.')
+  ], ['Sichtfeld', studentName(blind)], `Dynamisch aus der Sichtfeldauswertung: ${studentName(blind)}.`));
 
-  s.push(scenario('D02', 'Kooperative Verhaltensmodifikation', Boolean(ctx.phoneStudent), 'student.hidden.phoneRisk', `${studentName(ctx.phoneStudent)} und verdecktes Handyverhalten`, `${studentName(ctx.phoneStudent)} schaut wiederholt unter den Tisch. Die vorbereitete Klasse enthält ein Handy-Risikoprofil.`, [
-    plus(`Du klärst nach der Phase mit ${studentName(ctx.phoneStudent)} ein konkretes Handy-Ziel und vereinbarst eine Selbstkontrolle.`, 'Die Intervention setzt auf Zielklärung und Eigensteuerung statt auf bloße Sanktion.'),
-    zero('Du positionierst dich häufiger in der Nähe des Tisches.', 'Das kann bremsen, bleibt aber eine reine Kontrollmaßnahme.'),
-    minus('Du nimmst das Handy öffentlich weg und diskutierst vor der Klasse darüber.', 'Das Problem wird zur Bühne und die Kooperation wird unwahrscheinlicher.')
-  ], ['phoneRisk', studentName(ctx.phoneStudent)]));
+  s.push(scenario('D02', 'Kooperative Verhaltensmodifikation', Boolean(ctx.phoneStudent), 'phoneRisk', `${studentName(ctx.phoneStudent)} schaut verdeckt nach unten`, `${studentName(ctx.phoneStudent)} schaut wiederholt unter den Tisch. Das Profil enthält ein Handy-Risiko.`, ctx.phoneStudent, [
+    good(`Du sprichst ${studentName(ctx.phoneStudent)} leise an und vereinbarst nach der Phase ein klares Handy-Ziel mit kurzer Selbstkontrolle.`, 'Die Intervention bleibt ruhig und setzt auf Zielklärung statt auf eine öffentliche Bühne.'),
+    neutral('Du bleibst häufiger in der Nähe des Tisches und beobachtest weiter.', 'Die Kontrolle kann bremsen, ersetzt aber keine gemeinsame Veränderungsvereinbarung.'),
+    poor('Du nimmst das Handy lautstark weg und diskutierst vor der Klasse darüber.', 'Das Verhalten bekommt Aufmerksamkeit, die Beziehung wird belastet und die Kooperation sinkt.')
+  ], ['Handy-Risiko', studentName(ctx.phoneStudent)]));
 
-  s.push(scenario('D03', 'Classroom Management', ctx.backRowRisks.length > 0, 'backRowRisks', `${studentName(ctx.backRowRisks[0] || ctx.phoneStudent)} sitzt hinten und wird unruhig`, `${studentName(ctx.backRowRisks[0] || ctx.phoneStudent)} sitzt weit hinten und verliert den Fokus. Andere bemerken es noch kaum.`, [
-    plus('Du setzt ein kurzes Präsenzsignal und gibst eine klare nächste Teilaufgabe.', 'Die Störung wird früh abgefangen und der Arbeitsfluss bleibt erhalten.'),
-    zero('Du beobachtest weiter, ob sich das Verhalten von selbst legt.', 'Es eskaliert nicht sofort, aber die Störanfälligkeit bleibt bestehen.'),
-    minus('Du ignorierst den Bereich dauerhaft, weil vorne gerade mehr los ist.', 'Das verdeckte Verhalten kann sich stabilisieren und später stärker auftreten.')
-  ], ['backRowRisks', studentName(ctx.backRowRisks[0] || ctx.phoneStudent)]));
+  s.push(scenario('D03', 'Classroom Management', ctx.backRowRisks.length > 0, 'backRowRisks', `${studentName(ctx.backRowRisks[0] || weak)} sitzt weit hinten`, `${studentName(ctx.backRowRisks[0] || weak)} sitzt in einem Bereich, der leicht aus dem Fokus gerät. Die Mitarbeit wird unklar.`, ctx.backRowRisks[0] || weak, [
+    good('Du setzt ein kurzes Präsenzsignal und gibst eine kleine nächste Teilaufgabe.', 'Die Störung wird früh abgefangen, ohne den Unterrichtsfluss zu unterbrechen.'),
+    neutral('Du wartest noch einen Moment, ob die Arbeitsruhe wiederkommt.', 'Es eskaliert nicht sofort, aber die ungünstige Position bleibt wirksam.'),
+    poor('Du konzentrierst dich dauerhaft nur auf den vorderen Bereich.', 'Das verdeckte Verhalten kann sich stabilisieren und später deutlicher auftreten.')
+  ], ['Sitzplatz hinten', studentName(ctx.backRowRisks[0] || weak)]));
 
-  s.push(scenario('D04', 'Classroom Management', ctx.visibleRiskStudents.length > 0, 'visionRiskStudents', `${studentName(visible)} ist gut sichtbar`, `${studentName(visible)} beginnt zu kommentieren, sitzt aber in einem wirksamen Sichtbereich der Lehrkraft.`, [
-    plus('Du nutzt Blickkontakt und ein kurzes Stoppsignal, bevor du ohne Unterbrechung weiterleitest.', 'Das gute Sichtfeld wird als präventive Ressource genutzt.'),
-    zero('Du wartest ab, ob der Kommentar endet.', 'Die Situation kann sich legen, aber die Ressource Sichtfeld bleibt ungenutzt.'),
-    minus('Du unterbrichst den Unterricht für eine lange Grundsatzrede.', 'Eine kleine Störung bekommt zu viel Bühne.')
-  ], ['visionRiskStudents', studentName(visible)]));
+  s.push(scenario('D04', 'Classroom Management', ctx.visibleRiskStudents.length > 0, 'visionRiskStudents', `${studentName(visible)} kommentiert sichtbar`, `${studentName(visible)} beginnt zu kommentieren, sitzt aber im wirksamen Sichtbereich.`, visible, [
+    good('Du nutzt Blickkontakt und ein kurzes vereinbartes Signal, während du den Unterricht weiterführst.', 'Das Sichtfeld wird als präventive Ressource genutzt; die Störung bekommt wenig Bühne.'),
+    neutral('Du ignorierst den Kommentar zunächst und erklärst weiter.', 'Das kann funktionieren, lässt aber die vorhandene Steuerungsmöglichkeit ungenutzt.'),
+    poor('Du stoppst den Unterricht für eine ausführliche Ermahnung.', 'Eine kleine Störung wird groß gemacht und erhält zusätzliche Aufmerksamkeit.')
+  ], ['Sichtfeld-Ressource', studentName(visible)]));
 
-  s.push(scenario('D05', 'Kooperative Verhaltensmodifikation', ctx.riskyPairs.length > 0, 'riskyPairs', `${riskyPair.label} geraten aneinander`, `${riskyPair.label} sitzen direkt oder diagonal nah beieinander. Es entsteht ein spitzer Kommentar und die Spannung steigt.`, [
-    plus(`Du stoppst die Eskalation knapp und klärst später mit ${riskyPair.names[0]} und ${riskyPair.names[1]} ein konkretes Ziel für die Zusammenarbeit.`, 'Der Konflikt wird begrenzt und in eine kooperative Zielvereinbarung übersetzt.'),
-    zero('Du trennst die beiden für diese Aufgabe räumlich und machst weiter.', 'Das kann akut helfen, löst aber die Beziehungsspannung noch nicht.'),
-    minus('Du entscheidest sofort vor der Klasse, wer schuld ist.', 'Die Zuschreibung verstärkt den Konflikt und erschwert Kooperation.')
-  ], ['riskyPairs', riskyPair.label], riskyPair.reason));
+  s.push(scenario('D05', 'Kooperative Verhaltensmodifikation', ctx.riskyPairs.length > 0 || ctx.computedPairs.risky.length > 0, 'riskyPairs', `${riskyPair.label} geraten aneinander`, `${riskyPair.label} sitzen nah beieinander. Ein spitzer Kommentar löst sichtbare Spannung aus.`, targetRiskPairStudent, [
+    good(`Du stoppst knapp, trennst Verhalten von Person und klärst später mit ${riskyPair.names[0]} und ${riskyPair.names[1]} ein konkretes Arbeitsziel.`, 'Der Konflikt wird begrenzt und in eine überprüfbare Zielvereinbarung übersetzt.'),
+    neutral('Du setzt beide für diese Aufgabe auseinander und machst weiter.', 'Akut entsteht Ruhe, aber die Beziehungsspannung bleibt unbearbeitet.'),
+    poor('Du entscheidest vor der Klasse, wer angefangen hat.', 'Die Schuldfrage verschärft die Fronten und macht Kooperation schwieriger.')
+  ], ['riskante Nachbarschaft', riskyPair.label], riskyPair.reason));
 
-  s.push(scenario('D06', 'Kooperative Verhaltensmodifikation', ctx.riskyPairs.length > 1, 'riskyPairs[1]', `${riskyPair2.label} stören sich gegenseitig`, `${riskyPair2.label} reagieren aufeinander mit Nebenbemerkungen. Der Sitzplan hat diese Nähe als riskant markiert.`, [
-    plus('Du benennst das konkrete Muster und vereinbarst mit beiden ein beobachtbares Tischziel für die nächsten zehn Minuten.', 'Die Intervention bleibt konkret, überprüfbar und gemeinsam bearbeitbar.'),
-    zero('Du setzt dich kurz in die Nähe und wartest, ob es ruhiger wird.', 'Die Nähe der Lehrkraft kann dämpfen, verändert aber noch keine Vereinbarung.'),
-    minus('Du sagst, beide könnten grundsätzlich nicht zusammenarbeiten.', 'Die Schüler werden etikettiert und die Situation wird verfestigt.')
-  ], ['riskyPairs', riskyPair2.label], riskyPair2.reason));
+  s.push(scenario('D06', 'Kooperative Verhaltensmodifikation', Boolean(riskyPair2), 'riskyPairs[1]', `${riskyPair2.label} reizen sich gegenseitig`, `${riskyPair2.label} reagieren aufeinander mit Nebenbemerkungen.`, firstStudentFromPair(riskyPair2, risk), [
+    good('Du beschreibst das Muster neutral und vereinbarst mit beiden ein Tischziel für die nächsten Minuten.', 'Die Intervention bleibt konkret und kontrollierbar.'),
+    neutral('Du setzt dich kurz in die Nähe und lässt die Aufgabe weiterlaufen.', 'Nähe kann dämpfen, ersetzt aber keine gemeinsame Klärung.'),
+    poor('Du sagst, die beiden könnten grundsätzlich nicht zusammenarbeiten.', 'Die Etikettierung verfestigt das Muster.')
+  ], ['Sitznähe', riskyPair2.label]));
 
-  s.push(scenario('D07', 'Kooperative Verhaltensmodifikation', ctx.stabilizingPairs.length > 0, 'stabilizingPairs', `Ressource am Tisch: ${supportPair.label}`, `${supportPair.label} sitzen so, dass eine stabilisierende Nachbarschaft möglich ist. Ein unruhiger Moment kann aufgefangen werden.`, [
-    plus('Du gibst beiden eine kurze Rollenklärung und nutzt die stabilere Person als strukturierende Unterstützung, ohne Verantwortung abzugeben.', 'Die Ressource wird genutzt, bleibt aber pädagogisch geführt.'),
-    zero('Du lässt die Sitznachbarschaft unverändert und beobachtest.', 'Es kann funktionieren, aber die Ressource wird nicht aktiv gemacht.'),
-    minus('Du erklärst die stabilere Person für das Verhalten des anderen verantwortlich.', 'Das überfordert Mitschüler*innen und verschiebt Lehrer*innenverantwortung.')
-  ], ['stabilizingPairs', supportPair.label]));
+  s.push(scenario('D07', 'Kooperative Verhaltensmodifikation', ctx.stabilizingPairs.length > 0 || ctx.computedPairs.support.length > 0, 'stabilizingPairs', `Ressource am Tisch: ${supportPair.label}`, `${supportPair.label} sitzen so, dass Unterstützung möglich ist. Am Tisch entsteht Unruhe.`, targetSupportPairStudent, [
+    good('Du gibst eine kurze Rollenklärung und nutzt die Ressource als freiwillige Strukturhilfe, ohne Verantwortung abzugeben.', 'Die Ressource wird pädagogisch geführt und nicht auf Mitschüler*innen abgeschoben.'),
+    neutral('Du lässt die Sitznachbarschaft unverändert und beobachtest weiter.', 'Die Ressource kann wirken, wird aber nicht bewusst aktiviert.'),
+    poor(`Du sagst der stabileren Person, sie solle den Nachbarn einfach mitbetreuen.`, 'Aus Unterstützung wird Zusatzbelastung; Motivation und Beziehung können leiden.')
+  ], ['stabilisierende Nachbarschaft', supportPair.label]));
 
-  s.push(scenario('D08', 'Kooperative Verhaltensmodifikation', ctx.neutralizedRiskPairs.length > 0, 'neutralizedRiskPairs', `Neutralisierte Nähe: ${neutralPair.label}`, `${neutralPair.label} sitzen nah beieinander, aber die Vorbereitung hat eine mögliche Stabilisierung markiert. Jetzt entsteht trotzdem leichte Spannung.`, [
-    plus('Du stärkst die vorhandene Stabilisierung durch eine klare Mini-Aufgabe und kurze Rückmeldung.', 'Das vorhandene Schutzmoment wird bewusst gesichert.'),
-    zero('Du verlässt dich darauf, dass die Sitzordnung schon reicht.', 'Die Lage bleibt kontrollierbar, aber die Stabilisierung wird nicht aktiv unterstützt.'),
-    minus('Du stellst die beiden vor der Klasse als Problemfall dar.', 'Dadurch kann die zuvor neutralisierte Spannung wieder aktiviert werden.')
-  ], ['neutralizedRiskPairs', neutralPair.label]));
+  s.push(scenario('D08', 'Kooperative Verhaltensmodifikation', ctx.neutralizedRiskPairs.length > 0, 'neutralizedRiskPairs', `Neutralisierte Nähe: ${neutralPair.label}`, `${neutralPair.label} sitzen nah beieinander, aber die Vorbereitung hat ein Schutzmoment markiert. Jetzt entsteht leichte Spannung.`, firstStudentFromPair(neutralPair, support), [
+    good('Du sicherst das Schutzmoment mit einer klaren Mini-Aufgabe und kurzer Rückmeldung.', 'Die neutralisierte Lage bleibt stabil, weil die Ressource aktiv gemacht wird.'),
+    neutral('Du verlässt dich darauf, dass die Sitzordnung das schon auffängt.', 'Die Lage bleibt zunächst kontrollierbar, aber das Schutzmoment wird nicht gestärkt.'),
+    poor('Du stellst die beiden als Problemkombination vor der Klasse heraus.', 'Die zuvor neutralisierte Spannung kann wieder aktiviert werden.')
+  ], ['neutralisierte Nähe', neutralPair.label]));
 
-  s.push(scenario('D09', 'Classroom Management', ctx.activeTrash.length > 0, 'roomObjects.activeTrash', 'Müll lenkt den Tischbereich ab', `Im Klassenraum liegt noch Müll. In der Nähe entsteht Unruhe und mehrere Blicke wandern dorthin.`, [
-    plus('Du lässt den Störreiz kurz entfernen und führst die Aufmerksamkeit direkt zurück zur Aufgabe.', 'Der Raumfaktor wird bereinigt, bevor daraus ein Unterrichtsproblem wird.'),
-    zero('Du wartest, bis die Aufmerksamkeit wieder bei der Aufgabe ist.', 'Die Situation kann abklingen, aber der Störreiz bleibt bestehen.'),
-    minus('Du machst daraus eine lange Standpauke über Ordnung.', 'Der Müll bekommt mehr Aufmerksamkeit als nötig und unterbricht den Unterrichtsfluss.')
-  ], ['room-trash-distraction', `${ctx.activeTrash.length} Müllfeld(er)`]));
+  s.push(scenario('D09', 'Classroom Management', ctx.activeTrash.length > 0, 'roomObjects.activeTrash', 'Müll wird zum Störreiz', 'Im Klassenraum liegt noch Müll. In der Nähe wandern mehrere Blicke weg von der Aufgabe.', risk, [
+    good('Du lässt den Störreiz knapp entfernen und führst die Aufmerksamkeit direkt zur Aufgabe zurück.', 'Der Raumfaktor wird bereinigt, bevor daraus eine größere Unterrichtsstörung wird.'),
+    neutral('Du wartest, ob die Aufmerksamkeit von selbst zurückkommt.', 'Die Lage kann abklingen, aber der Störreiz bleibt bestehen.'),
+    poor('Du hältst eine längere Standpauke über Ordnung.', 'Der Störreiz erhält zusätzliche Aufmerksamkeit und unterbricht den Unterrichtsfluss.')
+  ], ['Müll', `${ctx.activeTrash.length} Müllfeld(er)`]));
 
-  s.push(scenario('D10', 'Classroom Management', ctx.invalidSpacing.length > 0, 'spacing.invalidPairs', 'Laufweg ist blockiert', `Zwischen zwei Tischreihen ist kein Gang frei. Beim Helfen staut sich Bewegung im Raum.`, [
-    plus('Du organisierst die Hilfe zunächst über Signale und veränderst den Laufweg nach der Phase.', 'Der Unterricht bleibt ruhig und die räumliche Ursache wird nachgesteuert.'),
-    zero('Du arbeitest dich vorsichtig durch den engen Bereich.', 'Es geht weiter, aber die räumliche Schwäche bleibt bestehen.'),
-    minus('Du beschwerst dich bei der Klasse über das Chaos, ohne den Ablauf zu verändern.', 'Das Problem bleibt räumlich bestehen und erzeugt zusätzliche Unruhe.')
-  ], ['spacing', `${ctx.invalidSpacing.length} enge Tischabstände`]));
+  s.push(scenario('D10', 'Classroom Management', ctx.invalidSpacing.length > 0, 'spacing.invalidPairs', 'Der Laufweg ist blockiert', 'Zwischen zwei Tischreihen ist kaum Platz. Beim Helfen staut sich Bewegung im Raum.', ctx.transitionStudent, [
+    good('Du regelst Hilfe zunächst über Signale und veränderst den Laufweg nach der Phase.', 'Der Unterricht bleibt ruhig und die räumliche Ursache wird später korrigiert.'),
+    neutral('Du arbeitest dich vorsichtig durch den engen Bereich.', 'Der Unterricht geht weiter, aber das Raumproblem bleibt bestehen.'),
+    poor('Du lässt mehrere Schüler*innen gleichzeitig im engen Bereich aufstehen.', 'Die räumliche Schwäche wird zur zusätzlichen Störung.')
+  ], ['Laufweg', 'Raumstruktur']));
 
-  s.push(scenario('D11', 'Kooperative Verhaltensmodifikation', Boolean(ctx.distractorStudent), 'student.hidden.distractor', `${studentName(ctx.distractorStudent)} lenkt den Nachbarn ab`, `${studentName(ctx.distractorStudent)} kommentiert leise die Aufgabe und der Sitznachbar verliert den Fokus.`, [
-    plus(`Du vereinbarst mit ${studentName(ctx.distractorStudent)} ein kurzes Arbeitsziel und eine Selbstbeobachtung bis zur nächsten Rückmeldung.`, 'Das störende Verhalten wird in eine konkrete Veränderungsaufgabe übersetzt.'),
-    zero('Du stellst dich kurz neben den Tisch.', 'Das stoppt die Ablenkung im Moment, bleibt aber abhängig von deiner Nähe.'),
-    minus('Du setzt die Person kommentarlos weg und sagst, sie könne nicht neben anderen sitzen.', 'Die Maßnahme beschämt und verhindert kooperative Bearbeitung.')
-  ], ['distractor', studentName(ctx.distractorStudent)]));
+  s.push(scenario('D11', 'Klassenregel', hasRule('melden'), 'rule:melden', `${studentName(ctx.callsOutStudent)} ruft dazwischen`, `${studentName(ctx.callsOutStudent)} ruft eine Antwort in die Klasse. Die Melde-Regel ist ${hasRule('melden') ? 'vereinbart' : 'nicht gewählt'}.`, ctx.callsOutStudent, [
+    good(`Du verweist knapp auf die Regel „${ruleText('melden')}“ und gibst ${studentName(ctx.callsOutStudent)} danach eine reguläre Beteiligungsmöglichkeit.`, 'Die Regel wird nicht als Strafe, sondern als gemeinsame Struktur genutzt.'),
+    neutral('Du nimmst die richtige Antwort an und machst weiter.', 'Die Aufgabe läuft weiter, aber das Reinrufen wird indirekt bestätigt.'),
+    poor('Du lobst den Inhalt laut und übergehst die Form vollständig.', 'Das kann fachlich angenehm wirken, verstärkt aber das unerwünschte Meldeverhalten.')
+  ], [focusRule('melden'), studentName(ctx.callsOutStudent)]));
 
-  s.push(scenario('D12', 'Kooperative Verhaltensmodifikation', Boolean(ctx.boundaryStudent), 'student.hidden.boundaryTesting', `${studentName(ctx.boundaryStudent)} testet eine Grenze`, `${studentName(ctx.boundaryStudent)} macht bewusst etwas anderes als vereinbart und schaut, wie du reagierst.`, [
-    plus(`Du benennst die Abweichung ruhig und vereinbarst mit ${studentName(ctx.boundaryStudent)} den nächsten machbaren Arbeitsschritt.`, 'Die Grenze bleibt klar und der Schüler bekommt eine Rückkehrmöglichkeit.'),
-    zero('Du ignorierst es, solange niemand direkt gestört wird.', 'Die Stunde läuft weiter, aber die Grenze bleibt uneindeutig.'),
-    minus('Du steigst in eine öffentliche Diskussion ein.', 'Das Grenztesten erhält Bühne und wird wahrscheinlicher.')
-  ], ['boundaryTesting', studentName(ctx.boundaryStudent)]));
+  s.push(scenario('D12', 'Klassenregel', hasRule('ausreden'), 'rule:ausreden', `${studentName(ctx.distractorStudent)} unterbricht`, `${studentName(ctx.distractorStudent)} fällt einer anderen Person ins Wort.`, ctx.distractorStudent, [
+    good(`Du stoppst kurz und bindest die Regel „${ruleText('ausreden')}“ an den nächsten Redebeitrag zurück.`, 'Die Gesprächsstruktur wird wiederhergestellt, ohne eine lange Belehrung zu starten.'),
+    neutral('Du bittest allgemein um Ruhe und lässt weitersprechen.', 'Die Lage beruhigt sich, aber die konkrete Gesprächsregel bleibt unscharf.'),
+    poor('Du unterbrichst selbst mehrfach, um das Unterbrechen zu kritisieren.', 'Die Intervention modelliert genau das Verhalten, das reduziert werden soll.')
+  ], [focusRule('ausreden'), studentName(ctx.distractorStudent)]));
 
-  s.push(scenario('D13', 'Kooperative Verhaltensmodifikation', Boolean(ctx.callsOutStudent), 'student.hidden.callsOut', `${studentName(ctx.callsOutStudent)} ruft hinein`, `${studentName(ctx.callsOutStudent)} ruft die Antwort heraus, bevor andere reagieren können.`, [
-    plus(`Du beschreibst das Reinrufen konkret und vereinbarst mit ${studentName(ctx.callsOutStudent)} ein Meldesignal als Ziel für die nächste Plenumsphase.`, 'Die Intervention ist kooperativ, konkret und überprüfbar.'),
-    zero('Du nimmst die richtige Antwort auf und gehst weiter.', 'Der Inhalt stimmt, aber das Verhalten wird indirekt verstärkt.'),
-    minus(`Du sagst vor der Klasse, dass ${studentName(ctx.callsOutStudent)} immer stört.`, 'Die Person wird etikettiert und die Beziehung belastet.')
-  ], ['callsOut', studentName(ctx.callsOutStudent)]));
+  s.push(scenario('D13', 'Klassenregel', hasRule('handy'), 'rule:handy', `${studentName(ctx.phoneStudent)} berührt das Handy`, `${studentName(ctx.phoneStudent)} schiebt etwas unter dem Tisch zurecht.`, ctx.phoneStudent, [
+    good(`Du erinnerst leise an „${ruleText('handy')}“ und vereinbarst nach der Phase eine kurze Selbstkontrolle.`, 'Regelstruktur und kooperative Zielarbeit greifen zusammen.'),
+    neutral('Du gehst näher heran und beobachtest weiter.', 'Die Nähe wirkt möglicherweise, klärt aber die Regel- und Zielseite nicht.'),
+    poor('Du machst eine öffentliche Handy-Kontrolle bei mehreren Schüler*innen.', 'Aus einer Einzelsituation wird eine große Störung mit Misstrauen.')
+  ], [focusRule('handy'), studentName(ctx.phoneStudent)]));
 
-  s.push(scenario('D14', 'Kooperative Verhaltensmodifikation', Boolean(ctx.transitionStudent), 'student.hidden.transitions', `${studentName(ctx.transitionStudent)} verliert den Übergang`, `Beim Wechsel der Sozialform bleibt ${studentName(ctx.transitionStudent)} sitzen und schaut suchend auf das Material.`, [
-    plus(`Du klärst mit ${studentName(ctx.transitionStudent)} den ersten Übergangsschritt und vereinbarst ein sichtbares Startsignal.`, 'Der Übergang wird konkret unterstützt und wiederholbar gemacht.'),
-    zero('Du erklärst den Auftrag noch einmal leise.', 'Das hilft kurzfristig, verändert aber die Übergangsstruktur nicht.'),
-    minus('Du kommentierst, dass alle anderen es ja auch schaffen.', 'Der Vergleich verunsichert und klärt das Problem nicht.')
-  ], ['transitions', studentName(ctx.transitionStudent)]));
+  s.push(scenario('D14', 'Klassenregel', hasRule('platz'), 'rule:platz', `${studentName(ctx.boundaryStudent)} steht auf`, `${studentName(ctx.boundaryStudent)} steht während der Arbeitsphase auf, obwohl kein Auftrag dazu erkennbar ist.`, ctx.boundaryStudent, [
+    good(`Du verweist knapp auf „${ruleText('platz')}“ und gibst eine klare Alternative: Hilfesignal oder kurze Rückfrage am Platz.`, 'Die Regel wird mit einer handhabbaren Alternative verbunden.'),
+    neutral('Du winkst die Person zurück an den Platz.', 'Das stoppt den Moment, aber der Grund für das Aufstehen bleibt offen.'),
+    poor('Du erlaubst es, damit es keinen Konflikt gibt.', 'Die Regel verliert Verbindlichkeit und die Bewegung kann andere aktivieren.')
+  ], [focusRule('platz'), studentName(ctx.boundaryStudent)]));
 
-  s.push(scenario('D15', 'Classroom Management', hasRule('melden'), selectedOrCatalog('melden'), 'Melderegel wird übergangen', 'Mehrere Schüler*innen rufen gleichzeitig Antworten hinein. Die Gesprächsstruktur kippt kurz.', [
-    plus(`Du verweist knapp auf die Regel „${ruleText('melden')}“ und gibst danach einer gemeldeten Person das Wort.`, 'Die ausgewählte Regel wird aktiviert und der Gesprächsfluss bleibt erhalten.'),
-    zero('Du nimmst eine hineingerufene Antwort auf und stellst die nächste Frage.', 'Inhaltlich geht es weiter, aber das Reinrufen bleibt als Muster bestehen.'),
-    minus('Du drohst der ganzen Klasse sofort mit Strafarbeit.', 'Die Reaktion ist pauschal und verschiebt das Problem in Richtung Machtkampf.')
-  ], ['Regel melden', hasRule('melden') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D15', 'Klassenregel', hasRule('lautstaerke'), 'rule:lautstaerke', `${studentName(ctx.distractorStudent)} wird lauter`, `Am Tisch von ${studentName(ctx.distractorStudent)} steigt die Lautstärke.`, ctx.distractorStudent, [
+    good(`Du nutzt das vereinbarte Lautstärkesignal und knüpfst an „${ruleText('lautstaerke')}“ an.`, 'Die Klasse bekommt eine klare, bekannte Orientierung ohne lange Unterbrechung.'),
+    neutral('Du erinnerst allgemein: „Bitte leiser.“', 'Das kann kurz helfen, bleibt aber weniger verbindlich.'),
+    poor('Du übertönst die Gruppe mit lauter Stimme.', 'Die Lautstärke steigt als Modell und die Arbeitsruhe wird weiter belastet.')
+  ], [focusRule('lautstaerke'), studentName(ctx.distractorStudent)]));
 
-  s.push(scenario('D16', 'Classroom Management', hasRule('ausreden'), selectedOrCatalog('ausreden'), 'Ausreden klappt nicht', 'Beim Sammeln von Ideen fallen sich mehrere gegenseitig ins Wort.', [
-    plus(`Du stoppst kurz und aktivierst die Regel „${ruleText('ausreden')}“.`, 'Die Gesprächsstruktur wird wieder hergestellt.'),
-    zero('Du notierst nur die lautesten Beiträge.', 'Es entsteht ein Ergebnis, aber ruhigere Personen werden weniger beteiligt.'),
-    minus('Du lässt alle weiter durcheinanderreden und bewertest dann die Beiträge.', 'Unklare Gesprächsbedingungen verstärken Frust und Konkurrenz.')
-  ], ['Regel ausreden', hasRule('ausreden') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D16', 'Klassenregel', hasRule('respekt'), 'rule:respekt', `${studentName(ctx.sensitiveStudent)} reagiert auf einen Kommentar`, `${studentName(ctx.sensitiveStudent)} wirkt getroffen, nachdem ein Fehler kommentiert wurde.`, ctx.sensitiveStudent, [
+    good(`Du schützt die Person knapp und bindest die Klasse an „${ruleText('respekt')}“ zurück.`, 'Die Beziehungssicherheit wird wiederhergestellt, ohne die Person bloßzustellen.'),
+    neutral('Du wechselst schnell zum nächsten Beitrag.', 'Die Situation wird nicht größer, aber die Verletzung bleibt ungeklärt.'),
+    poor('Du sagst, man müsse Kritik eben aushalten lernen.', 'Die verletzende Dynamik wird normalisiert und die Sicherheit sinkt.')
+  ], [focusRule('respekt'), studentName(ctx.sensitiveStudent)]));
 
-  s.push(scenario('D17', 'Classroom Management', hasRule('handy'), selectedOrCatalog('handy'), 'Handyregel wird relevant', `Ein leises Vibrieren ist zu hören. Einige Blicke gehen zu ${studentName(ctx.phoneStudent)}.`, [
-    plus(`Du erinnerst ruhig an die Regel „${ruleText('handy')}“ und führst den Blick zurück zur Aufgabe.`, 'Die Regel wird klar, kurz und für alle gleich nachvollziehbar.'),
-    zero('Du wartest ab, ob das Geräusch wiederkommt.', 'Die Situation beruhigt sich kurz, aber Regelklarheit entsteht nicht.'),
-    minus('Du suchst sofort alle Taschen der Klasse ab.', 'Die Maßnahme ist unverhältnismäßig und erzeugt Misstrauen.')
-  ], ['Regel handy', studentName(ctx.phoneStudent), hasRule('handy') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D17', 'Klassenregel', hasRule('hilfezeichen'), 'rule:hilfezeichen', `${studentName(ctx.transitionStudent)} ruft nach Hilfe`, `${studentName(ctx.transitionStudent)} ist unsicher und ruft mehrfach nach dir.`, ctx.transitionStudent, [
+    good(`Du erinnerst an „${ruleText('hilfezeichen')}“ und bestätigst, dass du gleich nach dem Signal kommst.`, 'Hilfesuche wird strukturiert, ohne Unsicherheit zu beschämen.'),
+    neutral('Du beantwortest die Frage direkt und gehst weiter.', 'Die Aufgabe wird gelöst, aber das Hilfesystem wird nicht gestärkt.'),
+    poor('Du sagst, wer jetzt noch fragt, habe nicht aufgepasst.', 'Die Hemmung zu fragen steigt und Unsicherheit kann verdeckt weiterwirken.')
+  ], [focusRule('hilfezeichen'), studentName(ctx.transitionStudent)]));
 
-  s.push(scenario('D18', 'Classroom Management', hasRule('platz'), selectedOrCatalog('platz'), 'Umherlaufen ohne Auftrag', 'Eine Person steht wiederholt auf und läuft an mehreren Tischen vorbei.', [
-    plus(`Du verweist knapp auf die Regel „${ruleText('platz')}“ und gibst eine konkrete Hilfe-Alternative.`, 'Die Bewegung wird begrenzt und ein legitimer Weg für Bedarf bleibt offen.'),
-    zero('Du lässt die Person laufen, solange niemand direkt angesprochen wird.', 'Die Störung bleibt moderat, kann aber übernommen werden.'),
-    minus('Du stellst die Person für den Rest der Stunde vor die Tür.', 'Die Maßnahme ist unverhältnismäßig und bricht pädagogische Bearbeitung ab.')
-  ], ['Regel platz', hasRule('platz') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D18', 'Klassenregel', hasRule('rollen'), 'rule:rollen', 'Gruppenrolle kippt', `In einer Gruppe übernimmt ${studentName(ctx.boundaryStudent)} plötzlich alles, während andere aussteigen.`, ctx.boundaryStudent, [
+    good(`Du stellst die Rollen kurz neu klar und verweist auf „${ruleText('rollen')}“.`, 'Die Kooperation wird strukturiert, ohne einzelne Personen als Problem abzustempeln.'),
+    neutral('Du bittest die Gruppe, sich besser aufzuteilen.', 'Der Hinweis ist plausibel, aber noch wenig konkret.'),
+    poor(`Du lässt ${studentName(ctx.boundaryStudent)} weitermachen, weil dann wenigstens etwas entsteht.`, 'Ein dominantes Muster wird belohnt und die Gruppenarbeit verliert ihren kooperativen Charakter.')
+  ], [focusRule('rollen'), studentName(ctx.boundaryStudent)]));
 
-  s.push(scenario('D19', 'Classroom Management', hasRule('lautstaerke'), selectedOrCatalog('lautstaerke'), 'Lautstärke steigt', 'Die Lautstärke wächst langsam. Fachliche und private Gespräche mischen sich.', [
-    plus(`Du erinnerst an „${ruleText('lautstaerke')}“ und machst einen kurzen Lautstärke-Check.`, 'Die Klasse erhält eine konkrete Rückmeldung und kann sich selbst nachsteuern.'),
-    zero('Du schließt die Tür und arbeitest mit einer einzelnen Gruppe weiter.', 'Die Außenwirkung sinkt, aber die Arbeitslautstärke bleibt ungeklärt.'),
-    minus('Du erklärst die Klasse für unreif und verbietest Gruppenarbeit.', 'Die Abwertung verhindert Lernen am Gruppenarbeitsprozess.')
-  ], ['Regel lautstaerke', hasRule('lautstaerke') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D19', 'Klassenregel', hasRule('material'), 'rule:material', 'Materialgang erzeugt Unruhe', `Mehrere Schüler*innen wollen gleichzeitig Material holen. ${studentName(ctx.transitionStudent)} steht schon halb auf.`, ctx.transitionStudent, [
+    good(`Du stoppst kurz und aktivierst „${ruleText('material')}“ mit einer klaren Reihenfolge.`, 'Die Situation wird über Struktur und nicht über einzelne Ermahnungen geregelt.'),
+    neutral('Du lässt es laufen und hoffst, dass es schnell geht.', 'Es kann klappen, bleibt aber anfällig für Bewegung und Nebenkommunikation.'),
+    poor('Du gibst zusätzlich neue Materialaufträge an mehrere Tische gleichzeitig.', 'Die Unruhe wird durch weitere Bewegungsanlässe verstärkt.')
+  ], [focusRule('material'), studentName(ctx.transitionStudent)]));
 
-  s.push(scenario('D20', 'Classroom Management', hasRule('respekt'), selectedOrCatalog('respekt'), `${studentName(ctx.sensitiveStudent)} wird ausgelacht`, `${studentName(ctx.sensitiveStudent)} gibt eine unsichere Antwort. Zwei Mitschüler*innen kichern hörbar.`, [
-    plus(`Du verweist auf „${ruleText('respekt')}“ und sicherst den Beitrag fachlich wertschätzend ab.`, 'Die Regel schützt die Lernatmosphäre und die betroffene Person bleibt handlungsfähig.'),
-    zero('Du übergehst das Kichern und stellst direkt die nächste Fachfrage.', 'Die Stunde geht weiter, aber Unsicherheit bleibt wahrscheinlich bestehen.'),
-    minus('Du sagst, Kritik müsse man eben aushalten lernen.', 'Die Verantwortung wird einseitig verschoben; Schutz und Regelklarheit fehlen.')
-  ], ['Regel respekt', studentName(ctx.sensitiveStudent), hasRule('respekt') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D20', 'Klassenregel', hasRule('stoppsignal'), 'rule:stoppsignal', 'Ruhezeichen wird übersehen', `${studentName(ctx.callsOutStudent)} redet weiter, während das Ruhezeichen gegeben wird.`, ctx.callsOutStudent, [
+    good(`Du wartest konsequent kurz aus und knüpfst an „${ruleText('stoppsignal')}“ an.`, 'Das Signal bleibt verbindlich und braucht keine lange Zusatzrede.'),
+    neutral('Du wiederholst das Signal etwas deutlicher.', 'Das kann helfen, aber die Verbindlichkeit hängt weiter von Wiederholung ab.'),
+    poor('Du redest über die Unruhe hinweg weiter.', 'Das Signal verliert Wirkung und Gespräche bleiben lohnend.')
+  ], [focusRule('stoppsignal'), studentName(ctx.callsOutStudent)]));
 
-  s.push(scenario('D21', 'Classroom Management', hasRule('hilfezeichen'), selectedOrCatalog('hilfezeichen'), 'Hilfe wird hineingerufen', 'Mehrere rufen gleichzeitig nach Hilfe. Du kannst nicht erkennen, wer wirklich blockiert ist.', [
-    plus(`Du erinnerst an „${ruleText('hilfezeichen')}“ und arbeitest die sichtbaren Signale der Reihe nach ab.`, 'Die Hilfesituation wird geordnet und die Klasse muss nicht lauter werden.'),
-    zero('Du gehst zur lautesten Person zuerst.', 'Die akute Lautstärke sinkt, aber lautes Rufen wird eher belohnt.'),
-    minus('Du sagst, wer ruft, bekommt heute keine Hilfe mehr.', 'Blockierte Schüler*innen bleiben ohne Unterstützung und die Regel wird zur Strafe.')
-  ], ['Regel hilfezeichen', hasRule('hilfezeichen') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D21', 'Klassenregel', hasRule('start'), 'rule:start', 'Startaufgabe stockt', `${studentName(ctx.transitionStudent)} beginnt nicht mit der Startaufgabe und sucht Blickkontakt zu anderen.`, ctx.transitionStudent, [
+    good(`Du zeigst knapp auf „${ruleText('start')}“ und gibst den ersten Arbeitsschritt.`, 'Die Regel wird mit Handlungssicherheit verbunden.'),
+    neutral('Du erinnerst die ganze Klasse noch einmal an den Arbeitsbeginn.', 'Das kann helfen, kostet aber Aufmerksamkeit für alle.'),
+    poor('Du gibst der Person sofort eine Zusatzaufgabe, damit sie beschäftigt ist.', 'Die eigentliche Startstruktur wird umgangen und die Überforderung kann steigen.')
+  ], [focusRule('start'), studentName(ctx.transitionStudent)]));
 
-  s.push(scenario('D22', 'Classroom Management', hasRule('rollen'), selectedOrCatalog('rollen'), 'Gruppenarbeit ohne Rollen', 'In einer Gruppe arbeiten zwei, während zwei andere nur zusehen.', [
-    plus(`Du aktivierst „${ruleText('rollen')}“ und lässt jede Person eine konkrete Teilaufgabe übernehmen.`, 'Die Verantwortlichkeit steigt und Leerlauf wird reduziert.'),
-    zero('Du lobst die zwei arbeitenden Schüler*innen und gehst weiter.', 'Die Gruppe produziert etwas, aber passive Beteiligung bleibt bestehen.'),
-    minus('Du brichst die Gruppenarbeit für die ganze Klasse ab.', 'Die Reaktion ist pauschal und nimmt funktionierenden Gruppen die Arbeitsform.')
-  ], ['Regel rollen', hasRule('rollen') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D22', 'Klassenregel', hasRule('wechsel'), 'rule:wechsel', 'Sozialformwechsel wird unruhig', `Beim Wechsel zur Partnerarbeit bewegt sich ${studentName(ctx.boundaryStudent)} schon los.`, ctx.boundaryStudent, [
+    good(`Du stoppst den Wechsel kurz und verweist auf „${ruleText('wechsel')}“, dann gibst du das Startsignal neu.`, 'Der Übergang wird gemeinsam strukturiert und bleibt steuerbar.'),
+    neutral('Du lässt den Wechsel weiterlaufen und regulierst einzelne Zurufe.', 'Die Stunde geht weiter, aber die Übergangsregel wird schwach.'),
+    poor('Du brichst die Partnerarbeit komplett ab.', 'Die Maßnahme ist unverhältnismäßig und kann Widerstand gegen Arbeitsformen erzeugen.')
+  ], [focusRule('wechsel'), studentName(ctx.boundaryStudent)]));
 
-  s.push(scenario('D23', 'Classroom Management', hasRule('material'), selectedOrCatalog('material'), 'Materialholen wird unruhig', 'Mehrere stehen gleichzeitig auf, um Material zu holen. Der Laufweg wird eng.', [
-    plus(`Du stoppst kurz, verweist auf „${ruleText('material')}“ und lässt Gruppen nacheinander starten.`, 'Der Ablauf wird wieder steuerbar und unnötige Bewegung nimmt ab.'),
-    zero('Du wartest, bis alle wieder sitzen.', 'Die Unruhe endet irgendwann, aber der Ablauf bleibt unklar.'),
-    minus('Du verbietest Materialholen für den Rest der Stunde komplett.', 'Die Maßnahme löst den Ablauf nicht und behindert die Arbeitsfähigkeit.')
-  ], ['Regel material', hasRule('material') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D23', 'Klassenregel', hasRule('kommentar'), 'rule:kommentar', 'Kommentar über Mitschüler*in', `${studentName(ctx.conflictStudent)} kommentiert eine Mitschülerin. Die Stimmung kippt kurz.`, ctx.conflictStudent, [
+    good(`Du stoppst den Kommentar und bindest an „${ruleText('kommentar')}“ zurück; die inhaltliche Arbeit läuft danach weiter.`, 'Die Grenze wird klar, aber die Situation bekommt keine unnötige Bühne.'),
+    neutral('Du wechselst schnell das Thema.', 'Die Eskalation wird vermieden, aber die Norm bleibt unausgesprochen.'),
+    poor('Du antwortest mit einem spitzen Gegenkommentar.', 'Das modelliert Abwertung und verstärkt die Dynamik.')
+  ], [focusRule('kommentar'), studentName(ctx.conflictStudent)]));
 
-  s.push(scenario('D24', 'Classroom Management', hasRule('stoppsignal'), selectedOrCatalog('stoppsignal'), 'Ruhezeichen greift nicht sofort', 'Nach dem Ruhezeichen sprechen einige weiter. Die Arbeitsphase soll ins Plenum zurückgeführt werden.', [
-    plus(`Du wartest sichtbar, wiederholst das Signal knapp und aktivierst „${ruleText('stoppsignal')}“.`, 'Das Ritual wird stabilisiert und bleibt berechenbar.'),
-    zero('Du beginnst trotz Restgeräuschen mit der Erklärung.', 'Ein Teil hört zu, aber die Steuerbarkeit bleibt eingeschränkt.'),
-    minus('Du wirst lauter als die Klasse und schimpfst über fehlenden Respekt.', 'Die Lautstärke steigt und das Ruhezeichen verliert Funktion.')
-  ], ['Regel stoppsignal', hasRule('stoppsignal') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D24', 'Klassenregel', hasRule('meldenplus'), 'rule:meldenplus', 'Warten fällt schwer', `${studentName(ctx.callsOutStudent)} meldet sich, spricht aber sofort los.`, ctx.callsOutStudent, [
+    good(`Du bestätigst die Meldung, verweist auf „${ruleText('meldenplus')}“ und gibst danach bewusst das Wort.`, 'Die Beteiligung bleibt erwünscht, die Form wird aber geklärt.'),
+    neutral('Du lässt den Beitrag zu, weil er fachlich passt.', 'Der fachliche Fluss bleibt, aber das Warten wird nicht geübt.'),
+    poor('Du nimmst die Person für den Rest der Stunde nicht mehr dran.', 'Aus Struktur wird Ausschluss; Motivation und Beziehung werden belastet.')
+  ], [focusRule('meldenplus'), studentName(ctx.callsOutStudent)]));
 
-  s.push(scenario('D25', 'Classroom Management', hasRule('start'), selectedOrCatalog('start'), 'Stundenbeginn wird unruhig', 'Einige haben Material bereit, andere suchen noch im Rucksack. Der Start verzögert sich.', [
-    plus(`Du nutzt „${ruleText('start')}“ und gibst eine kurze sichtbare Startaufgabe.`, 'Der Beginn wird strukturiert und Wartezeiten werden reduziert.'),
-    zero('Du wartest, bis alle von selbst fertig sind.', 'Es wird irgendwann ruhiger, aber Leerlauf entsteht.'),
-    minus('Du beginnst mit einer langen Beschwerde über fehlende Vorbereitung.', 'Der Einstieg wird negativ aufgeladen und kostet zusätzliche Zeit.')
-  ], ['Regel start', hasRule('start') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D25', 'Klassenregel', hasRule('pausen'), 'rule:pausen', 'Privatgespräch im Unterricht', `${studentName(ctx.distractorStudent)} beginnt ein privates Gespräch mit der Sitznachbarschaft.`, ctx.distractorStudent, [
+    good(`Du lenkst knapp auf „${ruleText('pausen')}“ und gibst eine konkrete Arbeitsfrage an den Tisch.`, 'Die Regel wird direkt in Arbeitsverhalten übersetzt.'),
+    neutral('Du schaust kurz hin und wartest ab.', 'Das Gespräch kann enden, aber die Regel bleibt unscharf.'),
+    poor('Du führst selbst ein längeres Gespräch darüber, warum Privatgespräche stören.', 'Die Unterbrechung wird größer als die ursprüngliche Störung.')
+  ], [focusRule('pausen'), studentName(ctx.distractorStudent)]));
 
-  s.push(scenario('D26', 'Classroom Management', hasRule('wechsel'), selectedOrCatalog('wechsel'), 'Wechsel der Sozialform kippt', 'Beim Wechsel in Partnerarbeit bewegen sich mehrere gleichzeitig und fragen durcheinander.', [
-    plus(`Du stoppst kurz, verweist auf „${ruleText('wechsel')}“ und gibst das Startsignal erneut.`, 'Der Übergang wird wieder berechenbar.'),
-    zero('Du beantwortest einzelne Fragen, während andere schon loslegen.', 'Einzelne werden geklärt, aber der Gesamtübergang bleibt unruhig.'),
-    minus('Du lässt alle zurück auf Anfang und wertest die Klasse ab.', 'Die Reaktion erzeugt Frust und klärt den Ablauf nicht.')
-  ], ['Regel wechsel', hasRule('wechsel') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D26', 'Kooperative Verhaltensmodifikation', true, 'positive-reinforcement', `${studentName(ctx.stabilizerStudent)} arbeitet stabil`, `${studentName(ctx.stabilizerStudent)} hält die Aufgabe gut, während daneben Unruhe entsteht.`, ctx.stabilizerStudent, [
+    good(`Du gibst ${studentName(ctx.stabilizerStudent)} eine konkrete Rückmeldung zum Arbeitsverhalten und lässt die Verantwortung bei dir.`, 'Das erwünschte Verhalten wird verstärkt, ohne die Person als Hilfslehrkraft zu benutzen.'),
+    neutral('Du nimmst das stabile Arbeiten wahr und greifst nicht ein.', 'Die Stabilität bleibt möglich, wird aber nicht als Ressource gestärkt.'),
+    poor(`Du sagst: „Wenn du fertig bist, hilf ${studentName(risk)} noch bei seinen Aufgaben.“`, `${studentName(ctx.stabilizerStudent)} erhält statt Anerkennung zusätzliche Verantwortung; langfristig kann Motivation sinken.`)
+  ], ['positive Verstärkung', studentName(ctx.stabilizerStudent)]));
 
-  s.push(scenario('D27', 'Classroom Management', hasRule('kommentar'), selectedOrCatalog('kommentar'), 'Kommentar über Mitschüler*innen', 'Ein Schüler kommentiert leise: „War ja klar, dass du das nicht kannst.“ Einige hören es.', [
-    plus(`Du stoppst den Kommentar und verweist kurz auf „${ruleText('kommentar')}“.`, 'Die soziale Grenze wird klar, ohne den Unterricht unnötig zu verlängern.'),
-    zero('Du schaust streng in die Richtung und machst weiter.', 'Das Signal kann reichen, aber die Norm wird nicht ausdrücklich geklärt.'),
-    minus('Du lässt die Klasse darüber abstimmen, ob der Kommentar schlimm war.', 'Die betroffene Person wird ausgestellt und die Situation verschärft sich.')
-  ], ['Regel kommentar', hasRule('kommentar') ? 'gewählt' : 'nicht gewählt']));
+  s.push(scenario('D27', 'Kooperative Verhaltensmodifikation', true, 'self-monitoring', `${studentName(risk)} zeigt ein wiederkehrendes Muster`, `${studentName(risk)} zeigt zum zweiten Mal ein ähnliches Störverhalten.`, risk, [
+    good(`Du vereinbarst mit ${studentName(risk)} eine kurze Selbstbeobachtung: Wann klappt es, wann wird es schwierig?`, 'Die Person wird an der Analyse beteiligt; Veränderung wird konkret beobachtbar.'),
+    neutral('Du erinnerst noch einmal knapp an die Aufgabe.', 'Das kann kurzfristig genügen, greift bei Wiederholung aber zu kurz.'),
+    poor('Du kündigst an, jeden weiteren Fehler an der Tafel zu notieren.', 'Die Kontrolle wird öffentlich; Scham und Widerstand werden wahrscheinlicher.')
+  ], ['Selbstbeobachtung', studentName(risk)]));
 
-  s.push(scenario('D28', 'Classroom Management', hasRule('meldenplus'), selectedOrCatalog('meldenplus'), 'Warten bis zum Aufruf', `${studentName(ctx.callsOutStudent)} meldet sich, beginnt aber schon zu sprechen, bevor der Aufruf erfolgt.`, [
-    plus(`Du verweist knapp auf „${ruleText('meldenplus')}“ und gibst danach geordnet das Wort.`, 'Die Regel wird präzise auf das Verhalten bezogen.'),
-    zero('Du lässt den Beitrag zu Ende sprechen.', 'Der Inhalt wird genutzt, aber die Wartestruktur wird geschwächt.'),
-    minus('Du verbietest der Person für den Rest der Stunde Beiträge.', 'Das ist unverhältnismäßig und verhindert Beteiligung.')
-  ], ['Regel meldenplus', studentName(ctx.callsOutStudent), hasRule('meldenplus') ? 'gewählt' : 'nicht gewählt']));
-
-  s.push(scenario('D29', 'Classroom Management', hasRule('pausen'), selectedOrCatalog('pausen'), 'Private Gespräche laufen weiter', 'Während einer Arbeitsphase entstehen private Seitengespräche, die den Tisch langsam ablenken.', [
-    plus(`Du erinnerst an „${ruleText('pausen')}“ und gibst eine klare fachliche Teilaufgabe zurück.`, 'Die Grenze wird benannt und direkt mit Arbeitsorientierung verbunden.'),
-    zero('Du ignorierst das Gespräch, solange es leise bleibt.', 'Es stört nicht sofort stark, bleibt aber als Ablenkung bestehen.'),
-    minus('Du beschuldigst die Gruppe, absichtlich gegen dich zu arbeiten.', 'Die Aussage personalisiert die Störung und verschärft die Stimmung.')
-  ], ['Regel pausen', hasRule('pausen') ? 'gewählt' : 'nicht gewählt']));
-
-  s.push(scenario('D30', 'Kooperative Verhaltensmodifikation', Boolean(ctx.sensitiveStudent), 'student.hidden.sensitive', `${studentName(ctx.sensitiveStudent)} zieht sich zurück`, `${studentName(ctx.sensitiveStudent)} wirkt nach einem Fehler still und beteiligt sich nicht mehr.`, [
-    plus(`Du klärst mit ${studentName(ctx.sensitiveStudent)} kurz, welche Rückmeldung hilfreich ist, und vereinbarst ein kleines Beteiligungsziel.`, 'Die emotionale Situation wird ernst genommen und in einen machbaren Schritt übersetzt.'),
-    zero('Du lässt die Person in Ruhe und gehst weiter.', 'Das schützt kurzfristig, kann aber Rückzug stabilisieren.'),
-    minus('Du forderst sofort eine Antwort vor der Klasse.', 'Der Druck erhöht die Unsicherheit und kann Vermeidung verstärken.')
-  ], ['sensitive', studentName(ctx.sensitiveStudent)]));
-
-  s.push(scenario('D31', 'Kooperative Verhaltensmodifikation', Boolean(ctx.conflictStudent), 'student.hidden.conflictWithBoys', `${studentName(ctx.conflictStudent)} reagiert gereizt`, `${studentName(ctx.conflictStudent)} reagiert auf einen Mitschüler gereizt. Die Spannung am Tisch ist sichtbar.`, [
-    plus(`Du begrenzt den Kommentar und vereinbarst mit ${studentName(ctx.conflictStudent)} später ein konkretes Ziel für respektvolle Reaktionen.`, 'Der Konflikt wird gestoppt und nicht nur moralisch bewertet.'),
-    zero('Du wechselst schnell das Thema und beobachtest weiter.', 'Die Spannung wird nicht größer, bleibt aber unbearbeitet.'),
-    minus('Du sagst, die Person solle sich nicht so anstellen.', 'Die Abwertung kann Reizbarkeit verstärken und verhindert Verständigung.')
-  ], ['conflictWithBoys', studentName(ctx.conflictStudent)]));
-
-  s.push(scenario('D32', 'Kooperative Verhaltensmodifikation', Boolean(ctx.mediatorStudent), 'student.hidden.mediator', `${studentName(ctx.mediatorStudent)} als Vermittlungsressource`, `${studentName(ctx.mediatorStudent)} sitzt in der Nähe einer angespannten Situation und könnte beruhigend wirken.`, [
-    plus('Du nutzt die Ressource dosiert, indem du eine kurze strukturierte Partnerklärung anleitest.', 'Mitschüler*innen werden einbezogen, ohne pädagogische Verantwortung abzugeben.'),
-    zero('Du wartest, ob die Situation durch die Nähe von selbst ruhiger wird.', 'Die Ressource bleibt möglich, aber nicht bewusst genutzt.'),
-    minus(`${studentName(ctx.mediatorStudent)} soll den Konflikt allein regeln.`, 'Das überfordert die vermittelnde Person und kann neue Spannungen erzeugen.')
-  ], ['mediator', studentName(ctx.mediatorStudent)]));
-
-  s.push(scenario('D33', 'Kooperative Verhaltensmodifikation', Boolean(ctx.stabilizerStudent), 'student.hidden.stabilizer', `${studentName(ctx.stabilizerStudent)} arbeitet stabil`, `${studentName(ctx.stabilizerStudent)} hält die Aufgabe gut, während am Nachbartisch Unruhe entsteht.`, [
-    plus('Du gibst eine kurze positive Rückmeldung und nutzt das stabile Arbeiten als Orientierung für die nächste Teilaufgabe.', 'Positive Verstärkung macht erwünschtes Verhalten sichtbar, ohne andere bloßzustellen.'),
-    zero('Du freust dich innerlich und greifst nicht ein.', 'Das stabile Verhalten bleibt erhalten, wird aber nicht als Ressource genutzt.'),
-    minus('Du sagst der stabilen Person, sie müsse jetzt die anderen mitziehen.', 'Das erzeugt Überforderung und verschiebt Verantwortung.')
-  ], ['stabilizer', studentName(ctx.stabilizerStudent)]));
-
-  s.push(scenario('D34', 'Kooperative Verhaltensmodifikation', ctx.riskStudents.length > 0, 'riskStudents', `Wiederholtes Muster bei ${studentName(risk)}`, `${studentName(risk)} zeigt zum zweiten Mal ein ähnliches Störmuster. Eine reine Erinnerung reicht wahrscheinlich nicht mehr.`, [
-    plus(`Du formulierst mit ${studentName(risk)} ein konkretes Veränderungsziel und legst eine kurze Auswertung nach der Stunde fest.`, 'Das wiederkehrende Verhalten wird systematisch und kooperativ bearbeitet.'),
-    zero('Du erinnerst noch einmal an die Arbeitsphase.', 'Das kann kurzfristig reichen, bleibt aber bei Wiederholung zu dünn.'),
-    minus('Du wertest die Person als grundsätzlich schwierig.', 'Die Zuschreibung verhindert eine veränderbare Zielperspektive.')
-  ], ['riskStudents', studentName(risk)]));
-
-  s.push(scenario('D35', 'Kooperative Verhaltensmodifikation', true, 'cooperative-diagnosis', 'Ursache bleibt unklar', 'Eine Störung tritt auf, aber der Auslöser ist nicht eindeutig: Aufgabe, Sitznachbarschaft oder Aufmerksamkeit könnten eine Rolle spielen.', [
-    plus('Du sammelst kurz Beobachtungen und klärst mit der betroffenen Person, was der Auslöser gewesen sein könnte.', 'Die Intervention beginnt mit kooperativer Diagnose statt vorschneller Sanktion.'),
-    zero('Du wartest ab, ob es einmalig bleibt.', 'Das ist möglich, aber bei Wiederholung fehlt eine Grundlage.'),
-    minus('Du legst sofort eine Strafe fest, ohne den Auslöser zu klären.', 'Die Maßnahme kann am eigentlichen Problem vorbeigehen.')
-  ], ['kooperative Diagnose']));
-
-  s.push(scenario('D36', 'Kooperative Verhaltensmodifikation', true, 'goal-setting', 'Ziel muss konkret werden', 'Eine Schülerin sagt: „Ich störe doch gar nicht.“ Das Verhalten ist aber wiederholt beobachtbar.', [
-    plus('Du beschreibst neutral, was beobachtbar war, und übersetzt es in ein kleines Ziel für die nächste Phase.', 'So wird aus Vorwurf eine überprüfbare Zielvereinbarung.'),
-    zero('Du sagst, ihr redet später darüber.', 'Das kann deeskalieren, bleibt aber noch unkonkret.'),
-    minus('Du sagst: „Doch, du störst immer.“', 'Die Verallgemeinerung provoziert Verteidigung statt Veränderung.')
+  s.push(scenario('D28', 'Kooperative Verhaltensmodifikation', true, 'goal-setting', 'Ziel muss konkret werden', `${studentName(ctx.boundaryStudent)} sagt: „Ich mache doch gar nichts.“ Gleichzeitig ist das Verhalten wiederholt beobachtbar.`, ctx.boundaryStudent, [
+    good('Du beschreibst neutral das beobachtbare Verhalten und übersetzt es in ein kleines Ziel für die nächste Phase.', 'Aus einem Vorwurf wird eine überprüfbare Zielvereinbarung.'),
+    neutral('Du sagst, ihr sprecht nach der Stunde darüber.', 'Das kann deeskalieren, bleibt aber im Moment noch unkonkret.'),
+    poor('Du sagst: „Du störst immer.“', 'Die Verallgemeinerung provoziert Verteidigung statt Veränderung.')
   ], ['Zielvereinbarung']));
 
-  s.push(scenario('D37', 'Kooperative Verhaltensmodifikation', true, 'self-monitoring', 'Selbstbeobachtung einsetzen', 'Ein Verhalten tritt nicht ständig auf, aber immer wieder in bestimmten Phasen.', [
-    plus('Du vereinbarst eine kurze Selbstbeobachtung: Wann klappt es, wann wird es schwierig?', 'Das macht Muster sichtbar und beteiligt die Person an der Veränderung.'),
-    zero('Du beobachtest es allein weiter.', 'Du bekommst Informationen, aber die Person wird noch nicht beteiligt.'),
-    minus('Du kündigst an, jeden Fehler sofort zu notieren.', 'Das wirkt kontrollierend und kann Widerstand erzeugen.')
-  ], ['Selbstbeobachtung']));
+  s.push(scenario('D29', 'Kooperative Verhaltensmodifikation', true, 'diagnosis', 'Auslöser bleibt unklar', 'Eine Störung tritt auf, aber der Auslöser ist nicht eindeutig: Aufgabe, Sitznachbarschaft oder Aufmerksamkeit könnten eine Rolle spielen.', risk, [
+    good('Du sammelst kurz Beobachtungen und klärst mit der betroffenen Person, was der Auslöser gewesen sein könnte.', 'Die Intervention beginnt mit kooperativer Diagnose statt vorschneller Sanktion.'),
+    neutral('Du wartest ab, ob es einmalig bleibt.', 'Das ist möglich, aber bei Wiederholung fehlt eine Grundlage.'),
+    poor('Du legst sofort eine Konsequenz fest, ohne den Auslöser zu klären.', 'Die Maßnahme kann am eigentlichen Problem vorbeigehen.')
+  ], ['kooperative Diagnose']));
 
-  s.push(scenario('D38', 'Kooperative Verhaltensmodifikation', true, 'reinforcement', 'Verstärkung planen', 'Ein vereinbartes Ziel wurde in der ersten Arbeitsphase teilweise erreicht.', [
-    plus('Du gibst eine konkrete Rückmeldung zum erreichten Verhalten und vereinbarst, woran weitergearbeitet wird.', 'Positive Rückmeldung stabilisiert Veränderung und bleibt lernorientiert.'),
-    zero('Du nimmst es zur Kenntnis und gehst zur nächsten Aufgabe.', 'Das Ziel bleibt bestehen, wird aber nicht gestärkt.'),
-    minus('Du betonst nur, was noch nicht geklappt hat.', 'Die Veränderung wird entwertet und Motivation sinkt.')
-  ], ['Rückmeldung', 'Verstärkung']));
+  s.push(scenario('D30', 'Kooperative Verhaltensmodifikation', true, 'reinforcement', 'Teilziel wurde erreicht', `${studentName(ctx.transitionStudent)} hält eine kurze Arbeitsphase besser durch als zuvor.`, ctx.transitionStudent, [
+    good('Du gibst konkrete Rückmeldung zum erreichten Teilziel und vereinbarst den nächsten kleinen Schritt.', 'Veränderung wird sichtbar und anschlussfähig.'),
+    neutral('Du gehst direkt zur nächsten Aufgabe über.', 'Der Ablauf bleibt flüssig, aber die Veränderung wird nicht stabilisiert.'),
+    poor('Du betonst nur, was noch nicht funktioniert hat.', 'Der Fortschritt wird entwertet; Motivation kann sinken.')
+  ], ['Verstärkung', studentName(ctx.transitionStudent)]));
 
-  s.push(scenario('D39', 'Kooperative Verhaltensmodifikation', true, 'evaluation', 'Kurze Auswertung nach der Phase', 'Die Arbeitsphase endet. Ein zuvor vereinbartes Verhalten soll kurz ausgewertet werden.', [
-    plus('Du fragst knapp: Was hat geholfen, was war schwierig, was gilt als nächster Schritt?', 'Die Auswertung macht den Veränderungsprozess transparent und anschlussfähig.'),
-    zero('Du beendest die Phase pünktlich ohne Rückblick.', 'Der Ablauf bleibt sauber, aber die Intervention verliert Anschluss.'),
-    minus('Du bewertest nur öffentlich, ob es gut oder schlecht war.', 'Die Auswertung wird zur Bloßstellung statt zur gemeinsamen Reflexion.')
+  s.push(scenario('D31', 'Kooperative Verhaltensmodifikation', true, 'deescalation', `${studentName(ctx.sensitiveStudent)} zieht sich zurück`, `${studentName(ctx.sensitiveStudent)} sagt kaum noch etwas und vermeidet Blickkontakt.`, ctx.sensitiveStudent, [
+    good('Du bietest leise eine Wahl zwischen kurzer Pause, Hilfesignal oder erstem kleinen Arbeitsschritt an.', 'Die Person erhält Handlungskontrolle zurück, ohne aus dem Unterricht herauszufallen.'),
+    neutral('Du lässt die Person zunächst in Ruhe und beobachtest.', 'Das kann schützen, löst aber die Anschlussfrage noch nicht.'),
+    poor('Du forderst sofort vor allen eine Erklärung ein.', 'Der Druck steigt und Rückzug kann sich verstärken.')
+  ], ['Rückzug', studentName(ctx.sensitiveStudent)]));
+
+  s.push(scenario('D32', 'Kooperative Verhaltensmodifikation', true, 'peer-resource', `${studentName(ctx.mediatorStudent)} will schlichten`, `${studentName(ctx.mediatorStudent)} bemerkt eine Spannung und bietet spontan Hilfe an.`, ctx.mediatorStudent, [
+    good('Du nimmst die Ressource auf, klärst aber den Rahmen und bleibst selbst verantwortlich.', 'Peer-Unterstützung wird genutzt, ohne pädagogische Verantwortung auszulagern.'),
+    neutral('Du bedankst dich und übernimmst die Situation allein.', 'Die Situation bleibt geführt, aber die Ressource wird nicht genutzt.'),
+    poor('Du lässt die Schlichtung vollständig von der Schülerin übernehmen.', 'Die Person kann überfordert werden und die Verantwortung verschiebt sich unangemessen.')
+  ], ['Peer-Ressource', studentName(ctx.mediatorStudent)]));
+
+  s.push(scenario('D33', 'Classroom Management', true, 'attention economy', 'Aufmerksamkeit droht zur Belohnung zu werden', `${studentName(ctx.callsOutStudent)} testet mit kleinen Bemerkungen, ob die Klasse reagiert.`, ctx.callsOutStudent, [
+    good('Du gibst eine knappe, ruhige Grenze und verstärkst direkt das nächste passende Arbeitsverhalten.', 'Aufmerksamkeit wird an erwünschtes Verhalten gekoppelt, nicht an Provokation.'),
+    neutral('Du ignorierst die Bemerkung und beobachtest weiter.', 'Das kann reichen, wenn keine Folgeaufmerksamkeit entsteht.'),
+    poor('Du diskutierst jede Bemerkung ausführlich aus.', 'Die Bemerkungen erhalten genau die Aufmerksamkeit, die sie wahrscheinlich attraktiv macht.')
+  ], ['Aufmerksamkeitssteuerung', studentName(ctx.callsOutStudent)]));
+
+  s.push(scenario('D34', 'Kooperative Verhaltensmodifikation', true, 'overhelping', 'Hilfe wird zur Abhängigkeit', `${studentName(ctx.transitionStudent)} fragt bei jedem kleinen Schritt nach Bestätigung.`, ctx.transitionStudent, [
+    good('Du vereinbarst ein Hilfesignal und zwei Schritte, die zuerst selbst geprüft werden.', 'Unterstützung bleibt verfügbar, fördert aber Selbststeuerung.'),
+    neutral('Du beantwortest die nächste Frage knapp.', 'Das löst den Moment, kann das Abhängigkeitsmuster aber erhalten.'),
+    poor('Du setzt sofort eine starke Person daneben, die jeden Schritt erklärt.', 'Kurzfristig entsteht Hilfe, langfristig kann Selbstständigkeit weiter sinken.')
+  ], ['Hilfeverhalten', studentName(ctx.transitionStudent)]));
+
+  s.push(scenario('D35', 'Classroom Management', true, 'transition-management', 'Übergang in Partnerarbeit', `Der Wechsel wird unruhig; ${studentName(ctx.boundaryStudent)} nutzt die Bewegung für Kommentare.`, ctx.boundaryStudent, [
+    good('Du stoppst kurz, gibst ein eindeutiges Startsignal und lässt erst danach wechseln.', 'Der Übergang wird strukturiert und verliert Störpotenzial.'),
+    neutral('Du erinnerst während des Wechsels an Ruhe.', 'Es kann funktionieren, aber die Struktur kommt spät.'),
+    poor('Du drohst mit dem Abbruch aller Partnerarbeit.', 'Die Drohung kann die Arbeitsform negativ aufladen und Widerstand erzeugen.')
+  ], ['Übergang', studentName(ctx.boundaryStudent)]));
+
+  s.push(scenario('D36', 'Kooperative Verhaltensmodifikation', true, 'private-feedback', 'Rückmeldung nach der Störung', `${studentName(risk)} hat sich nach einem Signal wieder gefangen.`, risk, [
+    good('Du gibst später kurz privat Rückmeldung: Was hat geholfen und was gilt beim nächsten Mal?', 'Die Rückmeldung stabilisiert das gelingende Verhalten ohne öffentliche Markierung.'),
+    neutral('Du machst weiter, weil die Störung vorbei ist.', 'Die Stunde läuft weiter, aber die Lernchance bleibt ungenutzt.'),
+    poor('Du sagst vor der Klasse, dass es diesmal gerade noch gut gegangen sei.', 'Die öffentliche Bewertung kann Beschämung auslösen und die Beziehung belasten.')
+  ], ['private Rückmeldung', studentName(risk)]));
+
+  s.push(scenario('D37', 'Classroom Management', true, 'teacher-position', 'Lehrkraft steht ungünstig', `Während du vorne erklärst, beginnt am Rand bei ${studentName(weak)} Bewegung.`, weak, [
+    good('Du veränderst deine Position so, dass der Randbereich sichtbar bleibt, und erklärst weiter.', 'Die räumliche Präsenz wirkt präventiv, ohne den Ablauf zu stoppen.'),
+    neutral('Du beendest erst den Satz und gehst danach hin.', 'Das kann reichen, solange die Bewegung klein bleibt.'),
+    poor('Du ignorierst den Randbereich, weil du gerade an der Tafel bist.', 'Die Randdynamik kann wachsen und später eine größere Intervention erzwingen.')
+  ], ['Lehrkraftposition', studentName(weak)]));
+
+  s.push(scenario('D38', 'Kooperative Verhaltensmodifikation', true, 'false-positive-praise', 'Lob könnte kippen', `${studentName(support)} arbeitet gut, während ${studentName(risk)} am Nachbartisch stockt.`, support, [
+    good(`Du gibst ${studentName(support)} konkrete Rückmeldung und fragst, ob eine kurze Partnerhilfe freiwillig passt.`, 'Anerkennung bleibt Anerkennung; Unterstützung wird nicht zur Pflicht.'),
+    neutral('Du sagst nur kurz „gut“ und gehst weiter.', 'Das Verhalten wird knapp bestätigt, aber wenig ausgebaut.'),
+    poor(`Du lobst ${studentName(support)} laut als Vorbild und sagst ${studentName(risk)}, er solle sich daran ein Beispiel nehmen.`, 'Das Lob wird zum Vergleich; der andere Schüler kann beschämt reagieren und die Ressource verliert Qualität.')
+  ], ['Ressource ohne Überforderung', studentName(support)]));
+
+  s.push(scenario('D39', 'Kooperative Verhaltensmodifikation', true, 'evaluation', 'Kurze Auswertung nach der Phase', 'Eine Arbeitsphase endet. Ein vereinbartes Verhalten soll kurz ausgewertet werden.', risk, [
+    good('Du fragst knapp: Was hat geholfen, was war schwierig, was ist der nächste Schritt?', 'Die Auswertung macht den Veränderungsprozess transparent und anschlussfähig.'),
+    neutral('Du beendest die Phase pünktlich ohne Rückblick.', 'Der Ablauf bleibt sauber, aber die Intervention verliert Anschluss.'),
+    poor('Du bewertest öffentlich, ob es gut oder schlecht war.', 'Die Auswertung wird zur Bloßstellung statt zur gemeinsamen Reflexion.')
   ], ['Auswertung']));
 
-  s.push(scenario('D40', 'Kooperative Verhaltensmodifikation', true, 'lessonReflection', 'Stunde endet mit Restspannung', 'Die Stunde endet, aber ein wiederkehrendes Problem ist noch nicht abschließend gelöst.', [
-    plus('Du hältst kurz fest, welches Ziel in der nächsten Stunde weiter gilt und welche Unterstützung dafür vereinbart wurde.', 'Der Prozess bleibt kooperativ und wird nicht einfach abgebrochen.'),
-    zero('Du beendest die Stunde pünktlich und beobachtest es beim nächsten Mal erneut.', 'Es eskaliert nicht, aber der Prozess bleibt offen.'),
-    minus('Du beendest die Stunde mit einer pauschalen Drohung für das nächste Mal.', 'Die nächste Stunde startet mit Druck statt mit geklärtem Ziel.')
-  ], ['Reflexion', 'Folgeziel']));
+  s.push(scenario('D40', 'Kooperative Verhaltensmodifikation', true, 'lessonReflection', 'Stunde endet mit Restspannung', 'Die Stunde endet, aber ein wiederkehrendes Problem ist noch nicht abschließend gelöst.', risk, [
+    good('Du hältst kurz fest, welches Ziel in der nächsten Stunde weiter gilt und welche Unterstützung dafür vereinbart wurde.', 'Der Prozess bleibt kooperativ und wird nicht einfach abgebrochen.'),
+    neutral('Du beendest pünktlich und beobachtest es beim nächsten Mal erneut.', 'Es eskaliert nicht, aber der Prozess bleibt offen.'),
+    poor('Du beendest die Stunde mit einer pauschalen Drohung für das nächste Mal.', 'Die nächste Stunde startet mit Druck statt mit geklärtem Ziel.')
+  ], ['Folgeziel']));
 
   return s.slice(0, 40);
 }
 
 function init() {
-  renderContext();
+  renderStaticContext();
+  renderLife();
+  renderClassroom();
   renderScenarioCatalog();
   bindEvents();
 }
 
 function bindEvents() {
-  if (openScenarioBtn) openScenarioBtn.addEventListener('click', () => scenarioDrawer.hidden = false);
-  if (closeScenarioBtn) closeScenarioBtn.addEventListener('click', () => scenarioDrawer.hidden = true);
+  if (startLessonBtn) startLessonBtn.addEventListener('click', startLesson);
+  if (continueLessonBtn) continueLessonBtn.addEventListener('click', continueAfterScenario);
+  if (openScenarioBtn) openScenarioBtn.addEventListener('click', () => { scenarioDrawer.hidden = false; });
+  if (closeScenarioBtn) closeScenarioBtn.addEventListener('click', () => { scenarioDrawer.hidden = true; });
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && scenarioDrawer && !scenarioDrawer.hidden) scenarioDrawer.hidden = true;
+    if (event.key === 'Escape') {
+      if (scenarioDrawer && !scenarioDrawer.hidden) scenarioDrawer.hidden = true;
+    }
   });
 }
 
-function renderContext() {
-  const score = context.stepData?.rawPreparationScore ?? context.stepData?.preparationScore ?? '–';
-  const hooks = Array.isArray(context.stepData?.suggestedScenarioHooks) ? context.stepData.suggestedScenarioHooks : [];
-  if (stepSummary) {
-    const dynamicBits = [
-      `${context.blindRiskStudents.length} blinde Risikoschüler*innen`,
-      `${context.riskyPairs.length} riskante Nachbarschaften`,
-      `${context.stabilizingPairs.length} stabilisierende Nachbarschaften`,
-      `${context.activeTrash.length} Müllfelder`,
-      `${context.invalidSpacing.length} enge Laufwege`
-    ];
-    stepSummary.innerHTML = `<strong>Startstabilität:</strong> ${score} · <strong>dynamische Auslöser:</strong> ${dynamicBits.join(' · ')}${hooks.length ? `<br><strong>Hooks:</strong> ${hooks.map(escapeHtml).join(', ')}` : ''}`;
-  }
-
-  if (ruleSummary) ruleSummary.textContent = `${context.acceptedRules.length} verbindliche Klassenregeln gespeichert`;
+function renderStaticContext() {
+  if (ruleCountPill) ruleCountPill.textContent = `${context.acceptedRules.length}`;
   if (selectedRulesList) {
     selectedRulesList.innerHTML = context.acceptedRules.length
       ? context.acceptedRules.map(rule => `<li>${escapeHtml(rule.text || rule.id)}</li>`).join('')
-      : '<li>Keine Regeln gespeichert. Regel-Szenarien werden als Katalogvarianten angezeigt.</li>';
+      : '<li>Keine Regeln gespeichert. Regel-Szenarien laufen als allgemeine Varianten.</li>';
   }
-
-  if (studentContextList) {
-    studentContextList.innerHTML = context.students.map(student => {
-      const place = deskPlace(student);
-      const markers = [];
-      if (student.hidden?.risk >= 3) markers.push('störanfällig');
-      if (student.hidden?.stabilizer) markers.push('stabilisierend');
-      if (student.hidden?.mediator) markers.push('vermittelnd');
-      if (student.hidden?.phoneRisk) markers.push('Handy-Risiko');
-      return `<li><strong>${escapeHtml(student.name)} (${student.age})</strong><span>${escapeHtml(student.note || '')}</span><small>${escapeHtml(place)}${markers.length ? ` · ${markers.join(', ')}` : ''}</small></li>`;
-    }).join('');
+  if (stepSummary) {
+    const bits = [
+      `Start: ${clampScore(context.startScore)}/10`,
+      `${context.blindRiskStudents.length} blinde Risiken`,
+      `${context.riskyPairs.length || context.computedPairs.risky.length} riskante Nähe`,
+      `${context.stabilizingPairs.length || context.computedPairs.support.length} Ressourcen`,
+      `${context.activeTrash.length} Müll`
+    ];
+    stepSummary.textContent = bits.join(' · ');
   }
 }
 
-function scenarioFitLabel(scenario) {
-  if (scenario.matched) return 'aus dieser Runde';
-  if (scenario.source?.startsWith('nicht')) return 'Regel nicht gewählt';
-  return 'Fallback / Katalog';
+function renderLife() {
+  if (lessonScoreText) lessonScoreText.textContent = `${lessonState.score}/10 Punkte`;
+  if (lessonLifeHint) lessonLifeHint.textContent = lessonState.score <= 3 ? 'Niedrige Stabilität: Jede Eskalation ist kritisch.' : lessonState.score <= 6 ? 'Mittlere Stabilität: Entscheidungen verändern die Lage deutlich.' : 'Hohe Stabilität: Gute Vorbereitung gibt Handlungsspielraum.';
+  if (!lessonLifeSegments) return;
+  lessonLifeSegments.innerHTML = '';
+  lessonLifeSegments.classList.remove('life-low', 'life-mid', 'life-high');
+  lessonLifeSegments.classList.add(lessonState.score <= 3 ? 'life-low' : lessonState.score <= 6 ? 'life-mid' : 'life-high');
+  for (let i = 1; i <= 10; i += 1) {
+    const segment = document.createElement('span');
+    if (i <= lessonState.score) segment.classList.add('active');
+    lessonLifeSegments.appendChild(segment);
+  }
+}
+
+function renderClassroom() {
+  if (!lessonGrid) return;
+  lessonGrid.style.setProperty('--lesson-cols', String(context.cols));
+  lessonGrid.style.setProperty('--lesson-rows', String(context.rows));
+  lessonGrid.innerHTML = '';
+  for (let row = 0; row < context.rows; row += 1) {
+    for (let col = 0; col < context.cols; col += 1) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'lesson-cell';
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+
+      const block = getBlockedCell(row, col);
+      const group = block ? getBlockedGroupAt(row, col) : null;
+      if (block) {
+        cell.classList.add('lesson-blocked', `lesson-blocked-${block.type}`);
+        if (group) cell.classList.add(...getJoinClasses(group, row, col));
+        cell.disabled = true;
+        if (group && group.minRow === row && group.minCol === col) cell.appendChild(createLessonBlockedLabel(group));
+      }
+
+      const desk = getDeskAt(row, col);
+      if (desk) cell.appendChild(createLessonDesk(desk));
+
+      const object = getRoomObjectAt(row, col);
+      if (object) cell.appendChild(createLessonObject(object));
+
+      if (lessonState.teacher.row === row && lessonState.teacher.col === col) cell.appendChild(createLessonTeacher());
+
+      cell.addEventListener('click', () => moveTeacherTo(row, col));
+      cell.addEventListener('dragover', event => { if (lessonState.dragTeacher && canTeacherMove(row, col)) event.preventDefault(); });
+      cell.addEventListener('drop', event => { event.preventDefault(); if (lessonState.dragTeacher) moveTeacherTo(row, col); });
+      lessonGrid.appendChild(cell);
+    }
+  }
+}
+
+function getBlockedCell(row, col) { return context.blockedCells.find(cell => cell.row === row && cell.col === col) || null; }
+function getBlockedGroupAt(row, col) { return context.blockedGroups.find(group => group.cells.some(cell => cell.row === row && cell.col === col)) || null; }
+function getJoinClasses(group, row, col) {
+  const has = (r, c) => group.cells.some(cell => cell.row === r && cell.col === c);
+  return [has(row, col - 1) && 'join-left', has(row, col + 1) && 'join-right', has(row - 1, col) && 'join-up', has(row + 1, col) && 'join-down'].filter(Boolean);
+}
+function getDeskAt(row, col) { return context.desks.find(desk => desk.row === row && desk.col === col) || null; }
+function getRoomObjectAt(row, col) {
+  const broom = context.objects?.broom;
+  if (broom && broom.row === row && broom.col === col) return { ...broom, type: 'broom' };
+  return (context.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;
+}
+function canTeacherMove(row, col) { return !getBlockedCell(row, col) && !getDeskAt(row, col) && !getRoomObjectAt(row, col); }
+
+function createLessonBlockedLabel(group) {
+  const el = document.createElement('span');
+  el.className = `lesson-blocked-label lesson-${group.type}`;
+  el.style.setProperty('--span-cols', String(group.colSpan));
+  el.style.setProperty('--span-rows', String(group.rowSpan));
+  el.innerHTML = group.type === 'sink' ? 'Wasch-<br>becken' : group.type === 'exit' ? 'Notaus-<br>gang' : escapeHtml(group.label || group.type);
+  return el;
+}
+
+function createLessonDesk(desk) {
+  const el = document.createElement('div');
+  const assignedId = context.assignments[desk.id];
+  const student = assignedId ? context.studentById[assignedId] : null;
+  el.className = 'lesson-desk';
+  if (lessonState.activeEvent?.targetStudentId === assignedId) el.classList.add('event-target');
+  el.innerHTML = `<span>${escapeHtml(desk.id.replace('desk-', 'T'))}</span><strong>${escapeHtml(student?.name || 'frei')}</strong>`;
+  return el;
+}
+
+function createLessonObject(object) {
+  const el = document.createElement('span');
+  el.className = `lesson-object lesson-object-${object.type}`;
+  el.textContent = object.type === 'broom' ? '🧹' : '🗑️';
+  return el;
+}
+
+function createLessonTeacher() {
+  const el = document.createElement('div');
+  el.className = 'lesson-teacher';
+  el.draggable = true;
+  el.textContent = 'LK';
+  el.title = 'Lehrkraft ziehen oder freies Feld anklicken';
+  el.addEventListener('dragstart', event => { lessonState.dragTeacher = true; event.dataTransfer.setData('text/plain', 'teacher'); });
+  el.addEventListener('dragend', () => { lessonState.dragTeacher = false; });
+  return el;
+}
+
+function moveTeacherTo(row, col) {
+  if (!lessonState.started || lessonState.ended || scenarioModal && !scenarioModal.hidden) return;
+  if (!canTeacherMove(row, col)) return;
+  lessonState.teacher = { ...lessonState.teacher, row, col };
+  renderClassroom();
+  checkTeacherResponse();
+}
+
+function startLesson() {
+  if (lessonState.started) return;
+  lessonState.started = true;
+  lessonState.ended = false;
+  if (startLessonBtn) startLessonBtn.disabled = true;
+  updatePhase('Unterricht läuft', 'Die Klasse arbeitet. Die nächste Störung kann jederzeit entstehen.');
+  lessonState.timerId = window.setInterval(tickLessonTimer, 1000);
+  renderTimer();
+  scheduleNextEvent();
+}
+
+function tickLessonTimer() {
+  lessonState.timeLeft -= 1;
+  if (lessonState.timeLeft <= 0) {
+    lessonState.timeLeft = 0;
+    endLesson();
+  }
+  renderTimer();
+}
+
+function renderTimer() {
+  if (!lessonTimer) return;
+  const minutes = String(Math.floor(lessonState.timeLeft / 60)).padStart(2, '0');
+  const seconds = String(lessonState.timeLeft % 60).padStart(2, '0');
+  lessonTimer.textContent = `${minutes}:${seconds}`;
+}
+
+function scheduleNextEvent() {
+  clearEventTimers();
+  if (!lessonState.started || lessonState.ended || lessonState.timeLeft <= 0) return;
+  updatePhase('Unterricht läuft', 'Die Klasse arbeitet. Beobachte den Raum.');
+  const delay = randomInt(3000, 5000);
+  lessonState.eventTimeoutId = window.setTimeout(triggerEvent, delay);
+}
+
+function triggerEvent() {
+  if (lessonState.ended || !lessonState.started) return;
+  const scenarioItem = pickScenario();
+  lessonState.currentScenario = scenarioItem;
+  lessonState.activeEvent = { scenarioId: scenarioItem.id, targetStudentId: scenarioItem.targetStudentId, responseResolved: false };
+  lessonState.responseLeft = 3;
+  renderClassroom();
+  updatePhase('Auffälligkeit bemerkt', `${studentName(context.studentById[scenarioItem.targetStudentId])} blinkt. Bewege die Lehrkraft innerhalb von 3 Sekunden in die Nähe.`);
+  if (lessonPhase) lessonPhase.textContent = 'Reaktion: 3 s';
+  lessonState.responseIntervalId = window.setInterval(() => {
+    lessonState.responseLeft -= 1;
+    if (lessonPhase) lessonPhase.textContent = `Reaktion: ${Math.max(0, lessonState.responseLeft)} s`;
+  }, 1000);
+  lessonState.responseTimeoutId = window.setTimeout(() => openScenario(scenarioItem, 'missed'), 3000);
+}
+
+function pickScenario() {
+  const candidates = SCENARIOS.filter(item => item.targetStudentId && context.deskByStudentId[item.targetStudentId]);
+  const notUsed = candidates.filter(item => !lessonState.usedScenarioIds.has(item.id));
+  const pool = notUsed.length ? notUsed : candidates;
+  const matched = pool.filter(item => item.matched);
+  const chosenPool = matched.length ? matched : pool;
+  const chosen = chosenPool[Math.floor(Math.random() * chosenPool.length)] || SCENARIOS[0];
+  lessonState.usedScenarioIds.add(chosen.id);
+  return chosen;
+}
+
+function checkTeacherResponse() {
+  if (!lessonState.activeEvent || lessonState.activeEvent.responseResolved) return;
+  const targetDesk = context.deskByStudentId[lessonState.activeEvent.targetStudentId];
+  if (!targetDesk) return;
+  const distance = Math.abs(lessonState.teacher.row - targetDesk.row) + Math.abs(lessonState.teacher.col - targetDesk.col);
+  if (distance <= 1) {
+    lessonState.activeEvent.responseResolved = true;
+    clearResponseTimers();
+    if (Math.random() < 0.5) {
+      openScenario(lessonState.currentScenario, 'approached');
+    } else {
+      const name = studentName(context.studentById[lessonState.activeEvent.targetStudentId]);
+      updatePhase('Früh abgefangen', `${name} beruhigt sich durch deine Nähe. Es entsteht diesmal kein Branching-Szenario.`);
+      lessonState.activeEvent = null;
+      renderClassroom();
+      scheduleNextEvent();
+    }
+  }
+}
+
+function openScenario(scenarioItem, mode) {
+  if (!scenarioItem || lessonState.ended) return;
+  clearResponseTimers();
+  clearTimeout(lessonState.eventTimeoutId);
+  lessonState.eventTimeoutId = null;
+  const name = studentName(context.studentById[scenarioItem.targetStudentId]);
+  if (scenarioModalType) scenarioModalType.textContent = scenarioItem.type;
+  if (scenarioModalTitle) scenarioModalTitle.textContent = scenarioItem.title;
+  if (scenarioModalSource) scenarioModalSource.textContent = mode === 'missed' ? 'zu spät reagiert' : 'trotz Präsenz ausgelöst';
+  if (scenarioModalScene) scenarioModalScene.textContent = mode === 'missed'
+    ? `${name} wurde nicht rechtzeitig erreicht. ${scenarioItem.scene}`
+    : `${name} wurde rechtzeitig erreicht, aber die Situation braucht trotzdem eine Entscheidung. ${scenarioItem.scene}`;
+  if (scenarioModalOutcome) { scenarioModalOutcome.hidden = true; scenarioModalOutcome.innerHTML = ''; }
+  if (continueLessonBtn) continueLessonBtn.hidden = true;
+  if (scenarioModalAnswers) {
+    const shuffled = shuffle([...scenarioItem.answers]);
+    scenarioModalAnswers.innerHTML = '';
+    shuffled.forEach((item, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'modal-answer-btn';
+      btn.innerHTML = `<span>Option ${String.fromCharCode(65 + index)}</span><strong>${escapeHtml(item.text)}</strong>`;
+      btn.addEventListener('click', () => chooseAnswer(item, btn));
+      scenarioModalAnswers.appendChild(btn);
+    });
+  }
+  if (scenarioModal) scenarioModal.hidden = false;
+  updatePhase('Entscheidung nötig', 'Wähle eine Reaktion. Die Wirkung wird danach sichtbar.');
+}
+
+function chooseAnswer(answerItem) {
+  if (!scenarioModalAnswers) return;
+  [...scenarioModalAnswers.querySelectorAll('button')].forEach(button => { button.disabled = true; });
+  const previous = lessonState.score;
+  lessonState.score = clampScore(lessonState.score + answerItem.delta);
+  renderLife();
+  const effect = answerItem.delta > 0 ? 'Die Stabilität steigt.' : answerItem.delta < 0 ? 'Die Stabilität sinkt.' : 'Die Stabilität bleibt unverändert.';
+  if (scenarioModalOutcome) {
+    scenarioModalOutcome.hidden = false;
+    scenarioModalOutcome.className = `scenario-outcome outcome-${answerItem.kind}`;
+    scenarioModalOutcome.innerHTML = `<strong>${effect} ${previous}/10 → ${lessonState.score}/10</strong><p>${escapeHtml(answerItem.feedback)}</p>`;
+  }
+  if (continueLessonBtn) continueLessonBtn.hidden = false;
+  updatePhase('Folge sichtbar', effect);
+}
+
+function continueAfterScenario() {
+  if (scenarioModal) scenarioModal.hidden = true;
+  lessonState.activeEvent = null;
+  lessonState.currentScenario = null;
+  renderClassroom();
+  if (lessonState.score <= 0) {
+    endLesson('Die Lebensleiste ist leer. Der Unterricht kippt und muss neu vorbereitet werden.');
+    return;
+  }
+  scheduleNextEvent();
+}
+
+function endLesson(message = 'Die zehn Minuten Unterrichtszeit sind vorbei.') {
+  lessonState.ended = true;
+  lessonState.started = false;
+  window.clearInterval(lessonState.timerId);
+  clearEventTimers();
+  if (startLessonBtn) startLessonBtn.disabled = true;
+  if (scenarioModal) scenarioModal.hidden = true;
+  updatePhase('Unterricht beendet', `${message} Endstabilität: ${lessonState.score}/10.`);
+}
+
+function clearResponseTimers() {
+  window.clearTimeout(lessonState.responseTimeoutId);
+  window.clearInterval(lessonState.responseIntervalId);
+  lessonState.responseTimeoutId = null;
+  lessonState.responseIntervalId = null;
+}
+function clearEventTimers() {
+  window.clearTimeout(lessonState.eventTimeoutId);
+  clearResponseTimers();
+  lessonState.eventTimeoutId = null;
+}
+function updatePhase(title, text) {
+  if (eventStatusTitle) eventStatusTitle.textContent = title;
+  if (eventStatusText) eventStatusText.textContent = text;
+  if (lessonPhase && !lessonState.activeEvent) lessonPhase.textContent = title;
 }
 
 function renderScenarioCatalog() {
   if (!scenarioList) return;
   if (scenarioCount) scenarioCount.textContent = `${SCENARIOS.length} Szenarien`;
-  scenarioList.innerHTML = SCENARIOS.map((scenarioItem, index) => `
-    <article class="scenario-card ${scenarioItem.matched ? 'matched' : 'fallback'}" data-type="${escapeHtml(scenarioItem.type)}">
+  scenarioList.innerHTML = SCENARIOS.map((item, index) => `
+    <article class="scenario-card ${item.matched ? 'matched' : 'fallback'}" data-type="${escapeHtml(item.type)}">
       <div class="scenario-card-head">
         <span class="scenario-number">${String(index + 1).padStart(2, '0')}</span>
-        <div>
-          <p class="eyebrow">${escapeHtml(scenarioItem.type)}</p>
-          <h3>${escapeHtml(scenarioItem.title)}</h3>
-        </div>
-        <span class="scenario-fit">${escapeHtml(scenarioFitLabel(scenarioItem))}</span>
+        <div><p class="eyebrow">${escapeHtml(item.type)}</p><h3>${escapeHtml(item.title)}</h3></div>
+        <span class="scenario-fit">${item.matched ? 'aus dieser Runde' : 'Katalog / falls passend'}</span>
       </div>
-      <p class="scenario-scene">${escapeHtml(scenarioItem.scene)}</p>
-      ${scenarioItem.contextNote ? `<p class="scenario-context-note">${escapeHtml(scenarioItem.contextNote)}</p>` : ''}
-      <div class="scenario-focus">${(scenarioItem.focus || []).map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>
-      <div class="scenario-answers">
-        ${scenarioItem.answers.map(answer => `
-          <div class="scenario-answer delta-${answer.delta > 0 ? 'plus' : answer.delta < 0 ? 'minus' : 'zero'}">
-            <strong>${answer.delta > 0 ? '+1' : answer.delta < 0 ? '-1' : '0'}</strong>
-            <p>${escapeHtml(answer.text)}</p>
-            <small>${escapeHtml(answer.feedback)}</small>
+      <p class="scenario-scene">${escapeHtml(item.scene)}</p>
+      ${item.contextNote ? `<p class="scenario-context-note">${escapeHtml(item.contextNote)}</p>` : ''}
+      <div class="scenario-focus">${(item.focus || []).map(f => `<span>${escapeHtml(f)}</span>`).join('')}</div>
+      <div class="scenario-answers catalog-answer-list">
+        ${item.answers.map((ans, answerIndex) => `
+          <div class="scenario-answer catalog-answer">
+            <strong>${String.fromCharCode(65 + answerIndex)}</strong>
+            <p>${escapeHtml(ans.text)}</p>
+            <small>${escapeHtml(ans.feedback)}</small>
           </div>
         `).join('')}
       </div>
@@ -581,14 +934,16 @@ function renderScenarioCatalog() {
   `).join('');
 }
 
+function shuffle(values) {
+  for (let i = values.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [values[i], values[j]] = [values[j], values[i]];
+  }
+  return values;
+}
+function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  }[char]));
+  return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 }
 
 init();

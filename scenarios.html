@@ -3,58 +3,96 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Unterrichtsszenarien | Classroom-Management-Spiel</title>
+  <title>Unterrichtsverlauf | Classroom-Management-Spiel</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="scenarios-page">
+<body class="scenarios-page branching-page">
   <header class="topbar compact-topbar scenarios-topbar">
     <div>
       <p class="eyebrow">Interaktive Phase · Schritt 3</p>
-      <h1>Unterrichtsverlauf vorbereiten</h1>
-      <p class="subtitle">Der Branching-Modus ist noch nicht aktiv. Der Katalog wird bereits dynamisch aus Sitzplan, Regeln und Profilen aufgebaut.</p>
+      <h1>Unterrichtsverlauf</h1>
+      <p class="subtitle">Branching-Prototyp: Die vorbereitete Klasse läuft im Hintergrund weiter. Störungen entstehen aus Sitzplan, Regeln und Schülerprofilen.</p>
     </div>
     <div class="scenario-top-actions">
       <button type="button" id="openScenarioBtn" class="primary-btn">Szenarien einsehen</button>
     </div>
   </header>
 
-  <main class="scenario-shell">
-    <section class="panel scenario-intro">
-      <div>
-        <p class="eyebrow">Nächster Schritt</p>
-        <h2>Branching-Szenario wird später hier angeschlossen.</h2>
-        <p>Diese Seite übernimmt die vorbereitete Klasse und die gewählten Klassenregeln. Der Button oben rechts öffnet den dynamisch befüllten Szenario-Katalog für den späteren Unterrichtsverlauf.</p>
+  <main class="branching-shell">
+    <aside class="panel lesson-sidebar" aria-label="Unterrichtsstatus">
+      <div class="lesson-timer-card">
+        <span class="score-label">Unterrichtszeit</span>
+        <strong id="lessonTimer">10:00</strong>
+        <span id="lessonPhase" class="score-scale">bereit</span>
       </div>
-      <div class="scenario-context-grid">
-        <article>
-          <h3>Aus Schritt 1</h3>
-          <p id="stepSummary">Classroom-Management-Daten werden geladen …</p>
-        </article>
-        <article>
-          <h3>Aus Schritt 2</h3>
-          <p id="ruleSummary">Regeldaten werden geladen …</p>
-          <ul id="selectedRulesList" class="scenario-rule-list"></ul>
-        </article>
-      </div>
-    </section>
 
-    <section class="panel scenario-student-panel">
-      <div class="section-title-row">
-        <h2>Schülerkontext</h2>
-        <span class="pill">aus Sitzplan übernommen</span>
+      <section class="lesson-life-box" aria-label="Lebensleiste">
+        <div class="life-panel-topline">
+          <strong>Lebensleiste</strong>
+          <span id="lessonScoreText">– Punkte</span>
+        </div>
+        <div id="lessonLifeSegments" class="life-segments lesson-life-segments"></div>
+        <p id="lessonLifeHint" class="hint">Startwert aus der Classroom-Management-Auswertung.</p>
+      </section>
+
+      <section class="lesson-event-box">
+        <p class="eyebrow">Aktuelle Lage</p>
+        <h2 id="eventStatusTitle">Unterricht starten</h2>
+        <p id="eventStatusText">Starte den Unterricht. Wenn ein Schüler blinkt, bewege die Lehrkraft innerhalb von drei Sekunden in die Nähe.</p>
+        <button type="button" id="startLessonBtn" class="primary-btn">Unterricht starten</button>
+      </section>
+
+      <section class="lesson-rules-box">
+        <div class="section-title-row">
+          <h2>Regeln</h2>
+          <span id="ruleCountPill" class="pill">0</span>
+        </div>
+        <ul id="selectedRulesList" class="scenario-rule-list"></ul>
+      </section>
+    </aside>
+
+    <section class="panel lesson-stage" aria-label="Klassenraum im Unterricht">
+      <div class="lesson-stage-head">
+        <div>
+          <p class="eyebrow">Live-Klassenraum</p>
+          <h2>Bewege die Lehrkraft zur blinkenden Störung</h2>
+        </div>
+        <p id="stepSummary" class="lesson-summary">Daten werden geladen …</p>
       </div>
-      <ul id="studentContextList" class="scenario-student-list"></ul>
+      <div class="lesson-grid-wrap">
+        <div class="board-marker lesson-board-marker" aria-label="Tafel vorne">Tafel / vorne</div>
+        <div id="lessonGrid" class="lesson-grid" aria-label="Klassenraumraster"></div>
+      </div>
     </section>
   </main>
+
+  <section id="scenarioModal" class="scenario-modal" hidden aria-modal="true" role="dialog" aria-labelledby="scenarioModalTitle">
+    <div class="scenario-modal-backdrop"></div>
+    <article class="scenario-modal-card">
+      <div class="scenario-modal-head">
+        <div>
+          <p id="scenarioModalType" class="eyebrow">Kooperative Verhaltensmodifikation</p>
+          <h2 id="scenarioModalTitle">Szenario</h2>
+        </div>
+        <span id="scenarioModalSource" class="scenario-fit">aus dieser Runde</span>
+      </div>
+      <p id="scenarioModalScene" class="scenario-scene"></p>
+      <div id="scenarioModalAnswers" class="modal-answer-list"></div>
+      <div id="scenarioModalOutcome" class="scenario-outcome" hidden></div>
+      <div class="scenario-modal-actions">
+        <button type="button" id="continueLessonBtn" class="primary-btn" hidden>Weiter im Unterricht</button>
+      </div>
+    </article>
+  </section>
 
   <section id="scenarioDrawer" class="scenario-drawer" hidden aria-label="Szenario-Katalog">
     <div class="scenario-drawer-backdrop"></div>
     <div class="scenario-drawer-panel">
       <div class="scenario-drawer-head">
         <div>
-          <p class="eyebrow">Katalog für spätere Branching-Logik</p>
-          <h2>40 Szenarien</h2>
-          <p>Jedes Szenario wird mit Variablen aus Sitzplan, Schülerprofilen, Klassenregeln und Auswertung befüllt.</p>
+          <p class="eyebrow">Katalog für den Branching-Modus</p>
+          <h2>40 dynamische Szenarien</h2>
+          <p>Die Szenarien werden mit Namen, Sitzplätzen, Regeln, Risiken und Ressourcen aus der aktuellen Runde befüllt.</p>
         </div>
         <div class="scenario-drawer-actions">
           <span id="scenarioCount" class="pill">40 Szenarien</span>
