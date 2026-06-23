@@ -6166,3 +6166,92 @@ body.rules-page {
     width: calc(100vw - 24px);
   }
 }
+
+/* ===== Version 19: Phase 3 scroll limits, seated-only target cues and tutorial image sizing ===== */
+@media (min-width: 1421px) {
+  .phase3-shell {
+    align-items: start !important;
+  }
+
+  .phase3-left-panel,
+  .phase3-right-panel {
+    height: var(--phase3-panel-height, auto) !important;
+    max-height: var(--phase3-panel-height, none) !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+
+  .phase3-left-panel .score-events-card,
+  .phase3-right-panel .branch-log {
+    min-height: 0 !important;
+  }
+
+  .phase3-left-panel .score-event-list,
+  .phase3-right-panel .branch-log {
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+}
+
+.phase3-left-panel,
+.phase3-right-panel {
+  min-height: 0 !important;
+}
+
+.phase3-left-panel .scoreboard-card,
+.phase3-left-panel .score-events-card,
+.phase3-right-panel .branch-event-cards,
+.phase3-right-panel .branch-log {
+  flex-shrink: 1;
+}
+
+.phase3-left-panel .score-event-list {
+  min-height: 0;
+  overflow-y: auto !important;
+}
+
+.branch-tutorial-figure,
+.branch-tutorial-image {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 12px;
+}
+
+.branch-tutorial-figure img,
+.branch-tutorial-image img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: min(430px, 52vh) !important;
+  margin: 0 auto;
+  object-fit: contain !important;
+}
+
+.branch-tutorial-dual {
+  align-content: center;
+}
+
+.branch-tutorial-dual .branch-tutorial-figure {
+  padding: 10px;
+}
+
+.branch-tutorial-dual .branch-tutorial-figure img {
+  max-height: min(210px, 25vh) !important;
+}
+
+.branch-tutorial-figure figcaption {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.branch-tutorial-image--annotated img {
+  max-height: min(390px, 48vh) !important;
+}
+
+.branch-tutorial-arrow {
+  left: 18%;
+  top: 38%;
+  width: 38%;
+}

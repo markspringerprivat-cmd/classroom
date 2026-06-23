@@ -1092,6 +1092,32 @@ function updateControlButtons() {
   }
 }
 
+function markPhase3TutorialSeen() {
+  try { sessionStorage.setItem('classroomGame.phase3TutorialSeen', '1'); } catch (error) {}
+}
+
+function wasPhase3TutorialSeen() {
+  try { return sessionStorage.getItem('classroomGame.phase3TutorialSeen') === '1'; } catch (error) { return false; }
+}
+
+function restartCurrentPhase() {
+  markPhase3TutorialSeen();
+  window.location.reload();
+}
+
+function syncPhase3PanelHeights() {
+  const shell = document.querySelector('.phase3-shell');
+  const roomPanel = document.querySelector('.phase3-room-panel');
+  if (!shell || !roomPanel) return;
+  if (window.matchMedia('(max-width: 1420px)').matches) {
+    shell.style.removeProperty('--phase3-panel-height');
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    shell.style.setProperty('--phase3-panel-height', `${roomPanel.offsetHeight}px`);
+  });
+}
+
 function tutorialVisualMarkup(visual) {
   if (!visual) return '<div class="branch-tutorial-placeholder"><strong>Unterrichtsstunde</strong><span>Akute Probleme erkennen, Wege freihalten und stabil handeln.</span></div>';
   if (visual.type === 'overview') {
@@ -1181,9 +1207,11 @@ function openBranchTutorial() {
 
 function closeBranchTutorial() {
   game.tutorialOpen = false;
+  markPhase3TutorialSeen();
   if (branchTutorialOverlay) branchTutorialOverlay.hidden = true;
   document.body.classList.remove('tutorial-open');
   updateControlButtons();
+  syncPhase3PanelHeights();
 }
 
 function nextBranchTutorialSlide() {
@@ -1236,7 +1264,14 @@ function init() {
   renderHighscore();
   bindEvents();
   updateControlButtons();
-  openBranchTutorial();
+  if (wasPhase3TutorialSeen()) {
+    game.tutorialOpen = false;
+    if (branchTutorialOverlay) branchTutorialOverlay.hidden = true;
+  } else {
+    openBranchTutorial();
+  }
+  syncPhase3PanelHeights();
+  window.addEventListener('resize', syncPhase3PanelHeights);
   logEvent('Bereit. Starte den Unterricht, sobald du die Runde beginnen willst.', 'info');
 }
 
@@ -1245,9 +1280,9 @@ function bindEvents() {
   if (closeScenarioBtn) closeScenarioBtn.addEventListener('click', () => scenarioDrawer.hidden = true);
   if (startLessonBtn) startLessonBtn.addEventListener('click', startLesson);
   if (pauseLessonBtn) pauseLessonBtn.addEventListener('click', toggleLessonPause);
-  if (restartLessonBtn) restartLessonBtn.addEventListener('click', () => window.location.reload());
+  if (restartLessonBtn) restartLessonBtn.addEventListener('click', restartCurrentPhase);
   if (continueScenarioBtn) continueScenarioBtn.addEventListener('click', closeScenarioModal);
-  if (restartOutcomeBtn) restartOutcomeBtn.addEventListener('click', () => window.location.reload());
+  if (restartOutcomeBtn) restartOutcomeBtn.addEventListener('click', restartCurrentPhase);
   if (branchTutorialSkipBtn) branchTutorialSkipBtn.addEventListener('click', closeBranchTutorial);
   if (branchTutorialNextBtn) branchTutorialNextBtn.addEventListener('click', nextBranchTutorialSlide);
   if (branchTutorialPrevBtn) branchTutorialPrevBtn.addEventListener('click', prevBranchTutorialSlide);
@@ -1598,6 +1633,10 @@ function hasActiveStudentIncident(studentId) {
   return game.activeIncidents.some(incident => incident.student?.id === studentId && incident.kind !== 'trash');
 }
 
+function isStudentUnavailable(studentId) {
+  return isStudentAway(studentId) || hasActiveStudentIncident(studentId);
+}
+
 function pickWanderReason(targetType, student) {
   const targetLabel = targetType === 'door' ? 'zur Tür' : targetType === 'sink' ? 'zum Waschbecken' : 'zum Schrank';
   const pools = {
@@ -1702,10 +1741,8 @@ function spawnWanderIncident() {
   const shuffledStudents = shuffle(context.students
     .map(student => ({ student, desk: context.deskByStudentId[student.id] }))
     .filter(item => item.desk)
-    .filter(item => !hasActiveStudentIncident(item.student.id))
-    .filter(item => !isStudentAway(item.student.id))
-    .filter(item => !isDeskWithinTeacherRadius(item.desk))
-    .filter(item => hasAvailableApproachCue({ kind: 'wander', student: item.student, desk: item.desk }, reserved)));
+    .filter(item => !isStudentUnavailable(item.student.id))
+    .filter(item => !isDeskWithinTeacherRadius(item.desk)));
 
   shuffledStudents.forEach(item => {
     shuffle(targetTypes()).forEach(type => {
@@ -1721,7 +1758,7 @@ function spawnWanderIncident() {
   });
 
   if (!candidates.length) return false;
-  const candidate = shuffle(candidates).find(item => hasAvailableApproachCue({ kind: 'wander', student: item.student, desk: item.desk }, reserved));
+  const candidate = shuffle(candidates)[0];
   if (!candidate) return false;
   const reason = pickWanderReason(candidate.targetType, candidate.student);
   const id = `incident-${++game.eventSeq}`;
@@ -1755,8 +1792,7 @@ function pickIncidentCandidate() {
   const seatedStudents = context.students
     .map(student => ({ student, desk: context.deskByStudentId[student.id] }))
     .filter(item => item.desk)
-    .filter(item => !hasActiveStudentIncident(item.student.id))
-    .filter(item => !isStudentAway(item.student.id));
+    .filter(item => !isStudentUnavailable(item.student.id));
   if (!seatedStudents.length) return null;
 
   const outsideRadius = seatedStudents.filter(item => !isDeskWithinTeacherRadius(item.desk));
@@ -2054,7 +2090,7 @@ function buildApproachCueMap(incidents = game.activeIncidents) {
   const map = new Map();
   const reservedKeys = new Set();
   incidents
-    .filter(incident => incident.kind !== 'trash')
+    .filter(incident => incident.kind === 'student')
     .forEach(incident => {
       const cue = bestApproachCellForIncident(incident, reservedKeys);
       if (!cue) return;
@@ -2219,6 +2255,7 @@ function renderBranchGame() {
   }
   renderIncidents();
   renderLife();
+  syncPhase3PanelHeights();
 }
 
 function handleBranchCellClick(row, col) {
@@ -2576,6 +2613,7 @@ function renderIncidents() {
   if (branchEventCards) {
     branchEventCards.innerHTML = currentProblems.length ? cards : '<p class="hint">Noch keine Ereigniskarte aktiv.</p>';
   }
+  syncPhase3PanelHeights();
 }
 
 function renderLife() {
