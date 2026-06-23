@@ -5658,3 +5658,64 @@ body.rules-page {
   outline-offset: 2px;
   transform: scale(1.05);
 }
+
+/* Version 14: Müll strikt auf Kachelgröße begrenzen */
+.grid-cell > .room-object.room-object-trash,
+.grid-cell > .room-object.room-object-bin {
+  position: absolute !important;
+  inset: 6px !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: calc(100% - 12px) !important;
+  max-height: calc(100% - 12px) !important;
+  box-sizing: border-box !important;
+}
+
+.grid-cell > .room-object.room-object-trash {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.grid-cell > .room-object.room-object-trash .trash-visual-img,
+.grid-cell > .room-object.room-object-bin .trash-visual-img,
+.branch-cell > .branch-object.branch-object-trash .trash-visual-img,
+.frozen-object.frozen-object-trash .trash-visual-img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+
+.branch-cell > .branch-object.branch-object-trash,
+.branch-cell > .branch-object.branch-object-bin {
+  position: absolute !important;
+  inset: 6px !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: calc(100% - 12px) !important;
+  max-height: calc(100% - 12px) !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+}
+
+.branch-cell > .branch-object.branch-object-trash {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.frozen-object.frozen-object-trash {
+  position: absolute !important;
+  inset: 2px !important;
+  width: auto !important;
+  height: auto !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
