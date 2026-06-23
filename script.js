@@ -2020,7 +2020,16 @@ bindGlobalEvents();
 bindTutorialEvents();
 initLayout('rows');
 if (startGateOverlay) startGateOverlay.hidden = true;
-openTutorial();
+try {
+  if (sessionStorage.getItem('classroomGame.demoRequested') === '1') {
+    sessionStorage.removeItem('classroomGame.demoRequested');
+    applyDemoSetup();
+  } else {
+    openTutorial();
+  }
+} catch (error) {
+  openTutorial();
+}
 if (new URLSearchParams(window.location.search).has('demo')) {
   applyDemoSetup();
   window.history.replaceState(null, '', window.location.pathname);

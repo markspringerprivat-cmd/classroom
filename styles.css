@@ -5211,3 +5211,253 @@ body.rules-page {
     font-size: 0.92rem;
   }
 }
+
+
+/* ===== Version 7: Phase 3 restored and aligned with Schritt 1 board layout ===== */
+.scenarios-page .branch-shell {
+  grid-template-columns: 300px minmax(760px, max-content) 300px;
+  align-items: start;
+  justify-content: center;
+  gap: 18px;
+}
+
+.scenarios-page .branch-room-panel {
+  width: max-content;
+  max-width: calc(100vw - 660px);
+  overflow: visible;
+}
+
+.scenarios-page .branch-room-head {
+  text-align: center;
+  justify-content: center;
+}
+
+.branch-classroom-grid {
+  --branch-cell: var(--cell-size);
+  --branch-gap: 7px;
+  display: grid;
+  grid-template-columns: repeat(var(--branch-cols, 10), var(--branch-cell)) !important;
+  grid-template-rows: repeat(var(--branch-rows, 9), var(--branch-cell)) !important;
+  gap: var(--branch-gap) !important;
+  width: max-content;
+  min-width: max-content;
+  padding: 14px !important;
+  border-radius: 16px !important;
+  background: rgba(5, 12, 31, 0.95) !important;
+  border: 1px solid rgba(77, 103, 150, 0.38) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03) !important;
+}
+
+.branch-cell {
+  position: relative;
+  width: var(--branch-cell) !important;
+  height: var(--branch-cell) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 1px dashed rgba(148, 163, 184, 0.28) !important;
+  border-radius: 12px !important;
+  background: rgba(15, 23, 42, 0.78) !important;
+  overflow: visible !important;
+  box-shadow: none !important;
+}
+
+.branch-cell:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.56) !important;
+  background: rgba(30, 41, 59, 0.86) !important;
+}
+
+.branch-cell.branch-blocked {
+  border-color: transparent !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.branch-cell.branch-blocked::after {
+  content: none !important;
+}
+
+.branch-block-label {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 2 !important;
+  width: calc(var(--span-cols) * var(--branch-cell) + (var(--span-cols) - 1) * var(--branch-gap)) !important;
+  height: calc(var(--span-rows) * var(--branch-cell) + (var(--span-rows) - 1) * var(--branch-gap)) !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 12px !important;
+  text-align: center !important;
+  font-size: 0.62rem !important;
+  line-height: 1.05 !important;
+  color: rgba(226,232,240,0.95) !important;
+  font-weight: 950 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  pointer-events: none !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+.branch-blocked-board .branch-block-label,
+.branch-block-label.branch-board {
+  background: linear-gradient(180deg, rgba(53, 83, 161, 0.98), rgba(39, 67, 133, 0.98)) !important;
+  border-color: rgba(147, 197, 253, 0.42) !important;
+}
+.branch-blocked-door .branch-block-label,
+.branch-block-label.branch-door {
+  background: linear-gradient(180deg, rgba(43, 78, 112, 0.96), rgba(36, 67, 96, 0.96)) !important;
+}
+.branch-blocked-window .branch-block-label,
+.branch-block-label.branch-window {
+  background: linear-gradient(180deg, rgba(42, 74, 106, 0.96), rgba(35, 63, 91, 0.96)) !important;
+}
+.branch-blocked-exit .branch-block-label,
+.branch-block-label.branch-exit {
+  background: linear-gradient(180deg, rgba(34, 91, 70, 0.96), rgba(28, 74, 58, 0.96)) !important;
+}
+.branch-blocked-cabinet .branch-block-label,
+.branch-block-label.branch-cabinet {
+  background: linear-gradient(180deg, rgba(60, 68, 84, 0.98), rgba(50, 58, 72, 0.98)) !important;
+}
+.branch-blocked-sink .branch-block-label,
+.branch-block-label.branch-sink {
+  background: linear-gradient(180deg, rgba(48, 82, 143, 0.98), rgba(38, 67, 119, 0.98)) !important;
+}
+
+.branch-block-label.side-label span,
+.branch-door span,
+.branch-exit span,
+.branch-window span {
+  writing-mode: vertical-rl !important;
+  transform: rotate(180deg) !important;
+}
+
+.branch-desk {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 4 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, rgba(245, 188, 42, 0.98), rgba(203, 139, 18, 0.98)) !important;
+  color: #1f2937 !important;
+  border: 2px solid rgba(244, 210, 110, 0.94) !important;
+  box-shadow: inset 0 -10px 16px rgba(125, 82, 8, 0.12), 0 6px 12px rgba(0, 0, 0, 0.20) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 2px !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.branch-desk.has-student strong.sr-only,
+.branch-desk.has-student > strong:not(.incident-countdown-number) {
+  display: none !important;
+}
+
+.branch-desk.has-student .branch-student-avatar,
+.branch-student-avatar {
+  width: 95% !important;
+  height: 95% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  display: block !important;
+}
+
+.branch-desk.incident-pulse {
+  animation: branchIncidentPulseClean 0.65s infinite alternate !important;
+  border-color: rgba(254, 202, 202, 0.98) !important;
+}
+
+@keyframes branchIncidentPulseClean {
+  from { box-shadow: inset 0 -10px 16px rgba(125, 82, 8, 0.12), 0 0 0 0 rgba(239, 68, 68, 0.18); }
+  to { box-shadow: inset 0 -10px 16px rgba(125, 82, 8, 0.12), 0 0 0 7px rgba(239, 68, 68, 0.18); }
+}
+
+.branch-desk .incident-countdown-number {
+  position: absolute !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  min-width: 0 !important;
+  height: auto !important;
+  border-radius: 12px !important;
+  background: rgba(220, 38, 38, 0.74) !important;
+  color: #fff !important;
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  font-weight: 1000 !important;
+  text-shadow: 0 2px 8px rgba(60, 10, 10, 0.55) !important;
+  box-shadow: none !important;
+}
+
+.branch-teacher {
+  position: absolute !important;
+  inset: 10px !important;
+  z-index: 7 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #4367b9, #2c4f9b) !important;
+  color: #fff !important;
+  font-size: 0.76rem !important;
+  font-weight: 950 !important;
+  box-shadow: 0 10px 20px rgba(25, 56, 128, 0.35), 0 0 0 2px rgba(191, 219, 254, 0.22) !important;
+}
+
+.branch-object {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 5 !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 6px 12px rgba(0,0,0,0.20) !important;
+  pointer-events: none !important;
+}
+
+.branch-object-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  font-size: 2.35rem !important;
+  line-height: 1 !important;
+}
+
+.branch-object-trash {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.98), rgba(153, 27, 27, 0.98)) !important;
+}
+
+.branch-object-broom {
+  background: linear-gradient(180deg, rgba(191, 219, 254, 0.98), rgba(96, 165, 250, 0.98)) !important;
+}
+
+.branch-object.active-cleaning {
+  transform: none !important;
+  box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.28), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+.incident-countdown-badge {
+  display: none !important;
+}
+
+@media (max-width: 1500px) {
+  .scenarios-page .branch-shell {
+    grid-template-columns: 270px minmax(680px, 1fr) 280px;
+  }
+  .branch-classroom-grid { --branch-cell: 64px; }
+}
+
+@media (max-width: 1120px) {
+  .scenarios-page .branch-shell {
+    grid-template-columns: 1fr;
+  }
+  .scenarios-page .branch-room-panel {
+    max-width: 100%;
+    width: 100%;
+    overflow-x: auto;
+  }
+}
