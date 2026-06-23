@@ -895,6 +895,8 @@ const teacherMoodImage = document.getElementById('teacherMoodImage');
 const teacherMoodLabel = document.getElementById('teacherMoodLabel');
 const teacherStatus = document.getElementById('teacherStatus');
 const startLessonBtn = document.getElementById('startLessonBtn');
+const pauseLessonBtn = document.getElementById('pauseLessonBtn');
+const restartLessonBtn = document.getElementById('restartLessonBtn');
 const incidentCounter = document.getElementById('incidentCounter');
 const incidentList = document.getElementById('incidentList');
 const branchLog = document.getElementById('branchLog');
@@ -921,6 +923,17 @@ const outcomeAdvice = document.getElementById('outcomeAdvice');
 const outcomeHighscore = document.getElementById('outcomeHighscore');
 const outcomeBreakdown = document.getElementById('outcomeBreakdown');
 const restartOutcomeBtn = document.getElementById('restartOutcomeBtn');
+const branchTutorialOverlay = document.getElementById('branchTutorialOverlay');
+const branchTutorialProgress = document.getElementById('branchTutorialProgress');
+const branchTutorialSkipBtn = document.getElementById('branchTutorialSkipBtn');
+const branchTutorialSlide = document.getElementById('branchTutorialSlide');
+const branchTutorialVisual = document.getElementById('branchTutorialVisual');
+const branchTutorialTitle = document.getElementById('branchTutorialTitle');
+const branchTutorialText = document.getElementById('branchTutorialText');
+const branchTutorialList = document.getElementById('branchTutorialList');
+const branchTutorialDots = document.getElementById('branchTutorialDots');
+const branchTutorialPrevBtn = document.getElementById('branchTutorialPrevBtn');
+const branchTutorialNextBtn = document.getElementById('branchTutorialNextBtn');
 
 const LESSON_SECONDS = 300;
 const INCIDENT_REACTION_MS = 7000;
@@ -963,6 +976,8 @@ const game = {
   scenarioCountdown: null,
   answerLeft: ANSWER_SECONDS,
   scenarioOpen: false,
+  manualPause: false,
+  tutorialOpen: true,
   pausedAt: null,
   eventSeq: 0,
   usedScenarioIds: new Set(),
@@ -981,6 +996,238 @@ const game = {
 
 const liveTrashDragState = { objectId: null };
 
+const branchTutorialSlides = [
+  {
+    title: 'Worum geht es in dieser Spielphase?',
+    text: 'Du steuerst die Lehrkraft durch den laufenden Unterricht. Reagiere auf akute Störungen, halte Wege frei und sichere die Unterrichtsstabilität bis zum Stundenende.',
+    bullets: [
+      'Bewege die Lehrkraft mit Klicks auf erreichbare Felder.',
+      'Fange akute Probleme schnell ab, bevor Zeit oder Stabilität verloren gehen.',
+      'Behalte gleichzeitig Unterrichtsstabilität, aktuelle Probleme und Highscore im Blick.'
+    ],
+    visual: { type: 'overview' }
+  },
+  {
+    title: 'Zu Problemen hingehen',
+    text: 'Wenn ein Problem auftritt, erscheint ein gelbes Zielfeld. Klicke dorthin: Die Lehrkraft läuft automatisch zum Feld und kann die Situation dann klären.',
+    bullets: [
+      'Rote Countdown-Felder zeigen akuten Handlungsdruck.',
+      'Die Lehrkraft muss rechtzeitig in die Nähe des Problems gelangen.',
+      'Ein gelber Richtungsmarker zeigt, wo du hinklicken solltest.'
+    ],
+    visual: { type: 'annotated-single', src: 'assets/tutorial/phase3_problem_move.png', alt: 'Lehrkraft, gelber Richtungsmarker und rotes Countdown-Feld' }
+  },
+  {
+    title: 'Szenarien sicher lösen',
+    text: 'Wenn die Lehrkraft einen betroffenen Schüler erreicht, kann ein Szenario starten. Dann hast du 20 Sekunden Zeit, um eine passende pädagogische Reaktion auszuwählen.',
+    bullets: [
+      'Eine gute Lösung stärkt die Unterrichtsstabilität und verbessert den Highscore.',
+      'Eine problematische Intervention kostet Punkte und kann Unterrichtsstabilität verlieren lassen.',
+      'Eine kurzfristige Notlösung bringt in der Regel keine Punkteveränderung.'
+    ],
+    visual: { type: 'single', src: 'assets/tutorial/phase3_scenario.png', alt: 'Szenariofenster mit Antwortoptionen' }
+  },
+  {
+    title: 'Müll blockiert den Weg',
+    text: 'Müll kann Laufwege blockieren. Räume ihn schnell aus dem Weg, indem du ihn in den Mülleimer ziehst.',
+    bullets: [
+      'Blockierte Felder erschweren den Weg zu Problemen.',
+      'Ziehe den Müll per Drag-and-Drop in den Mülleimer unten rechts.',
+      'Müll zählt nicht zu den maximal drei aktiven Problemen und kann zusätzlich auftauchen.'
+    ],
+    visual: {
+      type: 'dual',
+      items: [
+        { src: 'assets/tutorial/phase3_trash_block.png', alt: 'Müll blockiert ein Feld', caption: 'Müll blockiert den Weg' },
+        { src: 'assets/tutorial/phase3_trash_bin.png', alt: 'Müll wird in den Mülleimer entsorgt', caption: 'Schnell in den Mülleimer ziehen' }
+      ]
+    }
+  },
+  {
+    title: 'Weglaufende Schüler abfangen',
+    text: 'Manchmal verlassen Schüler ohne Absprache ihren Platz und bewegen sich zum Schrank, Waschbecken oder zur Tür. Reagiere frühzeitig, um die Situation professionell zu klären.',
+    bullets: [
+      'Unterbrich das Weglaufen möglichst früh.',
+      'Klär kurz den Anlass und führe die Person wieder in den Arbeitsprozess zurück.',
+      'Auch diese laufenden Schüler zählen zu den maximal drei aktiven Problemen.'
+    ],
+    visual: { type: 'single', src: 'assets/tutorial/phase3_student_move.png', alt: 'Schüler bewegt sich vom Platz weg' }
+  },
+  {
+    title: 'Unterrichtsstabilität im Blick behalten',
+    text: 'Die Unterrichtsstabilität ersetzt die bisherige Lebensanzeige. Verlierst du zu viel Stabilität, endet die Runde.',
+    bullets: [
+      'Wenn du sich bewegende Schüler nicht rechtzeitig stoppst, sinkt die Unterrichtsstabilität.',
+      'Auch eine schlecht gelöste Szenarioentscheidung kann Stabilität kosten.',
+      'Läuft der Timer eines akuten Problems ab, ohne dass du rechtzeitig dort bist, verlierst du ebenfalls Unterrichtsstabilität.'
+    ],
+    visual: { type: 'single', src: 'assets/tutorial/phase3_stability.png', alt: 'Lehrkraftbild mit Unterrichtsstabilität' }
+  },
+  {
+    title: 'So entsteht dein Highscore',
+    text: 'Der Highscore belohnt schnelles und passendes Handeln im Unterricht.',
+    bullets: [
+      'Reaktionspunkte gibt es, wenn du Probleme schnell erreichst.',
+      'Gute Interventionen bringen zusätzliche Pluspunkte.',
+      'Problematische Entscheidungen und verpasste Situationen kosten Punkte.'
+    ],
+    visual: { type: 'single', src: 'assets/tutorial/phase3_scores.png', alt: 'Highscore-Ereignisse mit Plus- und Minuspunkten' }
+  }
+];
+
+let branchTutorialIndex = 0;
+
+function isGameplayPaused() {
+  return Boolean(game.scenarioOpen || game.manualPause || game.tutorialOpen);
+}
+
+function updateControlButtons() {
+  if (startLessonBtn) {
+    startLessonBtn.disabled = game.started;
+    startLessonBtn.textContent = game.started ? 'Unterricht läuft' : 'Unterricht starten';
+  }
+  if (pauseLessonBtn) {
+    pauseLessonBtn.disabled = !game.started || game.finished || game.scenarioOpen || game.tutorialOpen;
+    pauseLessonBtn.textContent = game.manualPause ? 'Fortsetzen' : 'Pausieren';
+  }
+}
+
+function tutorialVisualMarkup(visual) {
+  if (!visual) return '<div class="branch-tutorial-placeholder"><strong>Unterrichtsstunde</strong><span>Akute Probleme erkennen, Wege freihalten und stabil handeln.</span></div>';
+  if (visual.type === 'overview') {
+    return `
+      <div class="branch-tutorial-overview-card">
+        <div class="branch-tutorial-overview-icon">LK</div>
+        <div>
+          <strong>Unterricht souverän steuern</strong>
+          <p>Du hältst den Unterricht am Laufen, indem du Probleme schnell erreichst, Müll beseitigst und passende Entscheidungen in Szenarien triffst.</p>
+        </div>
+      </div>`;
+  }
+  if (visual.type === 'annotated-single') {
+    return `
+      <div class="branch-tutorial-image branch-tutorial-image--annotated">
+        <img src="${escapeHtml(visual.src)}" alt="${escapeHtml(visual.alt || '')}" draggable="false" />
+        <span class="branch-tutorial-arrow branch-tutorial-arrow--move" aria-hidden="true"></span>
+      </div>`;
+  }
+  if (visual.type === 'dual') {
+    return `<div class="branch-tutorial-dual">${(visual.items || []).map(item => `
+      <figure class="branch-tutorial-figure">
+        <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt || '')}" draggable="false" />
+        ${item.caption ? `<figcaption>${escapeHtml(item.caption)}</figcaption>` : ''}
+      </figure>`).join('')}</div>`;
+  }
+  return `
+    <figure class="branch-tutorial-figure branch-tutorial-figure--single">
+      <img src="${escapeHtml(visual.src)}" alt="${escapeHtml(visual.alt || '')}" draggable="false" />
+    </figure>`;
+}
+
+function renderBranchTutorial(animated = false, direction = 'next') {
+  if (!branchTutorialSlide) return;
+  const render = () => {
+    const slide = branchTutorialSlides[branchTutorialIndex];
+    if (branchTutorialProgress) branchTutorialProgress.textContent = `${branchTutorialIndex + 1}/${branchTutorialSlides.length}`;
+    if (branchTutorialTitle) branchTutorialTitle.textContent = slide.title;
+    if (branchTutorialText) branchTutorialText.textContent = slide.text;
+    if (branchTutorialVisual) branchTutorialVisual.innerHTML = tutorialVisualMarkup(slide.visual);
+    if (branchTutorialList) branchTutorialList.innerHTML = (slide.bullets || []).map(item => `<li>${escapeHtml(item)}</li>`).join('');
+    if (branchTutorialPrevBtn) branchTutorialPrevBtn.disabled = branchTutorialIndex === 0;
+    if (branchTutorialNextBtn) branchTutorialNextBtn.textContent = branchTutorialIndex === branchTutorialSlides.length - 1 ? "Los geht's" : 'Weiter';
+    renderBranchTutorialDots();
+  };
+
+  if (!animated) {
+    render();
+    return;
+  }
+  branchTutorialSlide.classList.remove('tutorial-enter-left', 'tutorial-enter-right', 'tutorial-exit-left', 'tutorial-exit-right');
+  branchTutorialSlide.classList.add(direction === 'prev' ? 'tutorial-exit-right' : 'tutorial-exit-left');
+  window.setTimeout(() => {
+    render();
+    branchTutorialSlide.classList.remove('tutorial-exit-left', 'tutorial-exit-right');
+    branchTutorialSlide.classList.add(direction === 'prev' ? 'tutorial-enter-left' : 'tutorial-enter-right');
+    window.setTimeout(() => branchTutorialSlide.classList.remove('tutorial-enter-left', 'tutorial-enter-right'), 360);
+  }, 260);
+}
+
+function renderBranchTutorialDots() {
+  if (!branchTutorialDots) return;
+  branchTutorialDots.innerHTML = '';
+  branchTutorialSlides.forEach((_, index) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    if (index === branchTutorialIndex) dot.classList.add('active');
+    dot.setAttribute('aria-label', `Erklärseite ${index + 1}`);
+    dot.addEventListener('click', () => {
+      if (index === branchTutorialIndex) return;
+      const direction = index < branchTutorialIndex ? 'prev' : 'next';
+      branchTutorialIndex = index;
+      renderBranchTutorial(true, direction);
+    });
+    branchTutorialDots.appendChild(dot);
+  });
+}
+
+function openBranchTutorial() {
+  game.tutorialOpen = true;
+  branchTutorialIndex = 0;
+  if (branchTutorialOverlay) branchTutorialOverlay.hidden = false;
+  document.body.classList.add('tutorial-open');
+  renderBranchTutorial(false);
+  updateControlButtons();
+}
+
+function closeBranchTutorial() {
+  game.tutorialOpen = false;
+  if (branchTutorialOverlay) branchTutorialOverlay.hidden = true;
+  document.body.classList.remove('tutorial-open');
+  updateControlButtons();
+}
+
+function nextBranchTutorialSlide() {
+  if (branchTutorialIndex >= branchTutorialSlides.length - 1) {
+    closeBranchTutorial();
+    return;
+  }
+  branchTutorialIndex += 1;
+  renderBranchTutorial(true, 'next');
+}
+
+function prevBranchTutorialSlide() {
+  if (branchTutorialIndex <= 0) return;
+  branchTutorialIndex -= 1;
+  renderBranchTutorial(true, 'prev');
+}
+
+function applyPausedTimeShift() {
+  const pauseDuration = game.pausedAt ? Date.now() - game.pausedAt : 0;
+  if (pauseDuration <= 0) return;
+  game.activeIncidents.forEach(incident => { if (incident.deadline) incident.deadline += pauseDuration; });
+  if (game.nextIncidentAt) game.nextIncidentAt += pauseDuration;
+  if (game.nextTrashAt) game.nextTrashAt += pauseDuration;
+  if (game.nextWanderAt) game.nextWanderAt += pauseDuration;
+}
+
+function toggleLessonPause() {
+  if (!game.started || game.finished || game.scenarioOpen || game.tutorialOpen) return;
+  if (!game.manualPause) {
+    game.manualPause = true;
+    game.pausedAt = Date.now();
+    stopTeacherMovement();
+    if (teacherStatus) teacherStatus.textContent = 'Unterricht pausiert.';
+  } else {
+    game.manualPause = false;
+    applyPausedTimeShift();
+    game.pausedAt = null;
+    if (teacherStatus) teacherStatus.textContent = 'Unterricht fortgesetzt.';
+    if (game.teacherPath.length) queueNextTeacherStep();
+    renderBranchGame();
+  }
+  updateControlButtons();
+}
+
 function init() {
   renderContext();
   renderScenarioCatalog();
@@ -988,6 +1235,8 @@ function init() {
   renderLife();
   renderHighscore();
   bindEvents();
+  updateControlButtons();
+  openBranchTutorial();
   logEvent('Bereit. Starte den Unterricht, sobald du die Runde beginnen willst.', 'info');
 }
 
@@ -995,8 +1244,13 @@ function bindEvents() {
   if (openScenarioBtn) openScenarioBtn.addEventListener('click', () => scenarioDrawer.hidden = false);
   if (closeScenarioBtn) closeScenarioBtn.addEventListener('click', () => scenarioDrawer.hidden = true);
   if (startLessonBtn) startLessonBtn.addEventListener('click', startLesson);
+  if (pauseLessonBtn) pauseLessonBtn.addEventListener('click', toggleLessonPause);
+  if (restartLessonBtn) restartLessonBtn.addEventListener('click', () => window.location.reload());
   if (continueScenarioBtn) continueScenarioBtn.addEventListener('click', closeScenarioModal);
   if (restartOutcomeBtn) restartOutcomeBtn.addEventListener('click', () => window.location.reload());
+  if (branchTutorialSkipBtn) branchTutorialSkipBtn.addEventListener('click', closeBranchTutorial);
+  if (branchTutorialNextBtn) branchTutorialNextBtn.addEventListener('click', nextBranchTutorialSlide);
+  if (branchTutorialPrevBtn) branchTutorialPrevBtn.addEventListener('click', prevBranchTutorialSlide);
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && scenarioDrawer && !scenarioDrawer.hidden) scenarioDrawer.hidden = true;
   });
@@ -1048,6 +1302,7 @@ function startLesson() {
   unlockAudio();
   game.started = true;
   game.finished = false;
+  game.manualPause = false;
   game.lessonLeft = LESSON_SECONDS;
   game.highscoreBase = 0;
   game.lifeBonus = 0;
@@ -1062,13 +1317,12 @@ function startLesson() {
   clearAllStudentMovement();
   game.studentPositions = {};
   game.pendingWanderResolution = null;
+  game.pausedAt = null;
 
   game.teacherPath = [];
   game.teacherMoveStepIndex = 0;
-  if (startLessonBtn) {
-    startLessonBtn.disabled = true;
-    startLessonBtn.textContent = 'Unterricht läuft';
-  }
+  updateControlButtons();
+  if (teacherStatus) teacherStatus.textContent = 'Unterricht läuft. Reagiere auf Probleme im Raum.';
   logEvent('Der Unterricht beginnt. Reagiere auf blinkende Störungen. Müll kann zusätzlich auftauchen und blockiert Laufwege, bis er in den Mülleimer gezogen wird.', 'info');
   game.lessonTimer = window.setInterval(tickLesson, 250);
   renderBranchGame();
@@ -1081,7 +1335,7 @@ function tickLesson() {
     finishLesson('lost');
     return;
   }
-  if (game.scenarioOpen) return;
+  if (isGameplayPaused()) return;
   game.lessonLeft = Math.max(0, game.lessonLeft - 0.25);
   updateLessonTimer();
   checkIncidentTimeouts();
@@ -1125,9 +1379,9 @@ function finishLesson(reason = 'time') {
   if (!game.finalBonusAdded) {
     game.finalBonusAdded = true;
     if (game.lifeBonus > 0) {
-      addHighscoreEvent(game.lifeBonus, `Lebensbonus am Ende: ${game.score} × ${SCORE_PER_LIFE} Punkte`, 'good', { finalBonus: true });
+      addHighscoreEvent(game.lifeBonus, `Stabilitätsbonus am Ende: ${game.score} × ${SCORE_PER_LIFE} Punkte`, 'good', { finalBonus: true });
     } else {
-      addHighscoreEvent(0, 'Kein Lebensbonus: 0 verbleibende Leben.', 'bad', { finalBonus: true });
+      addHighscoreEvent(0, 'Kein Stabilitätsbonus: 0 verbleibende Stabilität.', 'bad', { finalBonus: true });
     }
   }
   game.finalHighscore = scoreBeforeLifeBonus + game.lifeBonus;
@@ -1139,10 +1393,12 @@ function finishLesson(reason = 'time') {
   if (lost) {
     logEvent('Die Unterrichtsstabilität ist auf 0 gefallen. Die Runde ist verloren.', 'bad');
     if (teacherStatus) teacherStatus.textContent = 'Runde verloren: Die Unterrichtsstabilität ist auf 0 gefallen.';
+    updateControlButtons();
     showOutcomeModal('lost');
   } else {
     logEvent(`Unterricht beendet. Endstabilität: ${game.score}/10.`, game.score > 5 ? 'good' : game.score < 3 ? 'bad' : 'neutral');
     if (teacherStatus) teacherStatus.textContent = 'Unterricht beendet.';
+    updateControlButtons();
     showOutcomeModal('won');
   }
   renderLife();
@@ -1178,7 +1434,7 @@ function trashSpawnChance() {
 }
 
 function maybeSpawnIncident() {
-  if (!game.started || game.finished || game.scenarioOpen) return;
+  if (!game.started || game.finished || isGameplayPaused()) return;
   const now = Date.now();
   maybeSpawnStudentIncidents(now);
   maybeSpawnTrashEvents(now);
@@ -1187,9 +1443,10 @@ function maybeSpawnIncident() {
 
 function maybeSpawnStudentIncidents(now) {
   if (now < game.nextIncidentAt) return;
-  const limit = currentDifficultyLimit();
+  const limit = Math.min(3, currentDifficultyLimit());
+  const activeProblemIncidents = game.activeIncidents.filter(incident => incident.kind !== 'trash').length;
   const activeStudentIncidents = game.activeIncidents.filter(incident => incident.kind === 'student').length;
-  const freeSlots = Math.max(0, limit - activeStudentIncidents);
+  const freeSlots = Math.max(0, Math.min(limit, 3) - Math.max(activeProblemIncidents, activeStudentIncidents));
   if (freeSlots > 0) {
     const spawnCount = Math.max(1, Math.min(freeSlots, progressBasedSpawnCount()));
     for (let i = 0; i < spawnCount; i++) spawnIncident();
@@ -1216,8 +1473,9 @@ function wanderLimit() {
 
 function maybeSpawnWanderEvents(now) {
   if (now < game.nextWanderAt) return;
+  const activeProblems = game.activeIncidents.filter(incident => incident.kind !== 'trash').length;
   const activeWander = game.activeIncidents.filter(incident => incident.kind === 'wander').length;
-  if (activeWander < wanderLimit()) {
+  if (activeProblems < 3 && activeWander < wanderLimit()) {
     spawnWanderIncident();
   }
   game.nextWanderAt = now + WANDER_EVENT_INTERVAL_MS;
@@ -1564,7 +1822,7 @@ function buildEscalationMessage(student, scenarioItem) {
 }
 
 function checkIncidentTimeouts() {
-  if (!game.activeIncidents.length || game.scenarioOpen) return;
+  if (!game.activeIncidents.length || isGameplayPaused()) return;
   const now = Date.now();
   const expired = game.activeIncidents.filter(incident => incident.kind === 'student' && incident.deadline && now >= incident.deadline);
   expired.forEach(incident => failIncidentLate(incident));
@@ -1603,7 +1861,7 @@ function startStudentMovement(incident, path, onArrive) {
   const queue = [...path];
   const step = () => {
     if (game.finished) return;
-    if (game.scenarioOpen) {
+    if (isGameplayPaused()) {
       game.studentMoveTimers[studentId] = window.setTimeout(step, 500);
       return;
     }
@@ -1670,7 +1928,7 @@ function moveStudentToTargetThenReturn(incident) {
       renderBranchGame();
       const returnAfterToilet = () => {
         if (game.finished) return;
-        if (game.scenarioOpen) {
+        if (isGameplayPaused()) {
           window.setTimeout(returnAfterToilet, 500);
           return;
         }
@@ -1685,7 +1943,7 @@ function moveStudentToTargetThenReturn(incident) {
       renderBranchGame();
       const returnAfterTargetWait = () => {
         if (game.finished) return;
-        if (game.scenarioOpen) {
+        if (isGameplayPaused()) {
           window.setTimeout(returnAfterTargetWait, 500);
           return;
         }
@@ -1717,7 +1975,7 @@ function handleWanderTargetReached(incident) {
   const failAndReturn = () => {
     const stillActive = game.activeIncidents.find(item => item.id === active.id);
     if (!stillActive || game.finished) return;
-    if (game.scenarioOpen) {
+    if (isGameplayPaused()) {
       window.setTimeout(failAndReturn, 500);
       return;
     }
@@ -1725,7 +1983,7 @@ function handleWanderTargetReached(incident) {
     addHighscoreEvent(-500, `${stillActive.student.name}: Rückweg ohne Klärung.`, 'bad');
     const ended = changeScore(-1);
     playBadAudio();
-    logEvent(`${stillActive.student.name} hat das Ziel erreicht und befindet sich nun auf dem Rückweg, ohne dass die Lehrkraft nachgefragt oder eine Regel geklärt hat. Das kostet 1 Leben und 500 Punkte.`, 'bad');
+    logEvent(`${stillActive.student.name} hat das Ziel erreicht und befindet sich nun auf dem Rückweg, ohne dass die Lehrkraft nachgefragt oder eine Regel geklärt hat. Das kostet 1 Stabilität und 500 Punkte.`, 'bad');
     if (stillActive.targetType === 'door' && stillActive.scenario?.wanderMeta?.subtype === 'toilet') {
       game.studentPositions[stillActive.student.id] = { row: stillActive.target.row, col: stillActive.target.col, state: 'moving', incidentId: stillActive.id, targetType: stillActive.targetType };
     }
@@ -1964,7 +2222,7 @@ function renderBranchGame() {
 }
 
 function handleBranchCellClick(row, col) {
-  if (!game.started || game.finished || game.scenarioOpen) return;
+  if (!game.started || game.finished || isGameplayPaused()) return;
   const object = getObjectAtLocal(row, col);
   if (object?.type === 'bin') {
     if (teacherStatus) teacherStatus.textContent = 'Ziehe den Müll in den Mülleimer unten rechts, um das Feld freizuräumen.';
@@ -1983,7 +2241,7 @@ function handleBranchCellClick(row, col) {
   const path = findPath(game.teacher, target);
   if (!path.length) {
     checkArrivalAtIncident();
-    if (teacherStatus && !game.scenarioOpen) teacherStatus.textContent = 'Die Lehrkraft steht bereits an diesem erreichbaren Feld.';
+    if (teacherStatus && !isGameplayPaused()) teacherStatus.textContent = 'Die Lehrkraft steht bereits an diesem erreichbaren Feld.';
     return;
   }
   game.teacherPath = path;
@@ -2048,7 +2306,7 @@ function queueNextTeacherStep() {
     game.teacher = { ...game.teacher, ...next };
     renderBranchGame();
     checkArrivalAtIncident();
-    if (game.scenarioOpen || !game.started || game.finished) return;
+    if (isGameplayPaused() || !game.started || game.finished) return;
     if (!game.teacherPath.length) {
       stopTeacherMovement();
       checkArrivalAtIncident();
@@ -2065,7 +2323,7 @@ function stopTeacherMovement() {
 }
 
 function checkArrivalAtIncident() {
-  if (!game.activeIncidents.length || game.scenarioOpen) return;
+  if (!game.activeIncidents.length || isGameplayPaused()) return;
   const reachable = game.activeIncidents.find(incident => {
     if (incident.kind === 'trash') return false;
     const position = incident.kind === 'wander'
@@ -2103,6 +2361,7 @@ function openScenarioModal(incident) {
   game.scenarioOpen = true;
   game.pausedAt = Date.now();
   stopTeacherMovement();
+  updateControlButtons();
   const scenarioItem = incident.scenario;
   if (activeMethodLabel) activeMethodLabel.textContent = scenarioItem.type || 'Kooperative Verhaltensmodifikation';
   if (scenarioModalArea) scenarioModalArea.textContent = scenarioItem.type || 'Kooperative Verhaltensmodifikation';
@@ -2285,16 +2544,11 @@ function showScenarioResult(text, delta, type) {
 function closeScenarioModal() {
   clearAnswerCountdown();
   if (scenarioModal) scenarioModal.hidden = true;
-  const pauseDuration = game.pausedAt ? Date.now() - game.pausedAt : 0;
-  if (pauseDuration > 0) {
-    game.activeIncidents.forEach(incident => { if (incident.deadline) incident.deadline += pauseDuration; });
-    if (game.nextIncidentAt) game.nextIncidentAt += pauseDuration;
-    if (game.nextTrashAt) game.nextTrashAt += pauseDuration;
-    if (game.nextWanderAt) game.nextWanderAt += pauseDuration;
-  }
+  applyPausedTimeShift();
   game.pausedAt = null;
   game.scenarioOpen = false;
   game.currentScenarioIncident = null;
+  updateControlButtons();
   resolveWanderAfterModal();
   if (!game.finished) {
     const now = Date.now();
@@ -2306,29 +2560,27 @@ function closeScenarioModal() {
 }
 
 function renderIncidents() {
-  if (incidentCounter) incidentCounter.textContent = String(game.activeIncidents.length);
+  const currentProblems = game.activeIncidents.filter(incident => incident.kind !== 'trash').slice(0, 3);
+  if (incidentCounter) incidentCounter.textContent = String(currentProblems.length);
   const now = Date.now();
-  const cards = game.activeIncidents.map(incident => {
-    if (incident.kind === 'trash') {
-      return `<article class="incident-item event-card"><strong>Müll blockiert den Weg</strong><span>in den Mülleimer ziehen</span><small>nahe bei ${escapeHtml(incident.student?.name || 'einem Tisch')}</small></article>`;
-    }
+  const cards = currentProblems.map(incident => {
     if (incident.kind === 'wander') {
-      return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)} ist unterwegs</strong><span>Lehrkraft muss nachfragen</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
+      return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)} ist unterwegs</strong><span>Bitte schnell ansprechen</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
     }
     const left = Math.max(0, Math.ceil((incident.deadline - now) / 1000));
-    return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)}</strong><span>${left}s bis Eskalation</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
+    return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)} braucht Hilfe</strong><span>${left}s bis Eskalation</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
   }).join('');
   if (incidentList) {
-    incidentList.innerHTML = game.activeIncidents.length ? cards : '<p class="hint">Keine akute Störung.</p>';
+    incidentList.innerHTML = currentProblems.length ? cards : '<p class="hint">Keine akute Störung.</p>';
   }
   if (branchEventCards) {
-    branchEventCards.innerHTML = game.activeIncidents.length ? cards : '<p class="hint">Noch keine Ereigniskarte aktiv.</p>';
+    branchEventCards.innerHTML = currentProblems.length ? cards : '<p class="hint">Noch keine Ereigniskarte aktiv.</p>';
   }
 }
 
 function renderLife() {
   if (branchScorePill) branchScorePill.textContent = `${game.score}/10`;
-  if (branchScoreNote) branchScoreNote.textContent = `Startwert nach Schritt 2: ${normalizeStartScore(context.startScore ?? context.stepData?.rawPreparationScore ?? context.stepData?.preparationScore ?? 5)}/10.`;
+  if (branchScoreNote) branchScoreNote.textContent = '';
   updateTeacherMoodImage();
   if (!branchLifeSegments) return;
   branchLifeSegments.classList.toggle('life-low', game.score <= 3);
@@ -2380,7 +2632,7 @@ function addHighscoreEvent(points, label, type = 'neutral', options = {}) {
     time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   };
   game.scoreEvents.unshift(event);
-  game.scoreEvents = game.scoreEvents.slice(0, 12);
+  game.scoreEvents = game.scoreEvents.slice(0, 3);
   renderHighscore();
 }
 
@@ -2389,8 +2641,8 @@ function renderHighscore() {
   if (currentHighscoreEl) currentHighscoreEl.textContent = String(visibleScore);
   if (highscoreNote) {
     highscoreNote.textContent = game.finished
-      ? `Endwert inklusive Lebensbonus: ${visibleScore} Punkte.`
-      : 'Lebensbonus wird erst am Ende addiert.';
+      ? `Endwert inklusive Stabilitätsbonus: ${visibleScore} Punkte.`
+      : '';
   }
   if (scoreEventCounter) scoreEventCounter.textContent = String(game.scoreEvents.length);
   if (scoreEventList) {
@@ -2401,7 +2653,7 @@ function renderHighscore() {
           <div><span>${escapeHtml(event.label)}</span><small>${escapeHtml(event.time)}</small></div>
         </article>
       `).join('')
-      : '<p class="hint">Noch keine Punkte-Ereignisse.</p>';
+      : '<p class="hint">Noch keine Ereignisse.</p>';
   }
 }
 
@@ -2416,7 +2668,7 @@ function showOutcomeModal(result) {
   if (outcomeTitle) outcomeTitle.textContent = won ? 'Du hast den Unterricht stabil gehalten.' : 'Die Klasse ist gekippt.';
   if (outcomeText) {
     outcomeText.textContent = won
-      ? `Die fünf Minuten sind abgelaufen, ohne dass die Unterrichtsstabilität auf 0 gefallen ist. Übrig: ${game.score}/10 Leben.`
+      ? `Die fünf Minuten sind abgelaufen, ohne dass die Unterrichtsstabilität auf 0 gefallen ist. Übrig: ${game.score}/10 Stabilität.`
       : 'Die Unterrichtsstabilität ist auf 0 gefallen. Die Klasse hat die gemeinsame Arbeitsruhe verloren.';
   }
   if (outcomeAdvice) {
@@ -2425,7 +2677,7 @@ function showOutcomeModal(result) {
       : 'Achte beim nächsten Mal besonders auf kurze Wege zur Lehrkraft, freie Laufwege, sichtbare Risikoschüler*innen und klare, knappe Interventionen statt langer Unterbrechungen.';
   }
   if (outcomeHighscore) outcomeHighscore.textContent = String(finalScore);
-  if (outcomeBreakdown) outcomeBreakdown.textContent = `Interventionen/Reaktionen: ${finalScore - game.lifeBonus} · Lebensbonus: ${game.lifeBonus} (${game.score} × ${SCORE_PER_LIFE})`;
+  if (outcomeBreakdown) outcomeBreakdown.textContent = `Interventionen/Reaktionen: ${finalScore - game.lifeBonus} · Stabilitätsbonus: ${game.lifeBonus} (${game.score} × ${SCORE_PER_LIFE})`;
   if (restartOutcomeBtn) restartOutcomeBtn.textContent = won ? 'Nochmal spielen' : 'Neuer Versuch';
   if (outcomeModal) {
     outcomeModal.hidden = false;
@@ -2674,5 +2926,4 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-installPageUtilities();
 init();

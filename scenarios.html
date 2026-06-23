@@ -3,96 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Unterrichtsverlauf | Classroom-Management-Spiel</title>
+  <title>Interaktive Phase · Schritt 3 | Classroom-Management-Spiel</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="scenarios-page branching-page">
-  <div class="page-utility-bar" style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:8px;flex-wrap:wrap;">
-    <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
-  </div>
-  <header class="topbar compact-topbar branching-topbar">
-    <div>
-      <p class="eyebrow">Interaktive Phase · Schritt 3</p>
-      <h1>Unterrichtsverlauf</h1>
+  <header class="topbar compact-topbar branching-topbar phase3-topbar">
+    <div class="phase3-header-copy">
+      <h1>Interaktive Phase · Schritt 3</h1>
       <p class="subtitle">Reagiere auf Störungen im laufenden Unterricht. Klicke ein erreichbares Feld an; die Lehrkraft läuft automatisch dorthin.</p>
     </div>
-    <div class="scenario-top-actions">
+    <div class="scenario-top-actions phase3-actions">
       <div class="lesson-clock" aria-live="polite">
         <span>Unterrichtszeit</span>
         <strong id="lessonTimer">05:00</strong>
       </div>
+      <button type="button" id="startLessonBtn" class="primary-btn">Unterricht starten</button>
+      <button type="button" id="pauseLessonBtn" class="ghost-btn" disabled>Pausieren</button>
+      <button type="button" id="restartLessonBtn" class="ghost-btn">Neustart</button>
       <button type="button" id="openScenarioBtn" class="ghost-btn">Szenarien einsehen</button>
     </div>
   </header>
 
-  <main class="branch-shell">
-    <aside class="branch-hud panel branch-left-panel" aria-label="Lehrkraft, Lebensleiste und Highscore">
-      <section class="teacher-mood-card" aria-label="Lehrkraft-Zustand">
+  <main class="branch-shell phase3-shell">
+    <aside class="branch-hud panel branch-left-panel phase3-left-panel" aria-label="Lehrkraft, Unterrichtsstabilität und Highscore">
+      <section class="teacher-mood-card teacher-image-only" aria-label="Lehrkraftbild">
         <div class="teacher-mood-frame">
-          <img id="teacherMoodImage" src="assets/teachers/teacher_5.png" alt="Zustand der Lehrkraft" />
-        </div>
-        <div>
-          <span>Zustand der Lehrkraft</span>
-          <strong id="teacherMoodLabel">stabil</strong>
+          <img id="teacherMoodImage" src="assets/teachers/teacher_8-10.png" alt="Lehrkraftbild" />
         </div>
       </section>
 
-      <section class="branch-life-card" aria-label="Lebensleiste">
-        <div class="section-title-row">
-          <h2>Lebensleiste</h2>
-          <span id="branchScorePill" class="pill">–/10</span>
-        </div>
-        <div id="branchLifeSegments" class="branch-life-segments" aria-label="Stabilitätsleiste"></div>
-        <p id="branchScoreNote" class="hint">Startwert wird aus Schritt 1 übernommen.</p>
+      <section class="branch-life-card phase3-stability-card" aria-label="Unterrichtsstabilität">
+        <div id="branchLifeSegments" class="branch-life-segments" aria-label="Unterrichtsstabilität"></div>
       </section>
 
       <section class="scoreboard-card" aria-label="Aktueller Highscore">
-        <div class="section-title-row">
-          <h2>Highscore</h2>
-          <span class="pill">live</span>
-        </div>
+        <h2>Highscore</h2>
         <div class="scoreboard-current">
           <span>Aktuell</span>
           <strong id="currentHighscore">0</strong>
         </div>
-        <p id="highscoreNote" class="hint">Lebensbonus wird erst am Ende addiert.</p>
       </section>
 
-      <section class="score-events-card" aria-label="Highscore-Ereignisse">
-        <div class="section-title-row">
-          <h2>Punkte-Ereignisse</h2>
-          <span id="scoreEventCounter" class="pill">0</span>
-        </div>
+      <section class="score-events-card score-events-card--plain" aria-label="Letzte Ereignisse">
         <div id="scoreEventList" class="score-event-list">
-          <p class="hint">Noch keine Punkte-Ereignisse.</p>
+          <p class="hint">Noch keine Ereignisse.</p>
         </div>
       </section>
-
-      <button type="button" id="startLessonBtn" class="primary-btn full-width">Unterricht starten</button>
     </aside>
 
-    <section class="branch-room-panel panel" aria-label="Klassenzimmer im Unterrichtsverlauf">
-      <div class="branch-room-head">
+    <section class="branch-room-panel panel phase3-room-panel" aria-label="Klassenzimmer im Unterrichtsverlauf">
+      <div class="branch-room-head phase3-room-head">
         <div>
-          <p class="eyebrow">Klassenzimmer</p>
-          <h2>Live-Verwaltung</h2>
+          <h2>Unterrichtsstunde</h2>
           <p id="teacherStatus" class="hint">Klicke nach dem Start ein freies Feld an. Die Lehrkraft läuft automatisch den kürzesten freien Weg.</p>
         </div>
       </div>
       <div id="branchClassroomGrid" class="branch-classroom-grid" aria-label="Spielbrett Unterrichtsverlauf"></div>
     </section>
 
-    <aside class="branch-log-panel panel branch-right-panel" aria-label="Ereignisanzeige">
-      <div class="section-title-row">
+    <aside class="branch-log-panel panel branch-right-panel phase3-right-panel" aria-label="Ereignisanzeige">
+      <div class="phase3-help-head">
         <h2>Wer braucht Hilfe?</h2>
-        <span id="incidentCounter" class="pill">0</span>
       </div>
       <div id="branchEventCards" class="branch-event-cards">
         <p class="hint">Noch keine Ereigniskarte aktiv.</p>
       </div>
-      <div class="section-title-row branch-history-head">
+      <div class="section-title-row branch-history-head phase3-history-head">
         <h2>Ereignishistorie</h2>
-        <span class="pill">Verlauf</span>
       </div>
       <div id="branchLog" class="branch-log"></div>
     </aside>
@@ -144,8 +121,6 @@
     </article>
   </section>
 
-
-
   <section id="outcomeModal" class="branch-outcome-modal" hidden aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="outcomeTitle">
     <div class="branch-modal-backdrop"></div>
     <article class="branch-outcome-card">
@@ -163,6 +138,32 @@
           <small id="outcomeBreakdown"></small>
         </div>
         <button type="button" id="restartOutcomeBtn" class="primary-btn">Neuer Versuch</button>
+      </div>
+    </article>
+  </section>
+
+  <section id="branchTutorialOverlay" class="tutorial-overlay" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="branchTutorialTitle">
+    <div class="tutorial-backdrop"></div>
+    <article class="tutorial-book" role="document">
+      <div class="tutorial-topline">
+        <span id="branchTutorialProgress" class="tutorial-progress-pill">1/7</span>
+        <button type="button" id="branchTutorialSkipBtn" class="tutorial-skip">Überspringen</button>
+      </div>
+      <div class="tutorial-viewport">
+        <section id="branchTutorialSlide" class="tutorial-slide-card tutorial-slide-card--phase3">
+          <div id="branchTutorialVisual" class="tutorial-visual tutorial-visual--phase3" aria-hidden="true"></div>
+          <div class="tutorial-content">
+            <p class="eyebrow">Spielerklärung</p>
+            <h2 id="branchTutorialTitle">Kurzer Überblick</h2>
+            <p id="branchTutorialText">In dieser Phase sicherst du den laufenden Unterricht: du bewegst die Lehrkraft, fängst Störungen ab und hältst die Unterrichtsstabilität hoch.</p>
+            <ul id="branchTutorialList" class="tutorial-list"></ul>
+          </div>
+        </section>
+      </div>
+      <div class="tutorial-controls">
+        <button type="button" id="branchTutorialPrevBtn" class="ghost-btn">Zurück</button>
+        <div id="branchTutorialDots" class="tutorial-dots" aria-label="Fortschritt der Spielerklärung"></div>
+        <button type="button" id="branchTutorialNextBtn" class="primary-btn">Weiter</button>
       </div>
     </article>
   </section>
