@@ -5577,3 +5577,84 @@ body.rules-page {
   opacity: 1 !important;
   background: linear-gradient(180deg, rgba(250, 204, 21, 0.96), rgba(217, 119, 6, 0.96)) !important;
 }
+
+
+/* Version 13: Müllbilder + Mülleimer-Drag-and-Drop */
+.room-object-icon,
+.branch-object-icon {
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.room-object-bin,
+.branch-object-bin,
+.frozen-object-bin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-object-trash,
+.branch-object-trash,
+.frozen-object-trash {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.room-object-trash,
+.branch-object-trash {
+  cursor: grab;
+}
+
+.room-object-trash.dragging-trash,
+.branch-object-trash.dragging-trash {
+  opacity: 0.55;
+}
+
+.trash-visual-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.room-object-trash {
+  padding: 0 !important;
+  overflow: visible;
+}
+
+.room-object-trash .trash-visual-img {
+  width: 88%;
+  height: 88%;
+  margin: 6%;
+}
+
+.branch-object-trash {
+  padding: 0 !important;
+  overflow: visible;
+}
+
+.branch-object-trash .trash-visual-img {
+  width: 92%;
+  height: 92%;
+  margin: 4%;
+}
+
+.frozen-object-trash {
+  padding: 1px;
+}
+
+.frozen-object-trash .trash-visual-img {
+  width: 100%;
+  height: 100%;
+}
+
+.room-object-bin.trash-drop-ready,
+.branch-object-bin.trash-drop-ready {
+  outline: 3px solid rgba(34, 197, 94, 0.45);
+  outline-offset: 2px;
+  transform: scale(1.05);
+}

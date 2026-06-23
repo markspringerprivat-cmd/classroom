@@ -72,9 +72,45 @@ const defaultBranchStep = {
   desks: defaultBranchDesks,
   assignments: defaultBranchAssignments,
   teacher: { row: 1, col: 4, dir: 'down', mode: 'frontStanding' },
-  objects: { trash: [], broom: { id: 'broom-fixed', type: 'broom', row: 8, col: 9 } },
+  objects: { trash: [], bin: { id: 'trash-bin-1', type: 'bin', row: 8, col: 9 } },
   metrics: {}
 };
+
+const trashAssetPool = ['assets/trash/paper.png', 'assets/trash/banana.png', 'assets/trash/apple.png'];
+
+function pickRandomTrashAsset() {
+  return trashAssetPool[Math.floor(Math.random() * trashAssetPool.length)];
+}
+
+function normalizeTrashItem(item = {}, index = 0) {
+  return {
+    ...item,
+    id: item.id || `trash-${index + 1}`,
+    type: 'trash',
+    asset: item.asset || item.image || pickRandomTrashAsset(),
+    removed: Boolean(item.removed)
+  };
+}
+
+function normalizeRoomObjects(raw = {}) {
+  const binSource = raw.bin || raw.broom || { id: 'trash-bin-1', type: 'bin', row: 8, col: 9 };
+  return {
+    bin: {
+      ...binSource,
+      id: binSource.id || 'trash-bin-1',
+      type: 'bin',
+      row: Number(binSource.row ?? 8),
+      col: Number(binSource.col ?? 9),
+      removed: false
+    },
+    trash: Array.isArray(raw.trash) ? raw.trash.map((item, index) => normalizeTrashItem(item, index)) : []
+  };
+}
+
+function trashImageMarkup(object, className = 'trash-visual-img', alt = 'Müll') {
+  const src = object?.asset || pickRandomTrashAsset();
+  return `<img class="${className}" src="${src}" alt="${alt}" draggable="false" />`;
+}
 
 function normalizeStepDataForBranching(stepData = {}, ruleData = {}) {
   const fromRules = ruleData?.step1 && typeof ruleData.step1 === 'object' ? ruleData.step1 : {};
@@ -90,12 +126,11 @@ function normalizeStepDataForBranching(stepData = {}, ruleData = {}) {
     desks: hasDesks ? source.desks : defaultBranchStep.desks,
     assignments: hasAssignments ? source.assignments : defaultBranchStep.assignments,
     teacher: source.teacher || defaultBranchStep.teacher,
-    objects: source.objects && typeof source.objects === 'object'
-      ? { trash: Array.isArray(source.objects.trash) ? source.objects.trash : [], broom: source.objects.broom || defaultBranchStep.objects.broom }
-      : defaultBranchStep.objects,
+    objects: normalizeRoomObjects(source.objects && typeof source.objects === 'object' ? source.objects : defaultBranchStep.objects),
     metrics: source.metrics || {}
   };
 }
+
 
 const ruleCatalog = {
   'focus-neighbours': 'Während Arbeitsphasen arbeiten wir leise und lenken unsere Sitznachbar*innen nicht ab.',
@@ -937,12 +972,11 @@ const game = {
   finalBonusAdded: false,
   finishReason: null,
   scoreEvents: [],
-  cleaningMode: false,
   dynamicTrash: [],
   studentPositions: {},
   studentMoveTimers: {},
   pendingWanderResolution: null,
-  broom: context.stepData?.objects?.broom || { id: 'broom-fixed', type: 'broom', row: (context.stepData?.rows || 9) - 1, col: (context.stepData?.cols || 10) - 1 }
+  bin: context.stepData?.objects?.bin || context.stepData?.objects?.broom || { id: 'trash-bin-1', type: 'bin', row: (context.stepData?.rows || 9) - 1, col: (context.stepData?.cols || 10) - 1 }
 };
 
 function init() {
@@ -1026,14 +1060,14 @@ function startLesson() {
   clearAllStudentMovement();
   game.studentPositions = {};
   game.pendingWanderResolution = null;
-  game.cleaningMode = false;
+
   game.teacherPath = [];
   game.teacherMoveStepIndex = 0;
   if (startLessonBtn) {
     startLessonBtn.disabled = true;
     startLessonBtn.textContent = 'Unterricht läuft';
   }
-  logEvent('Der Unterricht beginnt. Reagiere auf blinkende Störungen. Müll kann zusätzlich auftauchen und blockiert Laufwege, bis er weggefegt wird.', 'info');
+  logEvent('Der Unterricht beginnt. Reagiere auf blinkende Störungen. Müll kann zusätzlich auftauchen und blockiert Laufwege, bis er in den Mülleimer gezogen wird.', 'info');
   game.lessonTimer = window.setInterval(tickLesson, 250);
   renderBranchGame();
   renderHighscore();
@@ -1285,10 +1319,10 @@ function spawnTrashIncident() {
     handled: false,
     escalation: 'Der Müll bleibt liegen und blockiert weiter den Laufweg im Raum.'
   };
-  game.dynamicTrash.push({ id, type: 'trash', row: candidate.row, col: candidate.col, removed: false });
+  game.dynamicTrash.push({ id, type: 'trash', row: candidate.row, col: candidate.col, asset: pickRandomTrashAsset(), removed: false });
   game.activeIncidents.push(incident);
   playAlertAudio();
-  logEvent(`Müll taucht nahe bei ${candidate.nearStudent.name} auf. Er blockiert Laufwege zusätzlich zu den Schülerereignissen, bis du ihn mit dem Besen entfernst.`, 'warn');
+  logEvent(`Müll taucht nahe bei ${candidate.nearStudent.name} auf. Er blockiert Laufwege zusätzlich zu den Schülerereignissen, bis du ihn in den Mülleimer ziehst.`, 'warn');
   renderBranchGame();
   renderIncidents();
   return true;
@@ -1378,7 +1412,7 @@ function isWalkableForStudent(row, col, studentId = null) {
   if (getBlockedCellLocal(row, col)) return false;
   if (context.desks.some(desk => desk.row === row && desk.col === col)) return false;
   const object = getObjectAtLocal(row, col);
-  if (object && object.type !== 'broom') return false;
+  if (object) return false;
   if (game.teacher.row === row && game.teacher.col === col) return false;
   return !Object.entries(game.studentPositions || {}).some(([id, pos]) => id !== studentId && pos.state !== 'hidden' && pos.row === row && pos.col === col);
 }
@@ -1818,9 +1852,49 @@ function renderBranchGame() {
       const object = getObjectAtLocal(row, col);
       if (object) {
         const obj = document.createElement('span');
+        obj.addEventListener('pointerdown', event => event.stopPropagation());
         const trashIncident = object.type === 'trash' ? activeTrashByCell.get(`${row},${col}`) : null;
-        obj.className = `branch-object branch-object-${object.type}${game.cleaningMode && object.type === 'broom' ? ' active-cleaning' : ''}${trashIncident ? ' is-blocking' : ''}`;
-        obj.innerHTML = `<span class="branch-object-icon">${object.type === 'broom' ? '🧹' : '🗑️'}</span>`;
+        obj.className = `branch-object branch-object-${object.type}${trashIncident ? ' is-blocking' : ''}`;
+        if (object.type === 'bin') {
+          obj.innerHTML = '<span class="branch-object-icon" aria-hidden="true">🗑️</span>';
+          obj.title = 'Mülleimer: Ziehe Müll hier hinein.';
+          obj.addEventListener('dragover', event => {
+            const type = event.dataTransfer?.getData('type');
+            const objectId = event.dataTransfer?.getData('objectId');
+            if (type !== 'trash' || !objectId) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+            obj.classList.add('trash-drop-ready');
+          });
+          obj.addEventListener('dragleave', () => obj.classList.remove('trash-drop-ready'));
+          obj.addEventListener('drop', event => {
+            const type = event.dataTransfer?.getData('type');
+            const objectId = event.dataTransfer?.getData('objectId');
+            if (type !== 'trash' || !objectId) return;
+            event.preventDefault();
+            event.stopPropagation();
+            obj.classList.remove('trash-drop-ready');
+            const target = (game.dynamicTrash || []).find(item => item.id === objectId && !item.removed)
+              || (context.stepData?.objects?.trash || []).find(item => item.id === objectId && !item.removed);
+            if (!target) return;
+            clearTrashIncidentAt(target.row, target.col);
+          });
+        } else {
+          obj.draggable = true;
+          obj.innerHTML = trashImageMarkup(object, 'trash-visual-img branch-trash-img', 'Müll im Klassenraum');
+          obj.title = 'Ziehe dieses Müllbild in den Mülleimer unten rechts.';
+          obj.addEventListener('dragstart', event => {
+            event.stopPropagation();
+            if (event.dataTransfer) {
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData('type', 'trash');
+              event.dataTransfer.setData('objectId', object.id);
+            }
+            obj.classList.add('dragging-trash');
+          });
+          obj.addEventListener('dragend', () => obj.classList.remove('dragging-trash'));
+        }
         cell.appendChild(obj);
       }
 
@@ -1862,20 +1936,12 @@ function renderBranchGame() {
 function handleBranchCellClick(row, col) {
   if (!game.started || game.finished || game.scenarioOpen) return;
   const object = getObjectAtLocal(row, col);
-  if (object?.type === 'broom') {
-    game.cleaningMode = !game.cleaningMode;
-    if (teacherStatus) teacherStatus.textContent = game.cleaningMode
-      ? 'Besen aktiviert. Klicke jetzt auf den Müll, um das Feld freizuräumen.'
-      : 'Besen wieder abgelegt.';
-    renderBranchGame();
+  if (object?.type === 'bin') {
+    if (teacherStatus) teacherStatus.textContent = 'Ziehe den Müll in den Mülleimer unten rechts, um das Feld freizuräumen.';
     return;
   }
   if (object?.type === 'trash') {
-    if (!game.cleaningMode) {
-      if (teacherStatus) teacherStatus.textContent = 'Klicke zuerst unten rechts auf den Besen und dann auf das Müllfeld.';
-      return;
-    }
-    clearTrashIncidentAt(row, col);
+    if (teacherStatus) teacherStatus.textContent = 'Ziehe dieses Müllbild in den Mülleimer unten rechts.';
     return;
   }
 
@@ -1905,13 +1971,13 @@ function clearTrashIncidentAt(row, col) {
       staticTrash.removed = true;
       if (teacherStatus) teacherStatus.textContent = 'Müll entfernt. Das Feld ist wieder frei.';
     }
-    game.cleaningMode = false;
+  
     renderBranchGame();
     return;
   }
   removeIncident(incident.id);
   removeDynamicTrash(incident.id);
-  game.cleaningMode = false;
+
   addHighscoreEvent(0, 'Müll entfernt und Laufweg wieder freigemacht.', 'neutral');
   logEvent(`Der Weg nahe bei ${incident.student?.name || 'einem Tisch'} ist wieder frei.`, 'neutral');
   renderBranchGame();
@@ -2214,7 +2280,7 @@ function renderIncidents() {
   const now = Date.now();
   const cards = game.activeIncidents.map(incident => {
     if (incident.kind === 'trash') {
-      return `<article class="incident-item event-card"><strong>Müll blockiert den Weg</strong><span>mit dem Besen entfernen</span><small>nahe bei ${escapeHtml(incident.student?.name || 'einem Tisch')}</small></article>`;
+      return `<article class="incident-item event-card"><strong>Müll blockiert den Weg</strong><span>in den Mülleimer ziehen</span><small>nahe bei ${escapeHtml(incident.student?.name || 'einem Tisch')}</small></article>`;
     }
     if (incident.kind === 'wander') {
       return `<article class="incident-item event-card"><strong>${escapeHtml(incident.student.name)} ist unterwegs</strong><span>Lehrkraft muss nachfragen</span><small>${escapeHtml(incident.scenario.title)}</small></article>`;
@@ -2445,8 +2511,8 @@ function getBlockedCellLocal(row, col) {
 }
 
 function getObjectAtLocal(row, col) {
-  const broom = game.broom || context.stepData?.objects?.broom;
-  if (broom && broom.row === row && broom.col === col) return { ...broom, type: 'broom' };
+  const bin = game.bin || context.stepData?.objects?.bin || context.stepData?.objects?.broom;
+  if (bin && bin.row === row && bin.col === col) return { ...bin, type: 'bin' };
   const dynamicTrash = (game.dynamicTrash || []).find(item => !item.removed && item.row === row && item.col === col);
   if (dynamicTrash) return dynamicTrash;
   return (context.stepData?.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;

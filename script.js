@@ -23,7 +23,7 @@ const blockedCells = [
 
 const roomObjectConfig = {
   trashCount: 5,
-  broomPreferred: { row: 8, col: 9 }
+  binPreferred: { row: 8, col: 9 }
 };
 
 const students = [
@@ -67,8 +67,7 @@ const state = {
   desks: [],
   assignments: {},
   teacher: { row: 1, col: 4, dir: 'down', mode: 'frontStanding' },
-  objects: { trash: [], broom: null },
-  cleaningMode: false,
+  objects: { trash: [], bin: null },
   selectedStudentId: null,
   placingTeacher: false,
   score: null,
@@ -80,7 +79,8 @@ const state = {
 const dragState = {
   type: null,
   studentId: null,
-  deskId: null
+  deskId: null,
+  objectId: null
 };
 
 function studentAvatarSrc(student) {
@@ -91,6 +91,42 @@ function studentAvatarMarkup(student, className = 'student-avatar', altSuffix = 
   const src = studentAvatarSrc(student);
   const alt = `${student?.name || 'Schüler*in'}${altSuffix}`;
   return src ? `<img class="${className}" src="${src}" alt="${alt}" />` : `<span class="${className} avatar-fallback">${(student?.name || '?').charAt(0)}</span>`;
+}
+
+const trashAssetPool = ['assets/trash/paper.png', 'assets/trash/banana.png', 'assets/trash/apple.png'];
+
+function pickRandomTrashAsset() {
+  return trashAssetPool[Math.floor(Math.random() * trashAssetPool.length)];
+}
+
+function normalizeTrashItem(item = {}, index = 0) {
+  return {
+    ...item,
+    id: item.id || `trash-${index + 1}`,
+    type: 'trash',
+    asset: item.asset || item.image || pickRandomTrashAsset(),
+    removed: Boolean(item.removed)
+  };
+}
+
+function normalizeRoomObjects(raw = {}) {
+  const binSource = raw.bin || raw.broom || { id: 'trash-bin-1', type: 'bin', row: roomObjectConfig.binPreferred.row, col: roomObjectConfig.binPreferred.col };
+  return {
+    bin: {
+      ...binSource,
+      id: binSource.id || 'trash-bin-1',
+      type: 'bin',
+      row: Number(binSource.row ?? roomObjectConfig.binPreferred.row),
+      col: Number(binSource.col ?? roomObjectConfig.binPreferred.col),
+      removed: false
+    },
+    trash: Array.isArray(raw.trash) ? raw.trash.map((item, index) => normalizeTrashItem(item, index)) : []
+  };
+}
+
+function trashImageMarkup(object, className = 'trash-visual-img', alt = 'Müll') {
+  const src = object?.asset || pickRandomTrashAsset();
+  return `<img class="${className}" src="${src}" alt="${alt}" draggable="false" />`;
 }
 
 
@@ -292,11 +328,10 @@ function applyDemoSetup() {
   clearAllClassroomData();
   initLayout('rows', false);
   state.assignments = { ...DEMO_ASSIGNMENTS };
-  state.objects = {
+  state.objects = normalizeRoomObjects({
     ...state.objects,
     trash: (state.objects.trash || []).map(item => ({ ...item, removed: true }))
-  };
-  state.cleaningMode = false;
+  });
   state.selectedStudentId = null;
   clearResults();
   render();
@@ -318,7 +353,6 @@ function initLayout(layoutKey, keepAssignments = false) {
 
   state.teacher = { ...layout.teacher, mode: 'frontStanding' };
   state.objects = generateRoomObjects();
-  state.cleaningMode = false;
   state.placingTeacher = false;
   setDirectionActive(state.teacher.dir);
   updateTeacherPlacementButton();
@@ -415,31 +449,62 @@ function createBlockedElement(group) {
 function createRoomObjectElement(object) {
   const el = document.createElement('button');
   el.type = 'button';
-  el.className = `room-object room-object-${object.type}${state.cleaningMode && object.type === 'broom' ? ' active' : ''}`;
+  el.className = `room-object room-object-${object.type}`;
   el.dataset.objectId = object.id;
-  el.textContent = object.type === 'broom' ? '🧹' : '🗑️';
-  el.title = object.type === 'broom'
-    ? 'Besen anklicken, dann Müll anklicken, um ihn zu entfernen.'
-    : 'Müll: erzeugt Störrisiko. Mit dem Besen entfernen.';
-  el.addEventListener('click', event => {
-    event.stopPropagation();
-    if (object.type === 'broom') {
-      state.cleaningMode = !state.cleaningMode;
-      showTemporaryHint(state.cleaningMode ? 'Besen ausgewählt: Klicke Müll an, um ihn zu entfernen.' : 'Besen abgewählt.');
-      renderGrid();
-      return;
-    }
-    if (object.type === 'trash') {
-      if (!state.cleaningMode) {
-        showTemporaryHint('Klicke zuerst den Besen an, um Müll entfernen zu können.');
+
+  el.addEventListener('pointerdown', event => event.stopPropagation());
+
+  if (object.type === 'bin') {
+    el.innerHTML = `<span class="room-object-icon" aria-hidden="true">🗑️</span>`;
+    el.title = 'Mülleimer: Ziehe Müll hier hinein, um ihn zu entsorgen.';
+    el.addEventListener('click', event => {
+      event.stopPropagation();
+      showTemporaryHint('Ziehe ein Müllbild in den Mülleimer unten rechts.');
+    });
+    el.addEventListener('dragover', event => {
+      const data = getDropData(event);
+      if (data.type !== 'trash' || !data.objectId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      el.classList.add('trash-drop-ready');
+    });
+    el.addEventListener('dragleave', () => el.classList.remove('trash-drop-ready'));
+    el.addEventListener('drop', event => {
+      const data = getDropData(event);
+      if (data.type !== 'trash' || !data.objectId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      el.classList.remove('trash-drop-ready');
+      const targetTrash = (state.objects?.trash || []).find(item => item.id === data.objectId && !item.removed);
+      if (!targetTrash) {
+        clearDragState();
         return;
       }
-      object.removed = true;
-      state.cleaningMode = false;
+      targetTrash.removed = true;
       clearResults();
-      showTemporaryHint('Müll entfernt: Der Störreiz im Raum wurde reduziert.');
+      showTemporaryHint('Müll entsorgt: Der Störreiz im Raum wurde reduziert.');
+      clearDragState();
       renderGrid();
-    }
+    });
+    return el;
+  }
+
+  el.draggable = true;
+  el.innerHTML = trashImageMarkup(object, 'trash-visual-img', 'Müll im Klassenraum');
+  el.title = 'Müll: Ziehe dieses Objekt in den Mülleimer unten rechts.';
+  el.addEventListener('click', event => {
+    event.stopPropagation();
+    showTemporaryHint('Ziehe den Müll in den Mülleimer unten rechts.');
+  });
+  el.addEventListener('dragstart', event => {
+    event.stopPropagation();
+    startDrag(event, { type: 'trash', objectId: object.id });
+    el.classList.add('dragging-trash');
+  });
+  el.addEventListener('dragend', () => {
+    el.classList.remove('dragging-trash');
+    clearDragState();
   });
   return el;
 }
@@ -626,12 +691,14 @@ function startDrag(event, payload) {
   dragState.type = payload.type || null;
   dragState.studentId = payload.studentId || null;
   dragState.deskId = payload.deskId || null;
+  dragState.objectId = payload.objectId || null;
 
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('type', dragState.type || '');
     if (dragState.studentId) event.dataTransfer.setData('studentId', dragState.studentId);
     if (dragState.deskId) event.dataTransfer.setData('deskId', dragState.deskId);
+    if (dragState.objectId) event.dataTransfer.setData('objectId', dragState.objectId);
   }
 }
 
@@ -639,7 +706,8 @@ function getDropData(event) {
   return {
     type: event.dataTransfer?.getData('type') || dragState.type,
     studentId: event.dataTransfer?.getData('studentId') || dragState.studentId,
-    deskId: event.dataTransfer?.getData('deskId') || dragState.deskId
+    deskId: event.dataTransfer?.getData('deskId') || dragState.deskId,
+    objectId: event.dataTransfer?.getData('objectId') || dragState.objectId
   };
 }
 
@@ -647,6 +715,7 @@ function clearDragState() {
   dragState.type = null;
   dragState.studentId = null;
   dragState.deskId = null;
+  dragState.objectId = null;
 }
 
 function handleCellClick(row, col) {
@@ -726,7 +795,7 @@ function canPlaceDeskAt(deskId, row, col) {
   const block = getBlockedCell(row, col);
   if (block) return { ok: false, reason: `${block.label}: Dieses Feld ist blockiert.` };
   const targetObject = getRoomObjectAt(row, col);
-  if (targetObject) return { ok: false, reason: targetObject.type === 'trash' ? 'Hier liegt Müll. Entferne ihn zuerst mit dem Besen.' : 'Hier liegt der Besen.' };
+  if (targetObject) return { ok: false, reason: targetObject.type === 'trash' ? 'Hier liegt Müll. Ziehe ihn zuerst in den Mülleimer.' : 'Hier steht der Mülleimer.' };
   const targetDesk = getDeskAt(row, col);
   if (targetDesk && targetDesk.id !== deskId) return { ok: false, reason: 'Hier steht bereits ein Tisch.' };
   if (state.teacher.row === row && state.teacher.col === col) return { ok: false, reason: 'Hier steht die Lehrkraft.' };
@@ -743,7 +812,7 @@ function placeTeacher(row, col) {
   const object = getRoomObjectAt(row, col);
   if (object) {
     flashCell(row, col, 'invalid');
-    showTemporaryHint(object.type === 'trash' ? 'Die Lehrkraft kann nicht auf Müll stehen.' : 'Die Lehrkraft kann nicht auf dem Besenfeld stehen.');
+    showTemporaryHint(object.type === 'trash' ? 'Die Lehrkraft kann nicht auf Müll stehen.' : 'Die Lehrkraft kann nicht auf dem Mülleimerfeld stehen.');
     return;
   }
   if (getDeskAt(row, col)) {
@@ -801,7 +870,7 @@ function cellKey(row, col) { return `${row},${col}`; }
 function getBlockedCell(row, col) { return blockedCells.find(item => item.row === row && item.col === col) || null; }
 function isBlockedCell(row, col) { return Boolean(getBlockedCell(row, col)); }
 function getRoomObjectAt(row, col) {
-  if (state.objects?.broom && state.objects.broom.row === row && state.objects.broom.col === col) return state.objects.broom;
+  if (state.objects?.bin && state.objects.bin.row === row && state.objects.bin.col === col) return state.objects.bin;
   return (state.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;
 }
 function getActiveTrash() { return (state.objects?.trash || []).filter(item => !item.removed); }
@@ -817,12 +886,12 @@ function shuffle(items) {
   return copy;
 }
 function generateRoomObjects() {
-  const broom = { id: 'broom-1', type: 'broom', row: roomObjectConfig.broomPreferred.row, col: roomObjectConfig.broomPreferred.col, removed: false };
-  if (isBlockedCell(broom.row, broom.col) || getDeskAt(broom.row, broom.col) || (state.teacher.row === broom.row && state.teacher.col === broom.col)) {
+  const bin = { id: 'trash-bin-1', type: 'bin', row: roomObjectConfig.binPreferred.row, col: roomObjectConfig.binPreferred.col, removed: false };
+  if (isBlockedCell(bin.row, bin.col) || getDeskAt(bin.row, bin.col) || (state.teacher.row === bin.row && state.teacher.col === bin.col)) {
     for (let row = ROWS - 1; row >= 0; row--) {
       for (let col = COLS - 1; col >= 0; col--) {
         if (!isBlockedCell(row, col) && !getDeskAt(row, col) && !(state.teacher.row === row && state.teacher.col === col)) {
-          broom.row = row; broom.col = col; row = -1; break;
+          bin.row = row; bin.col = col; row = -1; break;
         }
       }
     }
@@ -833,13 +902,21 @@ function generateRoomObjects() {
       if (isBlockedCell(row, col)) continue;
       if (getDeskAt(row, col)) continue;
       if (state.teacher.row === row && state.teacher.col === col) continue;
-      if (broom.row === row && broom.col === col) continue;
+      if (bin.row === row && bin.col === col) continue;
       candidates.push({ row, col });
     }
   }
-  const trash = shuffle(candidates).slice(0, roomObjectConfig.trashCount).map((pos, index) => ({ id: `trash-${index + 1}`, type: 'trash', row: pos.row, col: pos.col, removed: false }));
-  return { broom, trash };
+  const trash = shuffle(candidates).slice(0, roomObjectConfig.trashCount).map((pos, index) => ({
+    id: `trash-${index + 1}`,
+    type: 'trash',
+    row: pos.row,
+    col: pos.col,
+    asset: pickRandomTrashAsset(),
+    removed: false
+  }));
+  return normalizeRoomObjects({ bin, trash });
 }
+
 
 function directionLabel(dir) {
   return ({ up: 'Lehrkraft ↑', down: 'Lehrkraft ↓', left: 'Lehrkraft ←', right: 'Lehrkraft →' })[dir] || 'Lehrkraft';
@@ -1707,8 +1784,8 @@ const tutorialSlides = [
   },
   {
     title: 'Raumsauberkeit und Störreize',
-    text: 'Müll im Klassenraum erzeugt starke rote Störfelder. Mit dem Besen kannst du Müll entfernen.',
-    bullets: ['Besen anklicken, danach Müll anklicken', 'Müll wirkt nach oben, unten, links und rechts als Störreiz', 'Ein aufgeräumter Raum reduziert Ablenkung'],
+    text: 'Müll im Klassenraum erzeugt starke rote Störfelder. Ziehe die Müllbilder in den Mülleimer unten rechts, um sie zu entsorgen.',
+    bullets: ['Jedes Müllbild lässt sich per Drag-and-Drop bewegen', 'Müll wirkt nach oben, unten, links und rechts als Störreiz', 'Ein aufgeräumter Raum reduziert Ablenkung'],
     visual: 'trash'
   },
   {
@@ -1761,7 +1838,7 @@ function tutorialVisualMarkup(type) {
     <div class="tutorial-viz-grid viz-trash">
       <span class="viz-cell red-2 trash-home">🗑️</span><span class="viz-cell red-2"></span><span class="viz-cell"></span>
       <span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home">🧹</span>
+      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home">🗑️</span>
     </div>`;
   return `
     <div class="tutorial-check-demo">

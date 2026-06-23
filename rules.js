@@ -141,16 +141,55 @@ function studentAvatarMarkup(student, className = 'student-avatar', altSuffix = 
   return src ? `<img class="${className}" src="${src}" alt="${alt}" />` : `<span class="${className} avatar-fallback">${(student?.name || '?').charAt(0)}</span>`;
 }
 
+const trashAssetPool = ['assets/trash/paper.png', 'assets/trash/banana.png', 'assets/trash/apple.png'];
+
+function pickRandomTrashAsset() {
+  return trashAssetPool[Math.floor(Math.random() * trashAssetPool.length)];
+}
+
+function normalizeTrashItem(item = {}, index = 0) {
+  return {
+    ...item,
+    id: item.id || `trash-${index + 1}`,
+    type: 'trash',
+    asset: item.asset || item.image || pickRandomTrashAsset(),
+    removed: Boolean(item.removed)
+  };
+}
+
+function normalizeRoomObjects(raw = {}) {
+  const binSource = raw.bin || raw.broom || { id: 'trash-bin-1', type: 'bin', row: 8, col: 9 };
+  return {
+    bin: {
+      ...binSource,
+      id: binSource.id || 'trash-bin-1',
+      type: 'bin',
+      row: Number(binSource.row ?? 8),
+      col: Number(binSource.col ?? 9),
+      removed: false
+    },
+    trash: Array.isArray(raw.trash) ? raw.trash.map((item, index) => normalizeTrashItem(item, index)) : []
+  };
+}
+
+function trashImageMarkup(object, className = 'trash-visual-img', alt = 'Müll') {
+  const src = object?.asset || pickRandomTrashAsset();
+  return `<img class="${className}" src="${src}" alt="${alt}" draggable="false" />`;
+}
+
 function loadStep1Data() {
   try {
     const raw = localStorage.getItem('classroomGame.step1');
-    if (!raw) return defaultStep1;
-    return { ...defaultStep1, ...JSON.parse(raw) };
+    if (!raw) return { ...defaultStep1, objects: normalizeRoomObjects(defaultStep1.objects || {}) };
+    const parsed = { ...defaultStep1, ...JSON.parse(raw) };
+    parsed.objects = normalizeRoomObjects(parsed.objects || {});
+    return parsed;
   } catch (error) {
     console.warn('Schritt-1-Daten konnten nicht gelesen werden:', error);
-    return defaultStep1;
+    return { ...defaultStep1, objects: normalizeRoomObjects(defaultStep1.objects || {}) };
   }
 }
+
 
 function getStudent(id) {
   return (step1Data.students || fallbackStudents).find(student => student.id === id);
@@ -232,8 +271,8 @@ function formatBlockedLabel(group) {
 }
 
 function getRoomObjectAt(row, col) {
-  const broom = step1Data.objects?.broom;
-  if (broom && broom.row === row && broom.col === col) return broom;
+  const bin = step1Data.objects?.bin;
+  if (bin && bin.row === row && bin.col === col) return bin;
   return (step1Data.objects?.trash || []).find(item => !item.removed && item.row === row && item.col === col) || null;
 }
 
@@ -323,7 +362,9 @@ function renderFrozenGrid() {
       if (object) {
         const objectEl = document.createElement('span');
         objectEl.className = `frozen-object frozen-object-${object.type}`;
-        objectEl.textContent = object.type === 'broom' ? '🧹' : '🗑️';
+        objectEl.innerHTML = object.type === 'bin'
+          ? '<span class="room-object-icon" aria-hidden="true">🗑️</span>'
+          : trashImageMarkup(object, 'trash-visual-img frozen-trash-img', 'Müll im Klassenraum');
         cell.appendChild(objectEl);
       }
       const teacher = step1Data.teacher || {};
