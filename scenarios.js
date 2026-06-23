@@ -979,6 +979,8 @@ const game = {
   bin: context.stepData?.objects?.bin || context.stepData?.objects?.broom || { id: 'trash-bin-1', type: 'bin', row: (context.stepData?.rows || 9) - 1, col: (context.stepData?.cols || 10) - 1 }
 };
 
+const liveTrashDragState = { objectId: null };
+
 function init() {
   renderContext();
   renderScenarioCatalog();
@@ -1860,8 +1862,8 @@ function renderBranchGame() {
           obj.title = 'Mülleimer: Ziehe Müll hier hinein.';
           obj.addEventListener('dragover', event => {
             const type = event.dataTransfer?.getData('type');
-            const objectId = event.dataTransfer?.getData('objectId');
-            if (type !== 'trash' || !objectId) return;
+            const objectId = event.dataTransfer?.getData('objectId') || liveTrashDragState.objectId;
+            if ((type && type !== 'trash') || !objectId) return;
             event.preventDefault();
             event.stopPropagation();
             if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
@@ -1870,13 +1872,14 @@ function renderBranchGame() {
           obj.addEventListener('dragleave', () => obj.classList.remove('trash-drop-ready'));
           obj.addEventListener('drop', event => {
             const type = event.dataTransfer?.getData('type');
-            const objectId = event.dataTransfer?.getData('objectId');
-            if (type !== 'trash' || !objectId) return;
+            const objectId = event.dataTransfer?.getData('objectId') || liveTrashDragState.objectId;
+            if ((type && type !== 'trash') || !objectId) return;
             event.preventDefault();
             event.stopPropagation();
             obj.classList.remove('trash-drop-ready');
             const target = (game.dynamicTrash || []).find(item => item.id === objectId && !item.removed)
               || (context.stepData?.objects?.trash || []).find(item => item.id === objectId && !item.removed);
+            liveTrashDragState.objectId = null;
             if (!target) return;
             clearTrashIncidentAt(target.row, target.col);
           });
@@ -1886,6 +1889,7 @@ function renderBranchGame() {
           obj.title = 'Ziehe dieses Müllbild in den Mülleimer unten rechts.';
           obj.addEventListener('dragstart', event => {
             event.stopPropagation();
+            liveTrashDragState.objectId = object.id;
             if (event.dataTransfer) {
               event.dataTransfer.effectAllowed = 'move';
               event.dataTransfer.setData('type', 'trash');
@@ -1893,7 +1897,10 @@ function renderBranchGame() {
             }
             obj.classList.add('dragging-trash');
           });
-          obj.addEventListener('dragend', () => obj.classList.remove('dragging-trash'));
+          obj.addEventListener('dragend', () => {
+            obj.classList.remove('dragging-trash');
+            liveTrashDragState.objectId = null;
+          });
         }
         cell.appendChild(obj);
       }

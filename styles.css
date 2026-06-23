@@ -5719,3 +5719,112 @@ body.rules-page {
   padding: 0 !important;
   box-sizing: border-box !important;
 }
+
+
+/* Version 15: Liveverwaltung – Müll, Mülleimer und laufende Schüler korrigiert */
+.grid-cell > .room-object.room-object-bin,
+.branch-cell > .branch-object.branch-object-bin,
+.viz-trash .broom-home {
+  background: rgba(248, 250, 252, 0.95) !important;
+  border: 1px solid rgba(203, 213, 225, 0.95) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70), 0 8px 16px rgba(15, 23, 42, 0.22) !important;
+  color: #334155 !important;
+}
+
+.grid-cell > .room-object.room-object-bin,
+.branch-cell > .branch-object.branch-object-bin {
+  border-radius: 11px !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.grid-cell > .room-object.room-object-bin .room-object-icon,
+.branch-cell > .branch-object.branch-object-bin .branch-object-icon,
+.viz-trash .tutorial-bin-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  font-size: 1.75rem !important;
+  line-height: 1 !important;
+}
+
+.branch-cell > .branch-object.branch-object-trash,
+.grid-cell > .room-object.room-object-trash {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.branch-cell > .branch-object.branch-object-trash .trash-visual-img,
+.grid-cell > .room-object.room-object-trash .trash-visual-img,
+.frozen-object.frozen-object-trash .trash-visual-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.branch-moving-student,
+.branch-moving-student.wander-active {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 12px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 2px !important;
+  transform: none !important;
+}
+
+.branch-moving-student-avatar,
+.branch-moving-student.wander-active .branch-moving-student-avatar {
+  width: 95% !important;
+  height: 95% !important;
+  max-width: 95% !important;
+  max-height: 95% !important;
+  object-fit: contain !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.branch-moving-student.wander-active {
+  background: rgba(239, 68, 68, 0.20) !important;
+  border: 2px solid rgba(248, 113, 113, 0.92) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 0 0 4px rgba(239, 68, 68, 0.14) !important;
+  animation: wanderStudentRedFrameBlink 0.65s ease-in-out infinite !important;
+}
+
+@keyframes wanderStudentRedFrameBlink {
+  0%, 100% {
+    background: rgba(239, 68, 68, 0.16);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16), 0 0 0 3px rgba(239, 68, 68, 0.12);
+  }
+  50% {
+    background: rgba(239, 68, 68, 0.30);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22), 0 0 0 5px rgba(239, 68, 68, 0.18);
+  }
+}
+
+.viz-trash .trash-home {
+  background: rgba(127, 29, 29, 0.70) !important;
+  border-color: rgba(248, 113, 113, 0.50) !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+}
+
+.tutorial-trash-img {
+  width: 84% !important;
+  height: 84% !important;
+  object-fit: contain !important;
+  display: block !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.viz-trash .broom-home {
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+}

@@ -1836,9 +1836,9 @@ function tutorialVisualMarkup(type) {
     </div>`;
   if (type === 'trash') return `
     <div class="tutorial-viz-grid viz-trash">
-      <span class="viz-cell red-2 trash-home">🗑️</span><span class="viz-cell red-2"></span><span class="viz-cell"></span>
+      <span class="viz-cell red-2 trash-home"><img class="tutorial-trash-img" src="assets/trash/paper.png" alt="zerknülltes Papier" draggable="false" /></span><span class="viz-cell red-2"></span><span class="viz-cell"></span>
       <span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
-      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home">🗑️</span>
+      <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home"><span class="tutorial-bin-icon" aria-hidden="true">🗑️</span></span>
     </div>`;
   return `
     <div class="tutorial-check-demo">
