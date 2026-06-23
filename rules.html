@@ -100,7 +100,7 @@
     <article class="tutorial-book rules-tutorial-book" role="document">
       <div class="tutorial-topline">
         <span class="tutorial-progress-pill">Schritt 2</span>
-        <button type="button" id="rulesTutorialSkipBtn" class="tutorial-skip">Überspringen</button>
+        <button type="button" id="rulesTutorialSkipBtn" class="tutorial-skip" onclick="window.closeRulesTutorial && window.closeRulesTutorial()">Überspringen</button>
       </div>
       <section class="tutorial-slide-card rules-tutorial-card">
         <div class="rules-tutorial-visual" aria-hidden="true">
@@ -120,7 +120,7 @@
         </div>
       </section>
       <div class="tutorial-controls">
-        <button type="button" id="rulesTutorialDoneBtn" class="primary-btn">Verstanden</button>
+        <button type="button" id="rulesTutorialDoneBtn" class="primary-btn" onclick="window.closeRulesTutorial && window.closeRulesTutorial()">Verstanden</button>
       </div>
     </article>
   </section>

@@ -6595,3 +6595,42 @@ body.rules-page {
     font-size: clamp(2rem, 5vw, 3.1rem);
   }
 }
+
+/* ===== Version 23: Schritt-2-Anleitung wirklich klickbar ===== */
+.rules-tutorial-overlay {
+  z-index: 20000 !important;
+  pointer-events: auto !important;
+}
+
+.rules-tutorial-overlay[hidden],
+.rules-tutorial-overlay.is-closed {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.rules-tutorial-overlay .tutorial-backdrop {
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+.rules-tutorial-book {
+  position: relative !important;
+  z-index: 2 !important;
+  pointer-events: auto !important;
+}
+
+.rules-tutorial-book .tutorial-topline,
+.rules-tutorial-book .tutorial-controls {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+#rulesTutorialSkipBtn,
+#rulesTutorialDoneBtn {
+  position: relative !important;
+  z-index: 20 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+}

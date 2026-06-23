@@ -485,8 +485,18 @@ function bindEvents() {
 
   finishBtn.addEventListener('click', finishRules);
   backBtn.addEventListener('click', () => { window.location.href = 'index.html'; });
-  if (rulesTutorialSkipBtn) rulesTutorialSkipBtn.addEventListener('click', closeRulesTutorial);
-  if (rulesTutorialDoneBtn) rulesTutorialDoneBtn.addEventListener('click', closeRulesTutorial);
+  if (rulesTutorialSkipBtn) {
+    rulesTutorialSkipBtn.addEventListener('pointerdown', handleRulesTutorialDismiss, true);
+    rulesTutorialSkipBtn.addEventListener('click', handleRulesTutorialDismiss, true);
+    rulesTutorialSkipBtn.addEventListener('click', () => closeRulesTutorial());
+  }
+  if (rulesTutorialDoneBtn) {
+    rulesTutorialDoneBtn.addEventListener('pointerdown', handleRulesTutorialDismiss, true);
+    rulesTutorialDoneBtn.addEventListener('click', handleRulesTutorialDismiss, true);
+    rulesTutorialDoneBtn.addEventListener('click', () => closeRulesTutorial());
+  }
+  document.addEventListener('pointerdown', handleRulesTutorialDismiss, true);
+  document.addEventListener('click', handleRulesTutorialDismiss, true);
 }
 
 function startRuleDrag(event, ruleId, source) {
@@ -586,25 +596,56 @@ function openRulesTutorialOnce() {
   if (!rulesTutorialOverlay) return;
   try {
     if (sessionStorage.getItem('classroomGame.rulesTutorialSeen') === '1') {
-      rulesTutorialOverlay.hidden = true;
+      closeRulesTutorial(false);
       return;
     }
   } catch (error) {
     // ignore
   }
   rulesTutorialOverlay.hidden = false;
+  rulesTutorialOverlay.removeAttribute('hidden');
+  rulesTutorialOverlay.classList.remove('is-closed');
+  rulesTutorialOverlay.style.display = '';
+  rulesTutorialOverlay.style.visibility = '';
+  rulesTutorialOverlay.style.pointerEvents = '';
   document.body.classList.add('tutorial-open');
 }
 
-function closeRulesTutorial() {
+function closeRulesTutorial(markSeen = true) {
   if (!rulesTutorialOverlay) return;
   rulesTutorialOverlay.hidden = true;
+  rulesTutorialOverlay.setAttribute('hidden', '');
+  rulesTutorialOverlay.classList.add('is-closed');
+  rulesTutorialOverlay.style.display = 'none';
+  rulesTutorialOverlay.style.visibility = 'hidden';
+  rulesTutorialOverlay.style.pointerEvents = 'none';
   document.body.classList.remove('tutorial-open');
-  try {
-    sessionStorage.setItem('classroomGame.rulesTutorialSeen', '1');
-  } catch (error) {
-    // ignore
+  if (markSeen) {
+    try {
+      sessionStorage.setItem('classroomGame.rulesTutorialSeen', '1');
+    } catch (error) {
+      // ignore
+    }
   }
+}
+
+window.closeRulesTutorial = closeRulesTutorial;
+
+function pointInsideElement(event, element) {
+  if (!event || !element) return false;
+  const rect = element.getBoundingClientRect();
+  return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+}
+
+function handleRulesTutorialDismiss(event) {
+  if (!rulesTutorialOverlay || rulesTutorialOverlay.hidden) return;
+  const target = event.target;
+  const clickedButton = target?.closest?.('#rulesTutorialSkipBtn, #rulesTutorialDoneBtn');
+  const buttonAreaClicked = pointInsideElement(event, rulesTutorialSkipBtn) || pointInsideElement(event, rulesTutorialDoneBtn);
+  if (!clickedButton && !buttonAreaClicked) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeRulesTutorial();
 }
 
 function saveDraft() {
