@@ -5461,3 +5461,46 @@ body.rules-page {
     overflow-x: auto;
   }
 }
+
+/* ===== Version 9: bewegende Schüler im Verwaltungsspiel ===== */
+.branch-moving-student {
+  position: absolute;
+  inset: 3px;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.96), rgba(202, 138, 4, 0.96));
+  border: 2px solid rgba(254, 240, 138, 0.95);
+  box-shadow: 0 10px 20px rgba(113, 63, 18, 0.28), inset 0 1px 0 rgba(255,255,255,0.16);
+  pointer-events: none;
+}
+
+.branch-moving-student.wander-active {
+  animation: wanderStudentPulse 0.9s ease-in-out infinite;
+}
+
+.branch-moving-student-avatar {
+  width: 96%;
+  height: 96%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  object-position: center center;
+  display: block;
+}
+
+@keyframes wanderStudentPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.04); filter: brightness(1.12); }
+}
+
+.branch-desk.student-away {
+  opacity: 0.78;
+}
+
+.branch-desk.student-away strong {
+  display: block !important;
+  color: rgba(255,255,255,0.72);
+  font-size: 0.7rem;
+}
