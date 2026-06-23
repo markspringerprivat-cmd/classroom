@@ -50,13 +50,6 @@
         <p id="currentRuleHint">Ziehe diese Regel in eine Liste.</p>
       </article>
 
-      <section class="rules-stability-panel" aria-live="polite" aria-label="Auswirkung auf die Unterrichtsstabilität">
-        <div>
-          <span>Unterrichtsstabilität nach Regeln</span>
-          <strong id="rulesStabilityPreview">–/10 Balken</strong>
-        </div>
-        <p id="rulesStabilityDetails">Wähle fünf Regeln aus. Passende Regeln decken konkrete Schülerprobleme ab.</p>
-      </section>
 
       <div class="rule-lists" aria-label="Regellisten">
         <section class="rule-list-card accepted-list" data-list="accepted">
@@ -89,7 +82,7 @@
 
       <div class="rules-status-bar rules-status-bar-clean">
         <p id="rulesStatusText" class="rules-status neutral" aria-live="polite"></p>
-        <button type="button" id="finishRulesBtn" class="primary-btn" disabled>Regelauswahl speichern &amp; zu Schritt 3</button>
+        <button type="button" id="finishRulesBtn" class="primary-btn" disabled>Regelauswahl auswerten</button>
       </div>
     </section>
   </main>
@@ -121,6 +114,41 @@
       </section>
       <div class="tutorial-controls">
         <button type="button" id="rulesTutorialDoneBtn" class="primary-btn" onclick="window.closeRulesTutorial && window.closeRulesTutorial()">Verstanden</button>
+      </div>
+    </article>
+  </section>
+
+
+  <section id="rulesEvaluationOverlay" class="rules-evaluation-overlay" hidden aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="rulesEvaluationTitle">
+    <div class="rules-evaluation-backdrop"></div>
+    <article class="rules-evaluation-card" role="document">
+      <div class="rules-evaluation-head">
+        <span id="rulesEvaluationStep" class="tutorial-progress-pill">Auswertung 1/5</span>
+        <h2 id="rulesEvaluationTitle">Regelauswahl wird bewertet</h2>
+        <p id="rulesEvaluationIntro">Jede gewählte Klassenregel wird mit den konkreten Schülerprofilen der Klasse abgeglichen.</p>
+      </div>
+
+      <div class="rules-evaluation-pair">
+        <article class="rules-evaluation-rule">
+          <span>Gewählte Klassenregel</span>
+          <strong id="rulesEvaluationRuleText">–</strong>
+        </article>
+        <div class="rules-evaluation-arrow" aria-hidden="true">→</div>
+        <div id="rulesEvaluationStudentSlot" class="rules-evaluation-student-slot"></div>
+      </div>
+
+      <div id="rulesEvaluationResult" class="rules-evaluation-result">
+        <strong id="rulesEvaluationDelta">–</strong>
+        <p id="rulesEvaluationText">–</p>
+      </div>
+
+      <div class="rules-evaluation-stability" aria-label="Aktuelle Unterrichtsstabilität nach dieser Regel">
+        <div id="rulesEvaluationSegments" class="branch-life-segments"></div>
+        <span id="rulesEvaluationScoreText">–/10 Unterrichtsstabilität</span>
+      </div>
+
+      <div class="rules-evaluation-actions">
+        <button type="button" id="rulesEvaluationNextBtn" class="primary-btn">Weiter</button>
       </div>
     </article>
   </section>

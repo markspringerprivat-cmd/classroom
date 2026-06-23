@@ -76,6 +76,21 @@ const rulesStabilityDetails = document.getElementById('rulesStabilityDetails');
 const rulesTutorialOverlay = document.getElementById('rulesTutorialOverlay');
 const rulesTutorialSkipBtn = document.getElementById('rulesTutorialSkipBtn');
 const rulesTutorialDoneBtn = document.getElementById('rulesTutorialDoneBtn');
+const rulesEvaluationOverlay = document.getElementById('rulesEvaluationOverlay');
+const rulesEvaluationStep = document.getElementById('rulesEvaluationStep');
+const rulesEvaluationTitle = document.getElementById('rulesEvaluationTitle');
+const rulesEvaluationIntro = document.getElementById('rulesEvaluationIntro');
+const rulesEvaluationRuleText = document.getElementById('rulesEvaluationRuleText');
+const rulesEvaluationStudentSlot = document.getElementById('rulesEvaluationStudentSlot');
+const rulesEvaluationResult = document.getElementById('rulesEvaluationResult');
+const rulesEvaluationDelta = document.getElementById('rulesEvaluationDelta');
+const rulesEvaluationText = document.getElementById('rulesEvaluationText');
+const rulesEvaluationSegments = document.getElementById('rulesEvaluationSegments');
+const rulesEvaluationScoreText = document.getElementById('rulesEvaluationScoreText');
+const rulesEvaluationNextBtn = document.getElementById('rulesEvaluationNextBtn');
+
+let pendingRulesData = null;
+let rulesEvaluationIndex = 0;
 
 
 function clearAllClassroomData() {
@@ -126,6 +141,17 @@ function installPageUtilities() {
   const resetUtilityBtn = bar.querySelector('#utilityResetBtn');
   if (resetUtilityBtn) resetUtilityBtn.onclick = resetAppAndReload;
   window.classroomReset = resetAppAndReload;
+}
+
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[char]));
 }
 
 function studentAvatarSrc(student) {
@@ -409,6 +435,14 @@ function renderRules() {
   saveDraft();
 }
 
+
+function ruleDisplayHint(rule) {
+  if (!rule) return 'Ziehe diese Regel in eine Liste.';
+  if (rule.tone === 'beneficial') return 'Prüfe, welches Schülerverhalten diese Regel abdecken kann.';
+  if (rule.tone === 'harmful') return 'Prüfe, ob diese Regel Unterrichtsstabilität schwächen könnte.';
+  return 'Prüfe, ob diese Regel ein konkretes Schülerverhalten aus der Klasse abdeckt.';
+}
+
 function renderCurrentRule() {
   const assignedCount = getAssignedRuleIds().length;
   const current = getCurrentRule();
@@ -419,7 +453,7 @@ function renderCurrentRule() {
     currentRuleCard.draggable = true;
     progressText.textContent = `Regel ${assignedCount + 1}/${TOTAL_RULES}`;
     currentRuleText.textContent = current.text;
-    currentRuleHint.textContent = current.hint || 'Ziehe diese Regel in eine Liste.';
+    currentRuleHint.textContent = ruleDisplayHint(current);
   } else {
     currentRuleCard.hidden = false;
     currentRuleCard.removeAttribute('data-rule-id');
@@ -452,7 +486,7 @@ function renderList(listName, container) {
     card.draggable = true;
     card.dataset.ruleId = rule.id;
     card.dataset.source = listName;
-    card.innerHTML = `<span class="rule-item-text">${rule.text}</span><span class="rule-mini-hint">${rule.hint || ''}</span>`;
+    card.innerHTML = `<span class="rule-item-text">${rule.text}</span><span class="rule-mini-hint">${ruleDisplayHint(rule)}</span>`;
     card.title = 'Per Drag & Drop in eine andere Liste ziehen.';
     card.addEventListener('dragstart', event => startRuleDrag(event, rule.id, listName));
     card.addEventListener('dragend', clearRuleDrag);
@@ -485,6 +519,7 @@ function bindEvents() {
 
   finishBtn.addEventListener('click', finishRules);
   backBtn.addEventListener('click', () => { window.location.href = 'index.html'; });
+  if (rulesEvaluationNextBtn) rulesEvaluationNextBtn.addEventListener('click', advanceRulesEvaluation);
   if (rulesTutorialSkipBtn) {
     rulesTutorialSkipBtn.addEventListener('pointerdown', handleRulesTutorialDismiss, true);
     rulesTutorialSkipBtn.addEventListener('click', handleRulesTutorialDismiss, true);
@@ -551,8 +586,7 @@ function updateCountersAndStatus() {
   finishBtn.disabled = !valid;
 
   if (valid) {
-    const preview = evaluateAcceptedRules();
-    setStatus(`Regelauswahl vollständig. Prognose: ${preview.finalLives}/10 Balken nach Schritt 2.`, 'ready');
+    setStatus('Regelauswahl vollständig. Starte jetzt die Auswertung.', 'ready');
   } else if (accepted > REQUIRED_ACCEPTED) {
     setStatus('Zu viele Klassenregeln. Es dürfen genau fünf sein.', 'warning');
   } else if (assigned < TOTAL_RULES) {
@@ -575,21 +609,9 @@ function setStatus(message, tone = 'neutral') {
 
 
 function updateRuleStabilityPreview() {
-  if (!rulesStabilityPreview && !rulesStabilityDetails) return;
-  const preview = evaluateAcceptedRules();
-  const acceptedIds = new Set(ruleState.lists.accepted);
-  const accepted = ruleState.lists.accepted.length;
-  const helpfulChosen = rules.filter(rule => acceptedIds.has(rule.id) && rule.tone === 'beneficial').length;
-  const harmfulChosen = rules.filter(rule => acceptedIds.has(rule.id) && rule.tone === 'harmful').length;
-  if (rulesStabilityPreview) rulesStabilityPreview.textContent = `${preview.finalLives}/10 Balken`;
-  if (rulesStabilityDetails) {
-    const missing = Math.max(0, REQUIRED_ACCEPTED - accepted);
-    if (missing > 0) {
-      rulesStabilityDetails.textContent = `Noch ${missing} Regel${missing === 1 ? '' : 'n'} auswählen. Passende Regeln decken konkrete Schülerprobleme ab.`;
-    } else {
-      rulesStabilityDetails.textContent = `${helpfulChosen} passende Regel${helpfulChosen === 1 ? '' : 'n'} gewählt, ${harmfulChosen} riskante Regel${harmfulChosen === 1 ? '' : 'n'} gewählt.`;
-    }
-  }
+  // Keine Vorabwertung anzeigen: Die gewählten Regeln werden erst in der Auswertung nach Abschluss bewertet.
+  if (rulesStabilityPreview) rulesStabilityPreview.textContent = '';
+  if (rulesStabilityDetails) rulesStabilityDetails.textContent = '';
 }
 
 function openRulesTutorialOnce() {
@@ -661,37 +683,35 @@ function saveDraft() {
 }
 
 function evaluateAcceptedRules() {
-  const acceptedIds = new Set(ruleState.lists.accepted);
   const startLives = clampLives(Number(step1Data.rawPreparationScore ?? step1Data.preparationScore ?? 5));
-  const targetedRules = rules.filter(rule => rule.tone === 'beneficial' && rule.targetStudent);
-  const harmfulChosen = rules.filter(rule => rule.tone === 'harmful' && acceptedIds.has(rule.id));
-  const matchedStudentRules = [];
-  const missedStudentRules = [];
-  let delta = 0;
-
-  targetedRules.forEach(rule => {
-    const student = getStudent(rule.targetStudent);
-    if (acceptedIds.has(rule.id)) {
-      delta += 1;
-      matchedStudentRules.push({ ruleId: rule.id, studentId: rule.targetStudent, studentName: student?.name || rule.targetStudent, text: rule.text, delta: 1 });
-    } else {
-      delta -= 1;
-      missedStudentRules.push({ ruleId: rule.id, studentId: rule.targetStudent, studentName: student?.name || rule.targetStudent, text: rule.text, delta: -1 });
-    }
+  const acceptedRules = ruleState.lists.accepted.map(getRule).filter(Boolean);
+  const acceptedRuleEvaluations = acceptedRules.map(rule => {
+    const student = rule.targetStudent ? getStudent(rule.targetStudent) : null;
+    const matched = Boolean(rule.tone === 'beneficial' && student);
+    return {
+      ruleId: rule.id,
+      text: rule.text,
+      tone: rule.tone || 'neutral',
+      delta: matched ? 1 : -1,
+      matched,
+      studentId: matched ? student.id : null,
+      studentName: matched ? student.name : null,
+      studentAge: matched ? student.age : null,
+      studentNote: matched ? student.note : null,
+      studentAvatar: matched ? student.avatar : null,
+      reason: matched
+        ? `Diese Regel passt zu ${student.name}, weil sie das konkrete Risikoverhalten „${student.note}“ präventiv begrenzt.`
+        : 'Diese gewählte Regel ist keinem konkreten Schülerverhalten aus der aktuellen Klasse eindeutig zugeordnet.'
+    };
   });
-
-  harmfulChosen.forEach(rule => {
-    delta -= 2;
-  });
-
+  const delta = acceptedRuleEvaluations.reduce((sum, item) => sum + item.delta, 0);
   return {
     startLives,
     delta,
     finalLives: clampLives(startLives + delta),
-    matchedStudentRules,
-    missedStudentRules,
-    harmfulSelected: harmfulChosen.map(rule => ({ ruleId: rule.id, text: rule.text, delta: -2 })),
-    acceptedHelpful: rules.filter(rule => acceptedIds.has(rule.id) && rule.tone === 'neutral').map(rule => ({ ruleId: rule.id, text: rule.text, delta: 0 }))
+    acceptedRuleEvaluations,
+    matchedStudentRules: acceptedRuleEvaluations.filter(item => item.matched),
+    unmappedSelectedRules: acceptedRuleEvaluations.filter(item => !item.matched)
   };
 }
 
@@ -700,10 +720,10 @@ function clampLives(value) {
   return Math.max(0, Math.min(10, Math.round(value)));
 }
 
-function finishRules() {
+function buildRulesData() {
   const evaluation = evaluateAcceptedRules();
-  const data = {
-    version: 2,
+  return {
+    version: 3,
     savedAt: new Date().toISOString(),
     acceptedRules: ruleState.lists.accepted.map(getRule),
     rejectedRules: ruleState.lists.rejected.map(getRule),
@@ -714,9 +734,97 @@ function finishRules() {
     evaluation,
     step1: step1Data
   };
+}
+
+function finishRules() {
+  pendingRulesData = buildRulesData();
+  rulesEvaluationIndex = 0;
+  if (!rulesEvaluationOverlay || !pendingRulesData.evaluation.acceptedRuleEvaluations?.length) {
+    completeRulesEvaluation();
+    return;
+  }
+  openRulesEvaluationOverlay();
+}
+
+function openRulesEvaluationOverlay() {
+  if (!rulesEvaluationOverlay) return;
+  rulesEvaluationOverlay.hidden = false;
+  rulesEvaluationOverlay.removeAttribute('hidden');
+  document.body.classList.add('tutorial-open');
+  renderRulesEvaluationStep();
+}
+
+function renderRulesEvaluationStep() {
+  if (!pendingRulesData) return;
+  const entries = pendingRulesData.evaluation.acceptedRuleEvaluations || [];
+  const entry = entries[rulesEvaluationIndex];
+  if (!entry) return completeRulesEvaluation();
+  const count = entries.length;
+  const cumulativeDelta = entries.slice(0, rulesEvaluationIndex + 1).reduce((sum, item) => sum + item.delta, 0);
+  const currentLives = clampLives(pendingRulesData.evaluation.startLives + cumulativeDelta);
+
+  if (rulesEvaluationStep) rulesEvaluationStep.textContent = `Auswertung ${rulesEvaluationIndex + 1}/${count}`;
+  if (rulesEvaluationTitle) rulesEvaluationTitle.textContent = entry.matched ? `Regel passt zu ${entry.studentName}` : 'Regel ohne konkrete Schülerzuordnung';
+  if (rulesEvaluationIntro) rulesEvaluationIntro.textContent = 'Die Unterrichtsstabilität verändert sich erst jetzt anhand deiner gewählten Klassenregeln.';
+  if (rulesEvaluationRuleText) rulesEvaluationRuleText.textContent = entry.text;
+  if (rulesEvaluationResult) {
+    rulesEvaluationResult.className = `rules-evaluation-result ${entry.delta > 0 ? 'good' : 'bad'}`;
+  }
+  if (rulesEvaluationDelta) rulesEvaluationDelta.textContent = entry.delta > 0 ? '+1 Unterrichtsstabilität' : '-1 Unterrichtsstabilität';
+  if (rulesEvaluationText) rulesEvaluationText.textContent = entry.reason;
+  if (rulesEvaluationSegments) {
+    rulesEvaluationSegments.classList.toggle('life-low', currentLives <= 3);
+    rulesEvaluationSegments.classList.toggle('life-mid', currentLives > 3 && currentLives <= 6);
+    rulesEvaluationSegments.classList.toggle('life-high', currentLives > 6);
+    rulesEvaluationSegments.innerHTML = Array.from({ length: 10 }, (_, index) => `<span class="${index < currentLives ? 'filled' : ''}"></span>`).join('');
+  }
+  if (rulesEvaluationScoreText) rulesEvaluationScoreText.textContent = `${currentLives}/10 Unterrichtsstabilität`;
+  if (rulesEvaluationStudentSlot) {
+    if (entry.matched) {
+      rulesEvaluationStudentSlot.innerHTML = `
+        <article class="rules-evaluation-student-card">
+          <div class="rules-student-avatar-wrap">${studentAvatarMarkup({ name: entry.studentName, avatar: entry.studentAvatar }, 'rules-student-avatar')}</div>
+          <div>
+            <span>Schülerprofil</span>
+            <strong>${escapeHtml(entry.studentName)}${entry.studentAge ? ` (${escapeHtml(entry.studentAge)})` : ''}</strong>
+            <p>${escapeHtml(entry.studentNote || '')}</p>
+          </div>
+        </article>`;
+    } else {
+      rulesEvaluationStudentSlot.innerHTML = `
+        <article class="rules-evaluation-student-card unmapped">
+          <div class="rules-evaluation-unmapped-icon">–</div>
+          <div>
+            <span>Keine passende Schülerkarte</span>
+            <strong>Kein konkretes Verhalten abgedeckt</strong>
+            <p>Diese Regel kann allgemein sinnvoll wirken, trifft aber kein ausgewiesenes Risikoprofil der aktuellen Klasse.</p>
+          </div>
+        </article>`;
+    }
+  }
+  if (rulesEvaluationNextBtn) rulesEvaluationNextBtn.textContent = rulesEvaluationIndex === count - 1 ? 'Weiter zu Schritt 3' : 'Nächste Regel';
+}
+
+function advanceRulesEvaluation() {
+  if (!pendingRulesData) return;
+  const entries = pendingRulesData.evaluation.acceptedRuleEvaluations || [];
+  if (rulesEvaluationIndex >= entries.length - 1) {
+    completeRulesEvaluation();
+    return;
+  }
+  rulesEvaluationIndex += 1;
+  renderRulesEvaluationStep();
+}
+
+function completeRulesEvaluation() {
+  if (!pendingRulesData) pendingRulesData = buildRulesData();
   try {
-    localStorage.setItem('classroomGame.step2.rules', JSON.stringify(data));
-    finishBtn.textContent = 'Weiter zu Schritt 3';
+    localStorage.setItem('classroomGame.step2.rules', JSON.stringify(pendingRulesData));
+    if (rulesEvaluationOverlay) {
+      rulesEvaluationOverlay.hidden = true;
+      rulesEvaluationOverlay.setAttribute('hidden', '');
+    }
+    document.body.classList.remove('tutorial-open');
     window.location.href = 'scenarios.html';
   } catch (error) {
     setStatus('Speichern fehlgeschlagen. Bitte prüfe den lokalen Speicher des Browsers.', 'warning');

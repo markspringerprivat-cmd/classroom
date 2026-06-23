@@ -6634,3 +6634,220 @@ body.rules-page {
   cursor: pointer !important;
   touch-action: manipulation !important;
 }
+
+/* ===== Version 24: Schritt-2-Regelauswertung statt Vorabwertung ===== */
+.rules-stability-panel {
+  display: none !important;
+}
+
+.rules-evaluation-overlay[hidden] {
+  display: none !important;
+}
+
+.rules-evaluation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 4vw, 48px);
+}
+
+.rules-evaluation-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.78);
+  backdrop-filter: blur(7px);
+}
+
+.rules-evaluation-card {
+  position: relative;
+  z-index: 1;
+  width: min(980px, calc(100vw - 34px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: clamp(20px, 3vw, 32px);
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.90)),
+    radial-gradient(circle at 18% 10%, rgba(37, 99, 235, 0.22), transparent 36%);
+  border: 1px solid rgba(147, 197, 253, 0.26);
+  box-shadow: 0 36px 90px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.rules-evaluation-head {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.rules-evaluation-head h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(1.8rem, 4vw, 3.05rem);
+  line-height: 1.02;
+}
+
+.rules-evaluation-head p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.82);
+  line-height: 1.45;
+}
+
+.rules-evaluation-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.rules-evaluation-rule,
+.rules-evaluation-student-card {
+  min-height: 160px;
+  border-radius: 22px;
+  padding: 20px;
+  background: rgba(30, 41, 59, 0.70);
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.rules-evaluation-rule span,
+.rules-evaluation-student-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(191, 219, 254, 0.78);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 850;
+}
+
+.rules-evaluation-rule strong,
+.rules-evaluation-student-card strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
+
+.rules-evaluation-arrow {
+  align-self: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(59, 130, 246, 0.20);
+  border: 1px solid rgba(147, 197, 253, 0.25);
+  color: #bfdbfe;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.rules-evaluation-student-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.rules-evaluation-student-card .rules-student-avatar-wrap {
+  width: 80px;
+  height: 80px;
+}
+
+.rules-evaluation-student-card p {
+  margin: 6px 0 0;
+  color: rgba(226, 232, 240, 0.82);
+  line-height: 1.4;
+}
+
+.rules-evaluation-student-card.unmapped {
+  background: rgba(69, 10, 10, 0.28);
+  border-color: rgba(248, 113, 113, 0.28);
+}
+
+.rules-evaluation-unmapped-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: rgba(127, 29, 29, 0.48);
+  color: #fecaca;
+  font-size: 2rem;
+  font-weight: 950;
+}
+
+.rules-evaluation-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin: 20px 0 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(30, 41, 59, 0.58);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.rules-evaluation-result > strong {
+  min-width: 150px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.rules-evaluation-result.good > strong {
+  color: #bbf7d0;
+  background: rgba(22, 101, 52, 0.42);
+}
+
+.rules-evaluation-result.bad > strong {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.48);
+}
+
+.rules-evaluation-result p {
+  margin: 0;
+  color: rgba(248, 250, 252, 0.90);
+  line-height: 1.45;
+}
+
+.rules-evaluation-stability {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.24);
+  border: 1px solid rgba(96, 165, 250, 0.16);
+}
+
+.rules-evaluation-stability .branch-life-segments {
+  margin: 0;
+}
+
+.rules-evaluation-stability > span {
+  color: rgba(191, 219, 254, 0.86);
+  font-weight: 850;
+}
+
+.rules-evaluation-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+@media (max-width: 760px) {
+  .rules-evaluation-pair,
+  .rules-evaluation-result {
+    grid-template-columns: 1fr;
+  }
+
+  .rules-evaluation-arrow {
+    transform: rotate(90deg);
+    margin: 0 auto;
+  }
+}
