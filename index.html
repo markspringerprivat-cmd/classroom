@@ -13,11 +13,6 @@
       <h1>Klassenraum vorbereiten</h1>
       <p class="subtitle">Ordne Tische, Schüler*innen und Lehrkraft so an, dass Störungen präventiv reduziert werden.</p>
     </div>
-    <div class="score-card" aria-live="polite" hidden>
-      <span class="score-label">Startstabilität</span>
-      <strong id="scoreValue">–</strong>
-      <span class="score-scale">von 10</span>
-    </div>
   </header>
 
   <main class="app-shell single-column">
@@ -30,7 +25,6 @@
             <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
             <button type="button" id="showTutorialBtn" class="ghost-btn">Anleitung</button>
           </div>
-          <p id="evalHint" class="eval-hint" hidden>Platziere zuerst alle 10 Schüler*innen im Raum.</p>
         </div>
       </div>
 
@@ -58,7 +52,6 @@
               <h2>Schülerprofile</h2>
               <span id="placedCounter" class="pill">0/10 platziert</span>
             </div>
-            <p class="hint">Ziehe die Kacheln auf Tische. Bereits platzierte Schüler*innen verschwinden aus der Liste und rücken nach oben nach.</p>
             <div id="studentPalette" class="student-palette compact-student-palette"></div>
           </section>
         </div>
@@ -111,14 +104,7 @@
             </section>
           </div>
         </div>
-
-        <section class="results" id="resultsPanel" hidden aria-label="Detaildaten der Auswertung">
-          <h2>Auswertung</h2>
-          <div class="meter" aria-label="Startstabilität"><div id="meterFill" class="meter-fill"></div></div>
-          <ul id="feedbackList" class="feedback-list"></ul>
-          <details class="export-box"><summary>Daten für spätere Szenarien anzeigen</summary><pre id="stateOutput"></pre></details>
-        </section>
-      </div>
+        </div>
     </section>
   </main>
 

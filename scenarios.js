@@ -123,9 +123,13 @@ function buildContext(stepData, ruleData) {
   const activeTrash = metrics.roomObjects?.activeTrash || (stepData?.objects?.trash || []).filter(item => !item.removed) || [];
   const invalidSpacing = metrics.spacing?.invalidPairs || [];
   const hooks = Array.isArray(stepData?.suggestedScenarioHooks) ? stepData.suggestedScenarioHooks : [];
+  const continuedStartScore = Number.isFinite(Number(ruleData?.evaluation?.finalLives))
+    ? Number(ruleData.evaluation.finalLives)
+    : normalizeStartScore(stepData?.rawPreparationScore ?? stepData?.preparationScore ?? 5);
 
   return {
     stepData,
+    startScore: continuedStartScore,
     ruleData,
     students,
     studentById,
@@ -664,7 +668,7 @@ const game = {
   started: false,
   finished: false,
   lessonLeft: LESSON_SECONDS,
-  score: normalizeStartScore(context.stepData?.rawPreparationScore ?? context.stepData?.preparationScore ?? 5),
+  score: normalizeStartScore(context.startScore ?? context.stepData?.rawPreparationScore ?? context.stepData?.preparationScore ?? 5),
   teacher: normalizeTeacher(context.stepData?.teacher),
   teacherPath: [],
   teacherMoveTimer: null,
@@ -1485,7 +1489,7 @@ function renderIncidents() {
 
 function renderLife() {
   if (branchScorePill) branchScorePill.textContent = `${game.score}/10`;
-  if (branchScoreNote) branchScoreNote.textContent = `Startwert aus Classroom Management: ${normalizeStartScore(context.stepData?.rawPreparationScore ?? context.stepData?.preparationScore ?? 5)}/10.`;
+  if (branchScoreNote) branchScoreNote.textContent = `Startwert nach Schritt 2: ${normalizeStartScore(context.startScore ?? context.stepData?.rawPreparationScore ?? context.stepData?.preparationScore ?? 5)}/10.`;
   updateTeacherMoodImage();
   if (!branchLifeSegments) return;
   branchLifeSegments.classList.toggle('life-low', game.score <= 3);

@@ -11,29 +11,22 @@
     <div>
       <p class="eyebrow">Interaktive Phase · Schritt 2</p>
       <h1>Klassenregeln aufstellen</h1>
-      <p class="subtitle">Wähle genau sechs verbindliche Klassenregeln aus. Die übrigen neun Regeln werden aussortiert. Die Liste „Später zuordnen“ muss am Ende leer sein.</p>
-    </div>
-    <div class="score-card" aria-live="polite">
-      <span class="score-label">Regeln gewählt</span>
-      <strong id="rulesChosenValue">0/6</strong>
-      <span class="score-scale">verbindlich</span>
+      <p class="subtitle">Wähle genau fünf verbindliche Klassenregeln aus. Die übrigen zehn Regeln werden aussortiert. Die Liste „Später zuordnen“ muss am Ende leer sein.</p>
     </div>
   </header>
 
-  <main class="rules-shell">
-    <aside class="rules-left panel">
+  <main class="rules-shell rules-shell-v4">
+    <aside class="rules-left panel rules-left-v4">
       <section>
         <div class="section-title-row">
           <h2>Vorbereiteter Klassenraum</h2>
           <span id="prepScorePill" class="pill">– Punkte</span>
         </div>
-        <p class="hint">Die Sitzordnung ist aus Schritt 1 übernommen und nicht mehr veränderbar.</p>
         <div id="frozenGrid" class="frozen-grid" aria-label="Übernommener Klassenraum"></div>
       </section>
 
       <section>
         <h2>Schülerliste</h2>
-        <p class="hint">Nutze die Profile, um passende Regeln auszuwählen.</p>
         <div id="rulesStudentList" class="rules-student-list"></div>
       </section>
     </aside>
@@ -50,28 +43,27 @@
       <article id="currentRuleCard" class="current-rule-card" draggable="true" aria-live="polite">
         <span class="rule-kicker">Regel prüfen</span>
         <h3 id="currentRuleText">Regel wird geladen …</h3>
-        <p id="currentRuleHint">Ziehe diese Regel per Drag & Drop in eine der Listen.</p>
+        <p id="currentRuleHint">Ziehe diese Regel in eine Liste.</p>
       </article>
 
       <div class="rule-lists" aria-label="Regellisten">
         <section class="rule-list-card accepted-list" data-list="accepted">
           <div class="rule-list-head">
             <h3>Klassenregeln</h3>
-            <span id="acceptedCounter" class="pill">0/6</span>
+            <span id="acceptedCounter" class="pill">0/5</span>
           </div>
-          <p class="hint">Genau sechs Regeln. Diese Variablen werden später im Szenario abgefragt.</p>
+          <p class="hint">Genau fünf Regeln. Gute Passungen zu problematischen Schülerprofilen verbessern die spätere Startstabilität.</p>
           <div id="acceptedList" class="rule-dropzone" data-list="accepted"></div>
         </section>
 
         <section class="rule-list-card rejected-list" data-list="rejected">
           <div class="rule-list-head">
             <h3>Aussortiert</h3>
-            <span id="rejectedCounter" class="pill">0/9</span>
+            <span id="rejectedCounter" class="pill">0/10</span>
           </div>
-          <p class="hint">Alle nicht gewählten Regeln. Am Ende müssen hier neun Regeln liegen.</p>
+          <p class="hint">Alle nicht gewählten Regeln. Am Ende müssen hier zehn Regeln liegen.</p>
           <div id="rejectedList" class="rule-dropzone" data-list="rejected"></div>
         </section>
-
 
         <section class="rule-list-card pending-list" data-list="pending">
           <div class="rule-list-head">
@@ -81,19 +73,14 @@
           <p class="hint">Zwischenablage. Am Ende muss diese Liste leer sein.</p>
           <div id="pendingList" class="rule-dropzone" data-list="pending"></div>
         </section>
-
       </div>
 
       <div class="rules-status-bar">
-        <p id="rulesStatusText">Ordne die aktuelle Regel zu.</p>
-        <button type="button" id="finishRulesBtn" class="primary-btn" disabled>Regelauswahl speichern & zu Schritt 3</button>
+        <p id="rulesStatusText" class="rules-status neutral">Ordne die aktuelle Regel zu.</p>
+        <button type="button" id="finishRulesBtn" class="primary-btn" disabled>Regelauswahl speichern &amp; zu Schritt 3</button>
       </div>
     </section>
   </main>
-
-  <footer class="footer-note">
-    <strong>Hinweis:</strong> Die ausgewählten Regeln werden im Browser gespeichert und können später für Unterrichtsszenarien genutzt werden.
-  </footer>
 
   <script src="rules.js"></script>
 </body>

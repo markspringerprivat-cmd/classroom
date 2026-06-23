@@ -4984,3 +4984,177 @@ body.rules-page {
     max-width: 100%;
   }
 }
+
+
+/* ===== Version 4 refinements ===== */
+.results { display: none !important; }
+
+.evaluation-overlay {
+  background: rgba(8, 15, 32, 0.28);
+  backdrop-filter: blur(5px);
+}
+
+.evaluation-card {
+  width: min(820px, calc(100% - 48px));
+}
+
+.rules-shell.rules-shell-v4 {
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.rules-left.rules-left-v4 {
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+}
+
+.rules-left.rules-left-v4 section + section {
+  margin-top: 14px;
+}
+
+.rules-left.rules-left-v4 .section-title-row,
+.rules-left.rules-left-v4 h2 {
+  margin-bottom: 10px;
+}
+
+.rules-left.rules-left-v4 .frozen-grid {
+  --frozen-cell: 36px;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.rules-left.rules-left-v4 .frozen-cell {
+  border-radius: 11px;
+}
+
+.rules-left.rules-left-v4 .frozen-blocked-label {
+  border-radius: 11px;
+  font-size: 0.55rem;
+}
+
+.rules-left.rules-left-v4 .frozen-desk,
+.rules-left.rules-left-v4 .frozen-teacher,
+.rules-left.rules-left-v4 .frozen-object {
+  inset: 1px;
+  border-radius: 11px;
+}
+
+.rules-left.rules-left-v4 .frozen-desk {
+  padding: 2px !important;
+  font-size: 0.58rem;
+}
+
+.rules-left.rules-left-v4 .frozen-desk.has-student {
+  padding: 1px !important;
+}
+
+.rules-left.rules-left-v4 .frozen-student-avatar {
+  width: 96% !important;
+  height: 96% !important;
+  object-fit: contain;
+}
+
+.rules-left.rules-left-v4 .frozen-object {
+  inset: 1px;
+  font-size: 1.15rem;
+  box-sizing: border-box;
+}
+
+.rules-left.rules-left-v4 .frozen-object-trash {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.96), rgba(153, 27, 27, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+.rules-left.rules-left-v4 .frozen-object-broom {
+  background: linear-gradient(180deg, rgba(191, 219, 254, 0.96), rgba(96, 165, 250, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.rules-left.rules-left-v4 .rules-student-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rules-left.rules-left-v4 .rules-student-card {
+  min-width: 0;
+  padding: 8px;
+}
+
+.rules-left.rules-left-v4 .rules-student-copy {
+  min-width: 0;
+}
+
+.rules-left.rules-left-v4 .rules-student-card strong {
+  font-size: 0.8rem;
+}
+
+.rules-left.rules-left-v4 .rules-student-card span {
+  font-size: 0.69rem;
+}
+
+.rules-left.rules-left-v4 .rules-student-card small {
+  display: none;
+}
+
+.rules-main.compact-rules-main {
+  min-width: 0;
+  align-self: stretch;
+}
+
+.rules-main.compact-rules-main .rule-lists {
+  align-items: stretch;
+}
+
+.rules-main.compact-rules-main .rule-list-card {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rules-main.compact-rules-main .rule-dropzone {
+  min-height: 360px;
+  height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+}
+
+.rule-item {
+  display: grid;
+  gap: 4px;
+}
+
+.rule-mini-hint {
+  display: block;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.rule-item.tone-harmful {
+  border-color: rgba(239, 68, 68, 0.36);
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.35), rgba(51, 24, 34, 0.9));
+}
+
+.rule-item.tone-beneficial {
+  border-color: rgba(34, 197, 94, 0.32);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(15, 23, 42, 0.9));
+}
+
+.rule-item.tone-neutral {
+  border-color: rgba(96, 165, 250, 0.22);
+}
+
+@media (max-width: 1280px) {
+  .rules-shell.rules-shell-v4 {
+    grid-template-columns: 1fr;
+  }
+}

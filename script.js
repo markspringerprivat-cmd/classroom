@@ -1044,8 +1044,8 @@ function evaluatePreparation() {
   if (!allStudentsPlaced()) {
     clearResults();
     const missing = students.length - Object.keys(state.assignments).length;
-    resultsPanel.hidden = false;
-    feedbackList.innerHTML = `<li class="warning">Die Vorbereitung kann erst ausgewertet werden, wenn alle 10 Schüler*innen platziert sind. Es fehlen noch ${missing}.</li>`;
+    if (resultsPanel) resultsPanel.hidden = false;
+    if (feedbackList) feedbackList.innerHTML = `<li class="warning">Die Vorbereitung kann erst ausgewertet werden, wenn alle 10 Schüler*innen platziert sind. Es fehlen noch ${missing}.</li>`;
     meterFill.style.width = '0%';
     stateOutput.textContent = '';
     return;
@@ -1345,9 +1345,9 @@ function saveStepStateForNextPage() {
 }
 
 function showResults(score, rawScore, feedback, metrics) {
-  scoreValue.textContent = score;
-  meterFill.style.width = `${score * 10}%`;
-  renderFeedbackList(feedbackList, feedback);
+  if (scoreValue) scoreValue.textContent = score;
+  if (meterFill) meterFill.style.width = `${score * 10}%`;
+  if (feedbackList) renderFeedbackList(feedbackList, feedback);
 
   const visionByDesk = state.desks.map(desk => ({
     deskId: desk.id,
@@ -1371,9 +1371,9 @@ function showResults(score, rawScore, feedback, metrics) {
     metrics,
     suggestedScenarioHooks: [...new Set(metrics.futureScenarioHooks)]
   };
-  stateOutput.textContent = JSON.stringify(exportData, null, 2);
-  resultsPanel.hidden = false;
-  evaluationOverlay.hidden = false;
+  if (stateOutput) stateOutput.textContent = JSON.stringify(exportData, null, 2);
+  if (resultsPanel) resultsPanel.hidden = false;
+  if (evaluationOverlay) evaluationOverlay.hidden = false;
   startEvaluationAnimation(feedback, rawScore);
 }
 
@@ -1570,8 +1570,8 @@ function clearResults() {
   state.rawScore = null;
   state.feedback = [];
   state.metrics = {};
-  scoreValue.textContent = '–';
-  resultsPanel.hidden = true;
+  if (scoreValue) scoreValue.textContent = '–';
+  if (resultsPanel) resultsPanel.hidden = true;
   if (evaluationOverlay) evaluationOverlay.hidden = true;
   if (overlayCloseBtn) overlayCloseBtn.hidden = false;
   if (evaluationActionArea) evaluationActionArea.hidden = true;
