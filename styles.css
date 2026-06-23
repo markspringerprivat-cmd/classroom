@@ -4843,3 +4843,144 @@ body.rules-page {
 .branch-desk.has-student strong.sr-only {
   position: absolute;
 }
+
+
+/* Version 3: requested layout and desk alignment refinements for Schritt 1 */
+.score-card[hidden],
+.eval-hint[hidden] {
+  display: none !important;
+}
+
+.compact-topbar {
+  align-items: flex-start;
+}
+
+.play-area {
+  grid-template-columns: minmax(0, auto) 330px;
+  gap: 18px;
+}
+
+.play-stage {
+  width: max-content;
+  max-width: 100%;
+  justify-items: center;
+  align-content: start;
+}
+
+.room-header.centered-room-header {
+  width: calc(10 * var(--cell-size) + 9 * var(--grid-gap) + 20px);
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.room-title-block,
+.room-title-block h2,
+.room-title-block p {
+  text-align: center;
+}
+
+.embedded-students {
+  align-self: start;
+  width: 330px;
+  margin: 0;
+}
+
+.prep-timer-panel {
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 12px;
+  border-radius: 18px;
+}
+
+.grid-cell > .desk,
+.grid-cell > .room-object,
+.grid-cell > .teacher-in-room {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.desk {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 6px;
+}
+
+.desk.has-student {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  overflow: hidden;
+}
+
+.desk.has-student .desk-label {
+  display: none !important;
+}
+
+.desk.has-student .student-chip-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.desk.has-student .student-chip-avatar-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.desk.has-student .student-chip-avatar {
+  width: 92%;
+  height: 92%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  object-position: center center;
+  display: block;
+}
+
+.desk.has-student .remove-student-btn {
+  top: 4px;
+  right: 4px;
+}
+
+.room-object {
+  inset: 1px;
+  border-radius: 12px;
+  font-size: 2rem;
+}
+
+.room-object-broom {
+  background: rgba(125, 190, 255, 0.72);
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.22), inset 0 1px 0 rgba(255,255,255,0.10);
+}
+
+.room-object-broom.active {
+  border-color: rgba(191, 219, 254, 0.96);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.24), 0 12px 22px rgba(59, 130, 246, 0.28);
+}
+
+@media (max-width: 1250px) {
+  .play-area {
+    grid-template-columns: 1fr;
+  }
+
+  .play-stage {
+    width: 100%;
+  }
+
+  .room-header.centered-room-header,
+  .classroom-grid,
+  .embedded-students {
+    width: 100%;
+    max-width: 100%;
+  }
+}

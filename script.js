@@ -361,13 +361,10 @@ function createDeskElement(desk, influence = null) {
   deskEl.dataset.deskId = desk.id;
   deskEl.title = 'Tisch ziehen und in ein anderes Rasterfeld ablegen';
 
-  const label = document.createElement('div');
-  label.className = 'desk-label';
-  label.innerHTML = `<span>Tisch</span><span>↕</span>`;
-
   const assignedStudentId = state.assignments[desk.id];
   const seat = document.createElement('div');
   if (assignedStudentId) {
+    deskEl.classList.add('has-student');
     const student = getStudent(assignedStudentId);
     seat.className = 'student-chip student-chip-photo';
     seat.draggable = true;
@@ -403,13 +400,16 @@ function createDeskElement(desk, influence = null) {
       event.stopPropagation();
       selectStudent(student.id);
     });
+    deskEl.appendChild(seat);
   } else {
+    const label = document.createElement('div');
+    label.className = 'desk-label';
+    label.innerHTML = `<span>Tisch</span><span>↕</span>`;
     seat.className = 'empty-seat';
     seat.textContent = 'freier Platz';
+    deskEl.appendChild(label);
+    deskEl.appendChild(seat);
   }
-
-  deskEl.appendChild(label);
-  deskEl.appendChild(seat);
 
   deskEl.addEventListener('dragstart', event => {
     if (event.target.closest('.student-chip, .remove-student-btn')) return;

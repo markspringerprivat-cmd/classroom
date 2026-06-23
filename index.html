@@ -13,7 +13,7 @@
       <h1>Klassenraum vorbereiten</h1>
       <p class="subtitle">Ordne Tische, Schüler*innen und Lehrkraft so an, dass Störungen präventiv reduziert werden.</p>
     </div>
-    <div class="score-card" aria-live="polite">
+    <div class="score-card" aria-live="polite" hidden>
       <span class="score-label">Startstabilität</span>
       <strong id="scoreValue">–</strong>
       <span class="score-scale">von 10</span>
@@ -30,31 +30,30 @@
             <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
             <button type="button" id="showTutorialBtn" class="ghost-btn">Anleitung</button>
           </div>
-          <p id="evalHint" class="eval-hint">Platziere zuerst alle 10 Schüler*innen im Raum.</p>
+          <p id="evalHint" class="eval-hint" hidden>Platziere zuerst alle 10 Schüler*innen im Raum.</p>
         </div>
       </div>
 
       <div class="room-wrap panel">
-        <div class="room-header centered-room-header">
-          <div class="room-title-block">
-            <h2>Klassenraum</h2>
-            <p>Ziehe Tische in freie Felder und ziehe Schüler*innen auf Tischplätze.</p>
-          </div>
-          <div class="legend" aria-label="Legende">
-            <span><i class="legend-desk"></i> Tisch</span>
-            <span><i class="legend-teacher"></i> Lehrkraft</span>
-            <span><i class="legend-vision"></i> Sichtbereich / Präsenzzone</span>
-            <span><i class="legend-risk"></i> Störrisiko</span>
-            <span><i class="legend-neutral"></i> neutralisiert</span>
-          </div>
-        </div>
-
         <div class="play-area">
           <div class="play-stage">
-            <div class="board-topbar"><div class="board-marker" aria-label="Tafel vorne">Tafel / vorne</div><div class="prep-timer" aria-live="polite"><span class="timer-label">Zeit</span><strong id="prepTimerValue">05:00</strong></div></div>
+            <div class="room-header centered-room-header">
+              <div class="room-title-block">
+                <h2>Klassenraum</h2>
+                <p>Ziehe Tische in freie Felder und ziehe Schüler*innen auf Tischplätze.</p>
+              </div>
+              <div class="legend" aria-label="Legende">
+                <span><i class="legend-desk"></i> Tisch</span>
+                <span><i class="legend-teacher"></i> Lehrkraft</span>
+                <span><i class="legend-vision"></i> Sichtbereich / Präsenzzone</span>
+                <span><i class="legend-risk"></i> Störrisiko</span>
+                <span><i class="legend-neutral"></i> neutralisiert</span>
+              </div>
+            </div>
             <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
           </div>
           <section class="embedded-students" aria-label="Schülerprofile">
+            <div class="prep-timer prep-timer-panel" aria-live="polite"><span class="timer-label">Zeit</span><strong id="prepTimerValue">05:00</strong></div>
             <div class="section-title-row">
               <h2>Schülerprofile</h2>
               <span id="placedCounter" class="pill">0/10 platziert</span>
@@ -123,7 +122,6 @@
     </section>
   </main>
 
-  <footer class="footer-note"><strong>Hinweis:</strong> Dieser Prototyp bildet Schritt 1 ab. Die berechneten Variablen können später genutzt werden, um passende Störungsszenarien auszuwählen.</footer>
 
   <div id="tutorialOverlay" class="tutorial-overlay" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="tutorialTitle">
     <div class="tutorial-backdrop"></div>
