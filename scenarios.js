@@ -424,336 +424,335 @@ function buildDynamicScenarios(ctx) {
     s.push(scenario(id, type, matched, source, title, scene, answers, focus, contextNote));
   };
 
-  const goodRuleAnswer = (student, ids, concrete, followUp = 'Nach der Stunde prüfe ich mit ihm kurz, welche Selbstkontrolle ihm hilft.') => {
+  const goodRuleAnswer = (student, ids, concrete) => {
     const name = n(student);
     return ruleActive(ids)
-      ? `Ich gehe ruhig zu ${name}, benenne kurz, was ich sehe, und erinnere an die vereinbarte Regel: „${ruleLabel(ids)}“ Danach bekommt ${name} einen klaren nächsten Arbeitsschritt. ${followUp}`
-      : `Ich gehe ruhig zu ${name}, benenne kurz, was ich sehe, und formuliere eine knappe Sofortvereinbarung: ${concrete} ${followUp}`;
+      ? `Ich erinnere ${name} ruhig an die passende Klassenregel. ${concrete}`
+      : `Ich treffe mit ${name} ruhig eine kurze Sofortvereinbarung. ${concrete}`;
   };
 
   add('S01', 'Classroom Management', true, 'phoneRisk', 'Handy unter dem Tisch',
     `${n(problem.niklas)} schaut wiederholt unter den Tisch und tippt heimlich. Einige Mitschüler*innen beobachten bereits, ob die Lehrkraft es bemerkt.`,
     [
-      plus(goodRuleAnswer(problem.niklas, ['phone-away', 'handy'], 'Das Handy bleibt jetzt weg und die nächste Aufgabe wird begonnen.', 'Wenn es schwerfällt, vereinbare ich nach der Stunde eine konkrete Aufbewahrungslösung.'), 'Die Intervention ist nah, ruhig und regelbezogen. Sie stellt Arbeitsfähigkeit her, ohne die Situation vorzuführen.'),
-      zero(`Ich stelle mich kurz in die Nähe von ${n(problem.niklas)} und beobachte, ob das Handy verschwindet.`, 'Präsenz kann kurz helfen, klärt aber weder Regel noch Selbststeuerung.'),
-      minus(`Ich nehme das Handy sichtbar an mich und erkläre der Klasse ausführlich, warum so etwas gar nicht geht.`, 'Die Störung wird zur Bühne; die Arbeitsruhe sinkt und die Beziehung wird belastet.')
+      plus(goodRuleAnswer(problem.niklas, ['phone-away', 'handy'], 'Das Handy bleibt weg; die nächste Aufgabe startet jetzt.'), 'Classroom Management: Die Handy-Regel wird kurz aktiviert und der Unterrichtsfluss bleibt erhalten.'),
+      zero(`Ich stelle mich kurz zu ${n(problem.niklas)} und beobachte, ob das Handy verschwindet.`, 'Die Präsenz passt, aber die Handy-Regel und eine Selbststeuerungshilfe bleiben ungeklärt.'),
+      minus(`Ich nehme das Handy sichtbar weg und mache die Situation zum Beispiel für alle.`, 'Die Regel wird zur Strafbühne; das schwächt Kooperation und verstärkt Aufmerksamkeit.')
     ], [n(problem.niklas), 'Handy'], selectedHint(['phone-away', 'handy']));
 
   add('S02', 'Kooperative Verhaltensmodifikation', true, 'callsOut', 'Zwischenruf im Plenum',
     `${n(problem.tom)} ruft eine Antwort in die Klasse, bevor andere fertig nachdenken können. Dadurch kippt die Aufmerksamkeit vom Arbeitsauftrag weg.`,
     [
-      plus(goodRuleAnswer(problem.tom, ['raise-hand', 'melden', 'meldenplus'], 'Erst melden, dann kurz warten, bis du dran bist.', 'Nach der Sequenz gebe ich eine kurze positive Rückmeldung, wenn das Warten gelingt.'), 'Die Regel wird knapp aktiviert und mit einem erreichbaren Ziel verbunden.'),
-      zero(`Ich sage nur kurz: „Leiser bitte“, und setze den Unterricht fort.`, 'Die Situation wird nicht größer, aber das konkrete Ersatzverhalten bleibt unklar.'),
-      minus(`Ich diskutiere mit ${n(problem.tom)} vor der Klasse, warum er immer dazwischenruft.`, 'Die öffentliche Diskussion verlängert die Störung und verstärkt die Aufmerksamkeit für das Verhalten.')
+      plus(goodRuleAnswer(problem.tom, ['raise-hand', 'melden', 'meldenplus'], 'Er meldet sich und wartet kurz, bis er dran ist.'), 'Kooperative Verhaltensmodifikation: Das Ersatzverhalten wird konkret benannt und später verstärkt.'),
+      zero(`Ich sage kurz: „Leiser bitte“, und setze den Unterricht fort.`, 'Das stoppt wenig, klärt aber weder Melde-Regel noch erreichbares Zielverhalten.'),
+      minus(`Ich diskutiere vor der Klasse, warum ${n(problem.tom)} immer dazwischenruft.`, 'Das ist Problemzuschreibung statt kooperativer Diagnose; die Störung bekommt Bühne.')
     ], [n(problem.tom), 'Melden'], selectedHint(['raise-hand', 'melden', 'meldenplus']));
 
   add('S03', 'Kooperative Verhaltensmodifikation', true, 'boundaryTesting', 'Grenze wird getestet',
     `${n(problem.ben)} grinst, verzögert den Arbeitsbeginn und schaut zur Klasse, ob jemand reagiert. Die Situation ist noch klein, kann aber schnell größer werden.`,
     [
-      plus(goodRuleAnswer(problem.ben, ['first-instruction'], 'Du beginnst jetzt mit dem ersten Schritt; ich komme gleich wieder und schaue auf den Start.', 'Bei gelingendem Start bestätige ich ihn kurz und sachlich.'), 'Die Lehrkraft setzt eine klare Grenze und verbindet sie mit unmittelbarer Rückmeldung.'),
-      zero(`Ich warte noch einen Moment ab, weil ${n(problem.ben)} vielleicht von selbst anfängt.`, 'Abwarten kann funktionieren, gibt aber unnötig Raum für weiteres Austesten.'),
-      minus(`Ich drohe direkt mit einer Strafe, damit ${n(problem.ben)} merkt, dass ich es ernst meine.`, 'Die Drohung verschiebt die Situation in einen Machtkampf.')
+      plus(goodRuleAnswer(problem.ben, ['first-instruction'], 'Er beginnt mit Schritt eins; ich prüfe gleich kurz den Start.'), 'Kooperative Verhaltensmodifikation: Grenze, Teilziel und Rückmeldung unterstützen Selbststeuerung.'),
+      zero(`Ich warte kurz ab, ob ${n(problem.ben)} von selbst beginnt.`, 'Abwarten kann reichen, lässt aber Zielklärung und konsequente Regelumsetzung offen.'),
+      minus(`Ich drohe direkt mit Strafe, damit ${n(problem.ben)} den Ernst versteht.`, 'Die Drohung ersetzt Kooperation durch Machtkampf und berücksichtigt das Austesten nicht.')
     ], [n(problem.ben), 'Grenze'], selectedHint(['first-instruction']));
 
   add('S04', 'Classroom Management', true, 'distractor', 'Ablenkung am Nachbartisch',
     `${n(problem.petra)} spricht leise mit der Sitznachbarin, obwohl die Arbeitsphase schon begonnen hat. Die Nachbarin lacht und legt den Stift weg.`,
     [
-      plus(goodRuleAnswer(problem.petra, ['focus-neighbours', 'pausen'], 'In der Arbeitsphase bleiben Gespräche auf die Aufgabe bezogen.', 'Ich gebe beiden einen kurzen, klaren Arbeitsauftrag für die nächsten zwei Minuten.'), 'Die Intervention schützt die Arbeitsphase und macht das erwartete Verhalten sichtbar.'),
-      zero(`Ich stelle mich neben den Tisch, ohne etwas zu sagen.`, 'Präsenz kann kurz beruhigen, ersetzt aber keine klare gemeinsame Orientierung.'),
-      minus(`Ich setze ${n(problem.petra)} sofort um, ohne den Grund oder die Regel zu klären.`, 'Das stoppt die Situation vielleicht, bleibt aber wenig kooperativ und erzeugt neue Unruhe.')
+      plus(goodRuleAnswer(problem.petra, ['focus-neighbours', 'pausen'], 'Beide starten jetzt mit einer klaren Zwei-Minuten-Aufgabe.'), 'Classroom Management: Arbeitsphasen-Regel und Gruppenfokus werden kurz wiederhergestellt.'),
+      zero(`Ich stelle mich neben den Tisch und warte kurz ab.`, 'Präsenz hilft nur teilweise, weil die Regel und der nächste Arbeitsschritt fehlen.'),
+      minus(`Ich setze ${n(problem.petra)} sofort um, ohne Regel oder Grund zu klären.`, 'Die Störung stoppt vielleicht, bleibt aber unkooperativ und erzeugt neue Unruhe.')
     ], [n(problem.petra), 'Ablenkung'], selectedHint(['focus-neighbours', 'pausen']));
 
   add('S05', 'Kooperative Verhaltensmodifikation', true, 'sensitive', 'Spott nach einem Fehler',
     `${n(problem.lina)} verzieht das Gesicht und sagt kaum noch etwas, nachdem ein Kommentar aus der Nähe kam. Die Stimmung am Tisch wird unsicher.`,
     [
-      plus(goodRuleAnswer(problem.lina, ['respect-no-mock', 'respekt', 'kommentar'], 'Fehler werden nicht kommentiert; wir bleiben sachlich und respektvoll.', 'Nach der Stunde kann ich mit den Beteiligten kurz klären, wie Beiträge sicherer werden.'), 'Die Lehrkraft schützt die emotionale Sicherheit und bindet die Regel an ein konkretes Verhalten.'),
-      zero(`Ich gehe weiter, damit die Situation nicht noch mehr Aufmerksamkeit bekommt.`, 'Das verhindert Öffentlichkeit, lässt aber die verletzende Dynamik bestehen.'),
-      minus(`Ich sage vor allen, dass ${n(problem.lina)} nicht so empfindlich sein soll.`, 'Das verstärkt Beschämung und verschlechtert die Beziehung.')
+      plus(goodRuleAnswer(problem.lina, ['respect-no-mock', 'respekt', 'kommentar'], 'Ich sichere Respekt und gebe ihr einen kleinen Wiedereinstieg.'), 'Kooperative Verhaltensmodifikation: Gefühl, Regel und Rückkehrverhalten werden gemeinsam berücksichtigt.'),
+      zero(`Ich gehe weiter, damit die Situation nicht größer wird.`, 'Der Schutz vor Öffentlichkeit passt, aber die Respekt-Regel bleibt ungeklärt.'),
+      minus(`Ich sage vor allen, dass ${n(problem.lina)} nicht so empfindlich sein soll.`, 'Die Respekt-Regel wird verletzt; das Schülerverhalten und ihre emotionale Lage werden missachtet.')
     ], [n(problem.lina), 'Respekt'], selectedHint(['respect-no-mock', 'respekt', 'kommentar']));
 
   add('S06', 'Classroom Management', Boolean(ctx.blindRiskStudents.length), 'blindspot', 'Unruhe im toten Winkel',
     `${n(ctx.blindRiskStudents[0] || risk)} nutzt einen Moment, in dem die Lehrkraft den Bereich kaum im Blick hat. Die Arbeitsruhe dort wird sichtbar schwächer.`,
     [
-      plus(`Ich bewege mich gezielt in einen erreichbaren Nachbarbereich, gebe ein kurzes Präsenzsignal und formuliere den nächsten Arbeitsschritt direkt an ${n(ctx.blindRiskStudents[0] || risk)}.`, 'Die Reaktion verbindet Raumpräsenz, klare Erwartung und minimale Unterbrechung.'),
-      zero(`Ich schaue aus der Entfernung kurz hin und mache weiter.`, 'Das kann kurz reichen, bleibt aber bei schlechter Sicht unsicher.'),
-      minus(`Ich rufe quer durch den Raum, dass dort hinten endlich Ruhe sein soll.`, 'Der Ruf macht die Störung größer und ersetzt keine wirksame Präsenz.')
+      plus(`Ich gehe in den Nachbarbereich, gebe ein kurzes Präsenzsignal und nenne den nächsten Arbeitsschritt.`, 'Classroom Management: Präsenz, Withitness und knappe Aufgabenorientierung verhindern Welleneffekte.'),
+      zero(`Ich schaue aus der Entfernung kurz hin und mache weiter.`, 'Der Blick kann reichen, aber der tote Winkel bleibt als strukturelles Risiko bestehen.'),
+      minus(`Ich rufe quer durch den Raum, dass dort hinten Ruhe sein soll.`, 'Das macht die Störung öffentlich und ersetzt keine wirksame Präsenz.')
     ], ['Sichtbereich'], 'Das Szenario wird wahrscheinlicher, wenn riskante Schüler außerhalb des Sichtbereichs sitzen.');
 
   add('S07', 'Classroom Management', Boolean(ctx.weaklyVisibleRiskStudents.length), 'weakVision', 'Halber Blickkontakt reicht nicht',
     `${n(ctx.weaklyVisibleRiskStudents[0] || risk)} arbeitet nur scheinbar mit. Weil die Sichtlinie schwach ist, merkt die Lehrkraft die Abweichung erst spät.`,
     [
-      plus(`Ich gehe ruhig näher heran, sichere Blickkontakt und vereinbare eine kleine überprüfbare Teilaufgabe.`, 'Die Lehrkraft nutzt Nähe, ohne zu kontrollierend zu wirken, und macht Erfolg überprüfbar.'),
-      zero(`Ich erinnere die ganze Klasse allgemein an konzentriertes Arbeiten.`, 'Die Erinnerung ist nicht falsch, aber zu unspezifisch für das konkrete Verhalten.'),
-      minus(`Ich sage laut, dass ich genau gesehen habe, dass nicht gearbeitet wird.`, 'Die Aussage kann als Bloßstellung erlebt werden und erhöht Widerstand.')
+      plus(`Ich gehe ruhig näher heran und vereinbare eine kleine überprüfbare Teilaufgabe.`, 'Classroom Management: Nähe und überprüfbare Aktivierung sichern den Arbeitsfokus ohne Bloßstellung.'),
+      zero(`Ich erinnere die ganze Klasse allgemein an konzentriertes Arbeiten.`, 'Die Erinnerung ist regelhaft, aber zu unspezifisch für das konkrete Verhalten.'),
+      minus(`Ich sage laut, dass ich das Nichtarbeiten genau gesehen habe.`, 'Öffentliche Kontrolle schwächt Beziehung und baut keine Selbststeuerung auf.')
     ], ['Sichtbereich']);
 
   add('S08', 'Classroom Management', Boolean(ctx.backRowRisks.length), 'backRow', 'Hinten entsteht Nebenbeschäftigung',
     `${n(ctx.backRowRisks[0] || risk)} wirkt im hinteren Bereich abgekoppelt. Andere orientieren sich kurz daran statt an der Aufgabe.`,
     [
-      plus(`Ich stelle mich so, dass der Bereich wieder im Blick liegt, und gebe eine kurze, sachliche Arbeitsrückmeldung am Platz.`, 'Das ist eine direkte, niedrigschwellige Präventionshandlung.'),
-      zero(`Ich ändere erst nach der Stunde die Sitzordnung.`, 'Eine spätere Änderung kann sinnvoll sein, löst die akute Situation aber nicht.'),
-      minus(`Ich kündige an, dass der hintere Bereich ab jetzt besonders streng kontrolliert wird.`, 'Das erzeugt Kontrolllogik statt Selbststeuerung.')
+      plus(`Ich positioniere mich mit Blick auf den Bereich und gebe dort kurze Arbeitsrückmeldung.`, 'Classroom Management: Raumpräsenz und Gruppenfokus wirken präventiv gegen Abkopplung.'),
+      zero(`Ich ändere erst nach der Stunde die Sitzordnung.`, 'Das kann strukturell sinnvoll sein, löst aber die akute Unruhe nicht.'),
+      minus(`Ich kündige strenge Kontrolle für den hinteren Bereich an.`, 'Das setzt auf Überwachung statt auf Unterrichtsfluss und Selbststeuerung.')
     ], ['Sitzordnung']);
 
   add('S09', 'Classroom Management', Boolean(ctx.metrics?.spacing?.invalidPairs?.length), 'spacing', 'Der Weg ist blockiert',
     `Ein Tischbereich ist so eng gestellt, dass die Lehrkraft nicht schnell genug zu einem auffälligen Schüler gelangt. Die Störung dauert dadurch länger als nötig.`,
     [
-      plus(`Ich wähle den erreichbaren Nachbarweg, reagiere kurz und merke mir, die Tischstellung nach der Sequenz zu korrigieren.`, 'Akut wird gehandelt; die Raumursache wird danach bearbeitet.'),
-      zero(`Ich versuche mich trotzdem durch die enge Stelle zu drängen.`, 'Das kostet Zeit und erhöht Unruhe im Raum.'),
-      minus(`Ich rufe aus der Distanz, weil ich nicht schnell hinkomme.`, 'Die Störung wird öffentlich und die Lehrkraft verliert Präsenz.')
+      plus(`Ich nutze einen erreichbaren Nachbarweg und korrigiere die Tischstellung später.`, 'Classroom Management: Akute Präsenz und spätere Raumgestaltung bearbeiten Ursache und Wirkung.'),
+      zero(`Ich dränge mich durch die enge Stelle, um direkt hinzukommen.`, 'Das reagiert schnell, kostet aber Zeit und erhöht Unruhe im Raum.'),
+      minus(`Ich rufe aus der Distanz, weil ich nicht schnell hinkomme.`, 'Die Störung wird öffentlich; die räumliche Struktur bleibt unbeachtet.')
     ], ['Laufwege']);
 
   add('S10', 'Kooperative Verhaltensmodifikation', Boolean(ctx.riskyPairs.length), 'riskyPairs', 'Zwei verstärken sich',
     `${n(ctx.riskyPairs[0]?.students?.[0] || problem.julius)} und ${n(ctx.riskyPairs[0]?.students?.[1] || problem.ben)} reagieren sichtbar aufeinander. Aus einer kleinen Bemerkung wird fast ein Wettbewerb.`,
     [
-      plus(`Ich gehe nah heran, stoppe die Dynamik knapp und gebe beiden getrennte, konkrete Arbeitsrollen für die nächsten Minuten.`, 'Die Intervention unterbricht die Verstärkung und schafft kooperativ klare Handlungsalternativen.'),
-      zero(`Ich beobachte, ob sich die beiden wieder beruhigen.`, 'Bei einer bekannten Risikokombination ist reines Beobachten zu schwach.'),
-      minus(`Ich entscheide sofort, wer schuld ist, und kritisiere die Person vor dem Tisch.`, 'Schuldzuweisung erhöht die Spannung und verhindert Klärung.')
+      plus(`Ich stoppe die Dynamik ruhig und gebe beiden getrennte, konkrete Arbeitsrollen.`, 'Kooperative Verhaltensmodifikation: Das Problem wird als Interaktion gesehen, nicht als Schuldfrage.'),
+      zero(`Ich beobachte, ob sich die beiden wieder beruhigen.`, 'Bei bekannter Risikokombination fehlt eine klare Veränderung der Bedingungen.'),
+      minus(`Ich bestimme sofort, wer schuld ist, und kritisiere diese Person.`, 'Schuldzuweisung ignoriert das Beziehungsmuster und erschwert kooperative Klärung.')
     ], ['Sitznachbarschaft']);
 
   add('S11', 'Kooperative Verhaltensmodifikation', true, 'peerConflict', 'Reibung mit Julius',
     `${n(problem.julius)} reagiert gereizt auf eine Bemerkung eines Jungen in seiner Nähe. Die Körpersprache wird angespannter.`,
     [
-      plus(`Ich gehe ruhig dazwischen, beschreibe nur das sichtbare Verhalten und gebe beiden eine kurze, getrennte Aufgabe. Eine Klärung kündige ich für später an, wenn beide wieder ansprechbar sind.`, 'Das schützt die Arbeitsphase und vermeidet eine öffentliche Konfliktverhandlung.'),
-      zero(`Ich bitte beide, sich einfach zusammenzureißen.`, 'Das benennt eine Erwartung, bietet aber keine konkrete Hilfe.'),
-      minus(`Ich lasse die beiden den Konflikt sofort vor der Gruppe ausdiskutieren.`, 'Die Situation wird zu groß und überfordert die Arbeitsphase.')
+      plus(`Ich beschreibe nur das sichtbare Verhalten und gebe beiden kurz getrennte Aufgaben.`, 'Kooperative Verhaltensmodifikation: Deeskalation kommt vor gemeinsamer Diagnose der Konfliktbedingungen.'),
+      zero(`Ich bitte beide, sich einfach zusammenzureißen.`, 'Die Erwartung ist klar, aber ein konkretes Ersatzverhalten fehlt.'),
+      minus(`Ich lasse beide den Konflikt sofort vor der Gruppe ausdiskutieren.`, 'Die Klärung wird zu früh und öffentlich; das überfordert die Arbeitsphase.')
     ], [n(problem.julius), 'Konflikt']);
 
   add('S12', 'Classroom Management', true, 'transition', 'Unklarer Wechsel',
     `Beim Wechsel in eine andere Arbeitsform entsteht Bewegung im Raum. ${n(problem.emily)} wirkt unsicher und beginnt, andere zu fragen, was jetzt zu tun ist.`,
     [
-      plus(goodRuleAnswer(problem.emily, ['transition-signal', 'wechsel'], 'Wir warten auf das Startsignal und beginnen dann mit Schritt eins.', 'Ich wiederhole den ersten Schritt knapp sichtbar für alle.'), 'Die Lehrkraft gibt Struktur, ohne Unsicherheit als Störung zu etikettieren.'),
-      zero(`Ich erkläre den Auftrag noch einmal ausführlich für die ganze Klasse.`, 'Das kann helfen, unterbricht aber mehr als nötig.'),
-      minus(`Ich sage, dass man nach der Erklärung nun wirklich selbst wissen müsse, was zu tun ist.`, 'Das erhöht Unsicherheit und erschwert Kooperation.')
+      plus(goodRuleAnswer(problem.emily, ['transition-signal', 'wechsel'], 'Alle warten auf das Signal und beginnen dann mit Schritt eins.'), 'Classroom Management: Übergangsregel, Signal und klare Instruktion geben Struktur.'),
+      zero(`Ich erkläre den Auftrag ausführlich für die ganze Klasse neu.`, 'Das kann helfen, schwächt aber den Unterrichtsfluss im Übergang.'),
+      minus(`Ich sage, dass man jetzt selbst wissen müsse, was zu tun ist.`, 'Die Unsicherheit wird als Störung behandelt; Struktur und Unterstützung fehlen.')
     ], [n(problem.emily), 'Übergang'], selectedHint(['transition-signal', 'wechsel']));
 
   add('S13', 'Classroom Management', true, 'material', 'Material wird zum Vorwand',
     `${n(problem.ben)} sagt, er müsse noch Material holen, bleibt aber stehen und schaut, wer reagiert.`,
     [
-      plus(goodRuleAnswer(problem.ben, ['walkway', 'material'], 'Material wird nur nach dem vereinbarten Ablauf geholt; jetzt startest du mit dem vorhandenen Material.', 'Wenn wirklich etwas fehlt, klären wir es leise am Platz.'), 'Die Lehrkraft trennt echten Bedarf von Ausweichen und hält den Unterricht im Fluss.'),
-      zero(`Ich lasse ihn gehen, damit der Unterricht nicht weiter unterbrochen wird.`, 'Kurzfristig ruhig, aber die Regel wird unklar.'),
-      minus(`Ich mache daraus eine Grundsatzrede über fehlende Vorbereitung.`, 'Die Klasse wird aus der Aufgabe gezogen und der Konflikt vergrößert sich.')
+      plus(goodRuleAnswer(problem.ben, ['walkway', 'material'], 'Er startet mit dem vorhandenen Material; echten Bedarf klären wir leise.'), 'Classroom Management: Die Material-Regel schützt Laufwege und Unterrichtsfluss.'),
+      zero(`Ich lasse ihn gehen, damit der Unterricht nicht weiter stockt.`, 'Das hält es kurz, macht aber die Material-Regel unklar.'),
+      minus(`Ich halte ausführlich fest, dass Materialvorbereitung eine klare Pflicht ist.`, 'Die eigene Lehrerreaktion wird zur Störung und nimmt der Klasse Arbeitszeit.')
     ], [n(problem.ben), 'Material'], selectedHint(['walkway', 'material']));
 
   add('S14', 'Kooperative Verhaltensmodifikation', true, 'selfControl', 'Selbstkontrolle bricht ab',
     `${n(problem.niklas)} beginnt konzentriert, verliert aber nach kurzer Zeit die Orientierung und greift wieder in Richtung Tasche.`,
     [
-      plus(`Ich gehe kurz hin, erinnere an das vereinbarte Ziel und frage leise: „Was hilft dir jetzt, die nächsten zwei Minuten dranzubleiben?“`, 'Das stärkt Selbststeuerung und hält die Intervention klein.'),
-      zero(`Ich lege die Aufgabe kommentarlos noch einmal auf den Tisch.`, 'Das kann unterstützen, klärt aber das Verhalten nicht.'),
-      minus(`Ich sage: „Du kannst es wohl einfach nicht lassen.“`, 'Die Aussage etikettiert den Schüler und schwächt Kooperation.')
+      plus(`Ich erinnere leise an das Ziel und frage, was ihm zwei Minuten Dranbleiben hilft.`, 'Kooperative Verhaltensmodifikation: Ziel, Selbstbeobachtung und Selbststeuerung werden angebahnt.'),
+      zero(`Ich lege die Aufgabe kommentarlos noch einmal auf den Tisch.`, 'Das unterstützt sachlich, klärt aber Verhalten und Selbstkontrolle nicht.'),
+      minus(`Ich sage: „Du kannst es wohl einfach nicht lassen.“`, 'Das etikettiert den Schüler und ignoriert Selbststeuerung als Ziel.')
     ], [n(problem.niklas), 'Selbstkontrolle']);
 
   add('S15', 'Kooperative Verhaltensmodifikation', true, 'attention', 'Aufmerksamkeit durch Geräusche',
     `${n(problem.tom)} erzeugt kleine Geräusche und wartet auf Reaktionen. Einige Köpfe drehen sich bereits.`,
     [
-      plus(`Ich gehe nah heran, gebe ein nonverbales Stoppsignal und flüstere den nächsten Arbeitsauftrag. Wenn es gelingt, bestätige ich die ruhige Mitarbeit kurz.`, 'Die Lehrkraft nimmt die Bühne weg und verstärkt das Zielverhalten.'),
-      zero(`Ich ignoriere es vollständig.`, 'Ignorieren kann bei Aufmerksamkeitsverhalten helfen, ist hier aber riskant, weil die Klasse schon reagiert.'),
-      minus(`Ich imitiere das Geräusch ironisch, damit klar wird, wie störend es ist.`, 'Ironie beschämt und kann die Dynamik verstärken.')
+      plus(`Ich gebe nah ein Stoppsignal und flüstere den nächsten Arbeitsauftrag.`, 'Kooperative Verhaltensmodifikation: Die Bühne sinkt, und ruhiges Zielverhalten kann verstärkt werden.'),
+      zero(`Ich ignoriere das Geräusch vollständig und arbeite weiter.`, 'Ignorieren kann passen, aber die Klasse reagiert bereits auf das Verhalten.'),
+      minus(`Ich imitiere das Geräusch ironisch, damit die Störung auffällt.`, 'Ironie beschämt und verstärkt das aufmerksamkeitssuchende Verhalten.')
     ], [n(problem.tom), 'Aufmerksamkeit']);
 
   add('S16', 'Classroom Management', true, 'lessonFlow', 'Arbeitsfluss kippt',
     `Mehrere Schüler*innen schauen nicht mehr auf ihre Aufgaben. Der Auslöser ist klein, aber die Klasse orientiert sich zunehmend an der Störung.`,
     [
-      plus(`Ich stoppe kurz, setze ein klares Signal und gebe eine sehr konkrete nächste Arbeitsminute vor. Danach gehe ich zuerst zu den riskanten Plätzen.`, 'Das verbindet Klassenmanagement mit gezielter Präsenz.'),
-      zero(`Ich spreche weiter, damit keine zusätzliche Unterbrechung entsteht.`, 'Das hält den Plan, übersieht aber den kippenden Arbeitsfluss.'),
-      minus(`Ich unterbreche lange und bespreche, wie schlecht die Mitarbeit gerade ist.`, 'Die Unterbrechung vergrößert den Störwert.')
+      plus(`Ich setze ein klares Signal und gebe die nächste Arbeitsminute konkret vor.`, 'Classroom Management: Signal, Gruppenfokus und Unterrichtsfluss werden schnell gesichert.'),
+      zero(`Ich spreche weiter, damit keine zusätzliche Unterbrechung entsteht.`, 'Der Plan läuft weiter, aber der kippende Gruppenfokus bleibt unbeachtet.'),
+      minus(`Ich unterbreche lange und kritisiere die Mitarbeit der Klasse.`, 'Die Lehrerreaktion vergrößert die Störung und senkt aktive Lernzeit.')
     ], ['Arbeitsfluss']);
 
   add('S17', 'Kooperative Verhaltensmodifikation', true, 'resourceUse', 'Ressource am Tisch',
     `${n(resource)} arbeitet ruhig und könnte als Ressource wirken. In der Nähe entsteht trotzdem Unruhe.`,
     [
-      plus(`Ich nutze ${n(resource)} nicht als Hilfslehrkraft, sondern gebe dem Tisch eine klare Mini-Aufgabe und bestätige die ruhige Mitarbeit von ${n(resource)} kurz.`, 'Ressourcen werden anerkannt, aber nicht überlastet.'),
-      zero(`Ich bitte ${n(resource)}, die anderen am Tisch zu beruhigen.`, 'Das kann kurz helfen, verlagert aber pädagogische Verantwortung auf einen Schüler.'),
-      minus(`Ich sage laut, dass sich alle ein Beispiel an ${n(resource)} nehmen sollen.`, 'Vergleiche können beschämen und die soziale Lage verschlechtern.')
+      plus(`Ich gebe dem Tisch eine Mini-Aufgabe und bestätige ${n(resource)} kurz für ruhige Mitarbeit.`, 'Kooperative Verhaltensmodifikation: Ressourcen werden verstärkt, ohne Schülerverantwortung zu überlasten.'),
+      zero(`Ich bitte ${n(resource)}, die anderen am Tisch zu beruhigen.`, 'Das kann helfen, verlagert aber pädagogische Verantwortung statt Kooperation aufzubauen.'),
+      minus(`Ich sage laut, alle sollten sich an ${n(resource)} ein Beispiel nehmen.`, 'Der Vergleich kann beschämen und verschlechtert die kooperative Gruppendynamik.')
     ], [n(resource), 'Ressource']);
 
   add('S18', 'Classroom Management', true, 'rules', 'Regel ist da, aber nicht präsent',
     `Eine vereinbarte Klassenregel passt zur Situation, wird im Moment aber nicht automatisch genutzt. Die Klasse braucht eine knappe Erinnerung.`,
     [
-      plus(`Ich erinnere knapp an die passende Regel, benenne das gewünschte Verhalten und führe die Klasse sofort zurück zur Aufgabe.`, 'Regeln wirken, wenn sie kurz, situationsnah und handlungsbezogen genutzt werden.'),
-      zero(`Ich sage allgemein, dass die Regeln gelten.`, 'Das stimmt, bleibt aber unkonkret.'),
-      minus(`Ich lasse die Klasse alle Regeln noch einmal laut vorlesen.`, 'Die lange Unterbrechung macht die Störung größer.')
+      plus(`Ich erinnere knapp an die Regel und nenne sofort das gewünschte Verhalten.`, 'Classroom Management: Regeln wirken, wenn sie positiv, kurz und handlungsnah genutzt werden.'),
+      zero(`Ich sage allgemein, dass die Klassenregeln weiterhin gelten.`, 'Das stimmt, bleibt aber ohne konkrete Verhaltenserwartung.'),
+      minus(`Ich lasse die Klasse alle Regeln noch einmal laut vorlesen.`, 'Die lange Unterbrechung verletzt den Unterrichtsfluss und macht die Störung größer.')
     ], ['Klassenregeln']);
 
   add('S19', 'Kooperative Verhaltensmodifikation', true, 'debrief', 'Klärung nach der Stunde',
     `${n(problem.petra)} arbeitet nach der Intervention kurz mit, wirkt aber weiterhin angespannt und ablenkbar.`,
     [
-      plus(`Ich halte die akute Phase knapp und kündige leise an: „Wir klären nach der Stunde kurz, was dir hilft, in Arbeitsphasen bei dir zu bleiben.“`, 'Die akute Ordnung bleibt erhalten; die eigentliche Verhaltensvereinbarung wird zeitnah vorbereitet.'),
-      zero(`Ich lasse es dabei, weil die Situation im Moment ruhig ist.`, 'Kurzfristig reicht das, aber es entsteht keine Veränderungsvereinbarung.'),
-      minus(`Ich führe sofort ein längeres Gespräch am Tisch.`, 'Das zieht Aufmerksamkeit und Zeit aus der Unterrichtsphase.')
+      plus(`Ich halte es akut kurz und kündige ein zeitnahes Nachgespräch an.`, 'Kooperative Verhaltensmodifikation: Die eigentliche Diagnose und Vereinbarung werden vorbereitet.'),
+      zero(`Ich lasse es dabei, weil die Situation im Moment ruhig ist.`, 'Die akute Stabilität bleibt, aber eine kooperative Veränderungsvereinbarung fehlt.'),
+      minus(`Ich führe sofort ein längeres Gespräch am Tisch.`, 'Die Klärung ist zu öffentlich und stört die Arbeitsphase.')
     ], [n(problem.petra), 'Nachgespräch']);
 
   add('S20', 'Classroom Management', true, 'proximity', 'Nähe ohne Bloßstellung',
     `${n(problem.lina)} braucht Unterstützung, ohne vor der Klasse herausgestellt zu werden. Ein falscher Ton würde die Situation verschärfen.`,
     [
-      plus(`Ich gehe seitlich an den Tisch, spreche leise und gebe eine konkrete, machbare nächste Handlung.`, 'Die Unterstützung ist respektvoll und unmittelbar.'),
-      zero(`Ich frage von vorne, ob alles in Ordnung ist.`, 'Die Frage ist freundlich, aber öffentlich und wenig konkret.'),
-      minus(`Ich erkläre der Klasse, dass manche Personen eben empfindlicher reagieren.`, 'Das etikettiert und verletzt Schutzbedürfnisse.')
+      plus(`Ich gehe seitlich an den Tisch und gebe leise eine machbare nächste Handlung.`, 'Classroom Management: Nähe wirkt präventiv, ohne emotionale Sicherheit zu gefährden.'),
+      zero(`Ich frage von vorne, ob alles in Ordnung ist.`, 'Die Frage ist freundlich, aber öffentlich und ohne klare Handlungshilfe.'),
+      minus(`Ich erkläre der Klasse, dass manche Personen empfindlicher reagieren.`, 'Das etikettiert Lina und missachtet ihren Schutzbedarf.')
     ], [n(problem.lina), 'Schutz']);
 
   add('S21', 'Classroom Management', Boolean(ctx.activeTrash?.length), 'trash', 'Müll lenkt ab',
     `Ein Müllfeld liegt im Laufweg. Es bindet Aufmerksamkeit und erschwert schnelle Präsenz der Lehrkraft.`,
     [
-      plus(`Ich entferne den Müll zügig mit dem Besen und kehre direkt zur nächsten Unterrichtshandlung zurück.`, 'Der Störreiz verschwindet, ohne die Situation groß zu machen.'),
-      zero(`Ich warte, bis später jemand Zeit hat, den Müll wegzuräumen.`, 'Die Ablenkung bleibt bestehen.'),
-      minus(`Ich mache die Klasse laut dafür verantwortlich, dass Müll im Raum liegt.`, 'Die Reaktion erzeugt Unruhe, ohne das Feld zu klären.')
+      plus(`Ich entferne den Müll zügig und kehre direkt zur Unterrichtshandlung zurück.`, 'Classroom Management: Raumgestaltung und Reibungslosigkeit werden sofort gesichert.'),
+      zero(`Ich warte, bis später jemand Zeit zum Aufräumen hat.`, 'Die Ablenkung und der blockierte Laufweg bleiben als Störfaktoren bestehen.'),
+      minus(`Ich mache die Klasse laut für den Müll im Raum verantwortlich.`, 'Die Reaktion schafft Unruhe, ohne die situative Störungsursache zu beseitigen.')
     ], ['Müll']);
 
   add('S22', 'Kooperative Verhaltensmodifikation', true, 'avoidance', 'Ausweichen statt Arbeiten',
     `${n(problem.ben)} fragt zum dritten Mal nach einer Nebensache, obwohl der Arbeitsauftrag klar ist. Es wirkt wie ein Ausweichen vor dem Beginn.`,
     [
-      plus(`Ich bestätige kurz die Frage, begrenze sie und vereinbare: „Erst Aufgabe eins, danach klären wir den Rest.“`, 'Das nimmt das Bedürfnis wahr und schützt gleichzeitig die Arbeitszeit.'),
-      zero(`Ich beantworte jede Nachfrage ausführlich.`, 'Das ist zugewandt, verstärkt aber möglicherweise das Ausweichen.'),
-      minus(`Ich sage, dass solche Fragen nur stören.`, 'Die Reaktion ist abwertend und verschlechtert Kooperation.')
+      plus(`Ich nehme die Frage kurz auf und vereinbare: erst Aufgabe eins, dann Klärung.`, 'Kooperative Verhaltensmodifikation: Bedürfnis und Arbeitsziel werden transparent verbunden.'),
+      zero(`Ich beantworte jede Nachfrage ausführlich.`, 'Das wirkt zugewandt, kann aber das Ausweichverhalten verstärken.'),
+      minus(`Ich sage, dass solche Fragen nur stören.`, 'Die Reaktion wertet ab und ignoriert das ausweichende Schülerverhalten.')
     ], [n(problem.ben), 'Ausweichen']);
 
   add('S23', 'Classroom Management', true, 'noise', 'Lautstärke steigt',
     `Die Arbeitslautstärke steigt schrittweise. ${n(problem.tom)} nutzt den Moment, um erneut Aufmerksamkeit zu bekommen.`,
     [
-      plus(`Ich nutze ein bekanntes Ruhezeichen, warte kurz auf Wirkung und gebe dann die nächste Arbeitsminute klar vor.`, 'Ein eingeübtes Signal ist kurz, vorhersehbar und unterbricht wenig.'),
-      zero(`Ich bitte mehrfach um Ruhe, während ich weiter erkläre.`, 'Die Bitte ist verständlich, verliert aber schnell Wirkung.'),
-      minus(`Ich erhöhe meine Stimme, bis die Klasse leise wird.`, 'Die Lautstärke der Lehrkraft verstärkt die Gesamtunruhe.')
+      plus(`Ich nutze das bekannte Ruhezeichen und gebe danach die nächste Arbeitsminute vor.`, 'Classroom Management: Stoppsignal und klare Aktivierung halten die Störung klein.'),
+      zero(`Ich bitte mehrfach um Ruhe, während ich weiter erkläre.`, 'Die Bitte ist passend gemeint, verliert aber ohne klares Signal Wirkung.'),
+      minus(`Ich werde lauter, bis die Klasse leise wird.`, 'Die Lehrkraft verstärkt die Gesamtlautstärke und unterbricht den Unterrichtsfluss.')
     ], ['Lautstärke']);
 
   add('S24', 'Kooperative Verhaltensmodifikation', true, 'choice', 'Kleine Wahlmöglichkeit',
     `${n(problem.niklas)} wirkt kurz vor dem Ausstieg aus der Aufgabe. Ein harter Befehl würde vermutlich Widerstand auslösen.`,
     [
-      plus(`Ich gebe zwei klare, gleichwertige Startoptionen und lasse ${n(problem.niklas)} eine davon wählen.`, 'Die Wahl ist begrenzt und fördert Selbststeuerung.'),
-      zero(`Ich sage nur, dass er anfangen soll.`, 'Die Erwartung ist klar, aber wenig unterstützend.'),
-      minus(`Ich stelle die gesamte Aufgabe infrage und erkläre lange, warum sie wichtig ist.`, 'Zu viel Erklärung verzögert den Start weiter.')
+      plus(`Ich biete zwei klare Startoptionen und lasse ${n(problem.niklas)} eine wählen.`, 'Kooperative Verhaltensmodifikation: Begrenzte Wahl stärkt Selbststeuerung innerhalb des Ziels.'),
+      zero(`Ich sage nur, dass er jetzt anfangen soll.`, 'Die Erwartung ist klar, aber sie enthält keine Selbststeuerungshilfe.'),
+      minus(`Ich erkläre lange, warum die Aufgabe wichtig ist.`, 'Zu viel Erklärung verzögert den Start und ignoriert das Ausstiegsrisiko.')
     ], [n(problem.niklas), 'Selbststeuerung']);
 
   add('S25', 'Classroom Management', true, 'firstMinute', 'Die erste Minute zählt',
     `Direkt nach dem Start der Arbeitsphase entsteht Unruhe. Noch ist die Situation gut steuerbar.`,
     [
-      plus(`Ich sichere die ersten sechzig Sekunden mit einem klaren Startsignal, sichtbarer Präsenz und einer überprüfbaren Mini-Aufgabe.`, 'Frühe Struktur verhindert, dass kleine Störungen wachsen.'),
-      zero(`Ich gebe der Klasse mehr Zeit, sich selbst zu sortieren.`, 'Das kann funktionieren, ist bei bekannten Risikoprofilen aber unsicher.'),
-      minus(`Ich beginne sofort mit Ermahnungen, bevor klar ist, wer Hilfe braucht.`, 'Die Stunde startet in einer negativen Kontrolllogik.')
+      plus(`Ich sichere den Start mit Signal, sichtbarer Präsenz und einer Mini-Aufgabe.`, 'Classroom Management: Frühe Struktur verhindert, dass kleine Störungen wachsen.'),
+      zero(`Ich gebe der Klasse mehr Zeit, sich selbst zu sortieren.`, 'Das kann funktionieren, berücksichtigt bekannte Risikoprofile aber nur schwach.'),
+      minus(`Ich starte mit Ermahnungen, bevor klar ist, wer Unterstützung braucht.`, 'Der Stundenstart kippt in Kontrolllogik statt präventive Struktur.')
     ], ['Startphase']);
 
   add('S26', 'Kooperative Verhaltensmodifikation', true, 'feedback', 'Positives Verhalten übersehen',
     `${n(problem.tom)} meldet sich einmal korrekt, kurz danach droht wieder ein Zwischenruf. Der Moment ist günstig für Verstärkung.`,
     [
-      plus(`Ich bestätige die korrekte Meldung kurz und konkret: „Danke, genau so kann ich dich drannehmen.“`, 'Positives Zielverhalten wird sichtbar verstärkt.'),
-      zero(`Ich nehme ihn einfach dran.`, 'Das ist sachlich, nutzt aber die Chance zur Verstärkung nicht.'),
-      minus(`Ich erinnere gleichzeitig daran, wie oft er sonst dazwischenruft.`, 'Die positive Handlung wird entwertet.')
+      plus(`Ich bestätige die korrekte Meldung kurz und konkret.`, 'Kooperative Verhaltensmodifikation: Zielverhalten wird verstärkt und dadurch wahrscheinlicher.'),
+      zero(`Ich nehme ihn einfach dran und mache weiter.`, 'Das ist sachlich, nutzt aber die Chance zur positiven Verstärkung nicht.'),
+      minus(`Ich erinnere gleichzeitig daran, wie oft er sonst dazwischenruft.`, 'Die Rückmeldung entwertet das Zielverhalten und schwächt Selbstwirksamkeit.')
     ], [n(problem.tom), 'Verstärkung']);
 
   add('S27', 'Classroom Management', true, 'seating', 'Sitzordnung als Auslöser',
     `An einem Tisch entsteht wiederholt Ablenkung. Die aktuelle Sitznähe scheint die Störung mit auszulösen.`,
     [
-      plus(`Ich interveniere jetzt knapp und plane anschließend eine gezielte Sitzkorrektur, statt mitten in der Phase hektisch umzubauen.`, 'Akut bleibt die Stunde stabil; die strukturelle Ursache wird später bearbeitet.'),
-      zero(`Ich tausche sofort mehrere Plätze.`, 'Das kann helfen, verursacht aber im laufenden Unterricht viel Bewegung.'),
-      minus(`Ich ignoriere die Sitzursache und arbeite nur mit Ermahnungen.`, 'Dann bleibt der strukturelle Auslöser bestehen.')
+      plus(`Ich interveniere knapp und plane danach eine gezielte Sitzkorrektur.`, 'Classroom Management: Die akute Störung und die strukturelle Sitzursache werden berücksichtigt.'),
+      zero(`Ich tausche sofort mehrere Plätze mitten in der Arbeitsphase.`, 'Das kann helfen, stört aber den Unterrichtsfluss durch viel Bewegung.'),
+      minus(`Ich ignoriere die Sitzursache und arbeite nur mit Ermahnungen.`, 'Die situative Bedingung bleibt bestehen; die Reaktion ist zu eindimensional.')
     ], ['Sitzordnung']);
 
   add('S28', 'Kooperative Verhaltensmodifikation', true, 'reflection', 'Kurze Reflexion statt Moralpredigt',
     `${n(problem.ben)} hält sich nach einer Intervention wieder an die Aufgabe. Die Lehrkraft kann jetzt entscheiden, wie sie den Moment abschließt.`,
     [
-      plus(`Ich gebe kurz Rückmeldung zum gelungenen Verhalten und formuliere die Erwartung für die nächsten Minuten.`, 'Der Abschluss stabilisiert, ohne die Situation erneut groß zu machen.'),
-      zero(`Ich sage nichts weiter, weil es jetzt läuft.`, 'Das ist störungsarm, verschenkt aber Verstärkung.'),
-      minus(`Ich erkläre ausführlich, warum es vorher problematisch war.`, 'Die lange Rückschau holt die Störung zurück.')
+      plus(`Ich gebe kurz Rückmeldung und formuliere die Erwartung für die nächsten Minuten.`, 'Kooperative Verhaltensmodifikation: Gelingen wird verstärkt und an ein klares Ziel gebunden.'),
+      zero(`Ich sage nichts weiter, weil es jetzt läuft.`, 'Das ist störungsarm, verschenkt aber eine wirksame Verstärkung.'),
+      minus(`Ich erkläre ausführlich, warum es vorher problematisch war.`, 'Die Rückschau reaktiviert die Störung und unterbricht den Arbeitsfluss.')
     ], [n(problem.ben), 'Rückmeldung']);
 
   add('S29', 'Classroom Management', true, 'taskClarity', 'Auftrag zu offen',
     `Einige Schüler*innen wissen nicht, was als Nächstes zählt. ${n(problem.petra)} nutzt die Unklarheit für Nebengespräche.`,
     [
-      plus(`Ich formuliere den nächsten Schritt sichtbar und zeitlich begrenzt: „Zwei Minuten: Aufgabe eins markieren, dann kurze Rückmeldung.“`, 'Klarheit reduziert Ausweich- und Ablenkungsverhalten.'),
-      zero(`Ich frage, wer die Aufgabe noch nicht verstanden hat.`, 'Das kann helfen, öffnet aber eine längere Unterbrechung.'),
-      minus(`Ich sage, dass die Aufgabe doch eindeutig erklärt wurde.`, 'Das klärt nichts und verstärkt Unsicherheit.')
+      plus(`Ich formuliere sichtbar: zwei Minuten Aufgabe eins markieren, dann Rückmeldung.`, 'Classroom Management: Klarheit und Zeitrahmen reduzieren Ausweich- und Ablenkungsverhalten.'),
+      zero(`Ich frage, wer die Aufgabe noch nicht verstanden hat.`, 'Das kann helfen, schwächt aber Unterrichtsfluss und klare Aktivierung.'),
+      minus(`Ich sage, dass die Aufgabe doch eindeutig erklärt wurde.`, 'Die Unsicherheit wird ignoriert; klare Instruktion als Classroom-Management-Hilfe fehlt.')
     ], [n(problem.petra), 'Auftragsklarheit']);
 
   add('S30', 'Kooperative Verhaltensmodifikation', true, 'emotion', 'Emotion vor Verhalten',
     `${n(problem.lina)} wirkt nach einem Kommentar innerlich ausgestiegen. Eine reine Ermahnung zur Mitarbeit würde zu kurz greifen.`,
     [
-      plus(`Ich spreche leise an, dass der Moment schwierig war, und gebe eine kleine Rückkehrhilfe: „Starte mit Zeile eins, ich komme gleich wieder.“`, 'Die Intervention verbindet emotionale Sicherheit mit konkreter Handlung.'),
-      zero(`Ich lasse ihr kurz Zeit und gehe weiter.`, 'Das schützt vor Öffentlichkeit, bietet aber noch keine Rückkehrhilfe.'),
-      minus(`Ich fordere sofort Mitarbeit ein, ohne den Auslöser zu beachten.`, 'Das kann als Druck erlebt werden und die Verweigerung verstärken.')
+      plus(`Ich spreche leise an, gebe Sicherheit und biete einen kleinen Startschritt an.`, 'Kooperative Verhaltensmodifikation: Gefühl, Auslöser und Rückkehrhandlung werden zusammen gesehen.'),
+      zero(`Ich lasse ihr kurz Zeit und gehe weiter.`, 'Der Schutz vor Öffentlichkeit passt, aber die Rückkehrhilfe zum Zielverhalten fehlt.'),
+      minus(`Ich fordere sofort Mitarbeit, ohne den Auslöser zu beachten.`, 'Das Schülerverhalten wird isoliert bewertet; die emotionale Bedingung bleibt unbeachtet.')
     ], [n(problem.lina), 'Emotion']);
 
   add('S31', 'Classroom Management', true, 'door', 'Blick wandert zur Tür',
     `${n(problem.niklas)} schaut wiederholt zur Tür und wirkt, als wolle er die Situation verlassen oder sich entziehen.`,
     [
-      plus(`Ich gehe nah genug heran, frage leise nach dem Grund und kläre sofort, ob es einen legitimen Anlass gibt oder ob die Rückkehr an die Aufgabe nötig ist.`, 'Die Bewegung wird früh geklärt, bevor sie zum Modell für andere wird.'),
-      zero(`Ich stelle mich in Türnähe und beobachte.`, 'Das kann verhindern, dass jemand geht, klärt aber nicht den Anlass.'),
-      minus(`Ich rufe von vorne, dass niemand den Raum verlässt.`, 'Die Reaktion ist öffentlich und wenig kooperativ.')
+      plus(`Ich gehe nah heran, frage leise nach dem Grund und kläre die Rückkehr.`, 'Classroom Management: Frühe Präsenz klärt Anlass und verhindert Modellwirkung für andere.'),
+      zero(`Ich stelle mich in Türnähe und beobachte.`, 'Das kann Weggehen verhindern, klärt aber weder Anlass noch Regel.'),
+      minus(`Ich rufe von vorne, dass niemand den Raum verlässt.`, 'Die Reaktion ist öffentlich und ersetzt keine kooperative Klärung.')
     ], [n(problem.niklas), 'Tür']);
 
   add('S32', 'Kooperative Verhaltensmodifikation', true, 'agreement', 'Vereinbarung braucht Kontrolle',
     `Eine vorherige Vereinbarung zeigt erste Wirkung, ist aber noch nicht stabil. ${n(problem.tom)} schaut, ob die Lehrkraft konsequent bleibt.`,
     [
-      plus(`Ich erinnere kurz an die Vereinbarung und frage nach dem vereinbarten Hilfeschritt, statt neu zu diskutieren.`, 'Konsequente Umsetzung macht Vereinbarungen verlässlich.'),
-      zero(`Ich verhandle die Vereinbarung erneut.`, 'Das kann wertschätzend sein, schwächt aber die Verbindlichkeit in der akuten Situation.'),
-      minus(`Ich erkläre, dass Vereinbarungen bei ihm ohnehin nichts bringen.`, 'Das beschädigt Beziehung und Selbstwirksamkeit.')
+      plus(`Ich erinnere kurz an die Vereinbarung und frage nach dem Hilfeschritt.`, 'Kooperative Verhaltensmodifikation: Vereinbarung, Kontrolle und Selbststeuerung bleiben verlässlich.'),
+      zero(`Ich verhandle die Vereinbarung in der Situation erneut.`, 'Das ist wertschätzend, schwächt aber Verbindlichkeit und Kontrollplanung.'),
+      minus(`Ich sage, dass Vereinbarungen bei ihm ohnehin nichts bringen.`, 'Das beschädigt Beziehung und Selbstwirksamkeit statt Selbstbewertung aufzubauen.')
     ], [n(problem.tom), 'Vereinbarung']);
 
   add('S33', 'Classroom Management', true, 'preventivePresence', 'Präventive Präsenz',
     `Noch ist keine offene Störung sichtbar, aber mehrere riskante Plätze liegen außerhalb der direkten Aufmerksamkeit.`,
     [
-      plus(`Ich verändere meine Position so, dass die riskanten Plätze im Blick liegen, ohne den Unterrichtsfluss zu unterbrechen.`, 'Prävention ist wirksamer als spätes Reagieren.'),
-      zero(`Ich bleibe vorne, damit die Erklärung vollständig bleibt.`, 'Das kann sachlich nötig sein, lässt aber blinde Bereiche entstehen.'),
-      minus(`Ich kündige an, dass ich gleich kontrollieren werde, wer nicht arbeitet.`, 'Die Ankündigung setzt auf Drohung statt Präsenz.')
+      plus(`Ich verändere meine Position, sodass riskante Plätze im Blick liegen.`, 'Classroom Management: Withitness wirkt präventiv, bevor eine Störung sichtbar wird.'),
+      zero(`Ich bleibe vorne, damit die Erklärung vollständig bleibt.`, 'Das kann sachlich nötig sein, lässt aber blinde Bereiche ohne Präsenz.'),
+      minus(`Ich kündige an, gleich streng zu kontrollieren, wer nicht arbeitet.`, 'Die Ankündigung setzt auf Drohung statt auf Präsenz und Gruppenfokus.')
     ], ['Präsenz']);
 
   add('S34', 'Kooperative Verhaltensmodifikation', true, 'cooperation', 'Kooperation statt Machtkampf',
     `${n(problem.ben)} widerspricht knapp. Die Situation kann entweder klein bleiben oder zum Machtkampf werden.`,
     [
-      plus(`Ich bleibe ruhig, wiederhole die Erwartung einmal knapp und gebe eine konkrete Wahl innerhalb der Regel.`, 'Die Lehrkraft bleibt klar und erhält Kooperation.'),
-      zero(`Ich erkläre ausführlich, warum die Regel sinnvoll ist.`, 'Das ist pädagogisch nachvollziehbar, aber im Moment zu lang.'),
-      minus(`Ich fordere sofort eine Entschuldigung vor der Klasse.`, 'Das erhöht den Druck und macht den Konflikt öffentlich.')
+      plus(`Ich wiederhole die Erwartung ruhig und gebe eine Wahl innerhalb der Regel.`, 'Kooperative Verhaltensmodifikation: Klarheit bleibt bestehen, ohne Kooperation zu verlieren.'),
+      zero(`Ich erkläre ausführlich, warum die Regel sinnvoll ist.`, 'Das ist pädagogisch plausibel, schwächt aber im Moment den Unterrichtsfluss.'),
+      minus(`Ich fordere sofort eine Entschuldigung vor der Klasse.`, 'Der Druck macht den Konflikt öffentlich und verhindert kooperative Klärung.')
     ], [n(problem.ben), 'Kooperation']);
 
   add('S35', 'Classroom Management', true, 'sink', 'Weg zum Waschbecken',
     `${n(problem.petra)} schaut zum Waschbecken und scheint gleich aufzustehen. Die Aufgabe ist noch nicht begonnen.`,
     [
-      plus(`Ich frage leise nach dem Grund. Wenn es nötig ist, erlaube ich den kurzen Weg mit Rückkehrregel; wenn nicht, verweise ich direkt auf den Arbeitsstart.`, 'Die Lehrkraft unterscheidet Bedürfnis und Ausweichen.'),
-      zero(`Ich lasse den Weg zu, solange es ruhig bleibt.`, 'Das hält die Situation klein, macht die Regel aber unklar.'),
-      minus(`Ich verbiete grundsätzlich jeden Gang durch den Raum.`, 'Das ignoriert mögliche berechtigte Gründe und wirkt unflexibel.')
+      plus(`Ich frage leise nach dem Grund und kläre kurz Weg oder Arbeitsstart.`, 'Classroom Management: Regel, legitimes Bedürfnis und Unterrichtsfluss werden abgewogen.'),
+      zero(`Ich lasse den Weg zu, solange es ruhig bleibt.`, 'Das hält die Situation klein, lässt aber die Regel unklar.'),
+      minus(`Ich verbiete grundsätzlich jeden Gang durch den Raum.`, 'Mögliche berechtigte Gründe werden ignoriert; die Regel wird unflexibel eingesetzt.')
     ], [n(problem.petra), 'Waschbecken']);
 
   add('S36', 'Kooperative Verhaltensmodifikation', true, 'cabinet', 'Weg zum Schrank',
     `${n(problem.emily)} steht unsicher auf und geht in Richtung Schrank. Es ist unklar, ob Material fehlt oder ob sie der Aufgabe ausweicht.`,
     [
-      plus(`Ich gehe hin, frage kurz nach dem Grund und gebe eine klare Rückkehrregel: Material holen, dann direkt wieder zur Aufgabe.`, 'Die Handlung wird strukturiert, nicht pauschal bestraft.'),
-      zero(`Ich schicke sie sofort zurück, damit niemand anderes aufsteht.`, 'Das kann Ordnung sichern, klärt aber den möglichen Bedarf nicht.'),
-      minus(`Ich rufe quer durch den Raum, dass der Schrank tabu ist.`, 'Das ist öffentlich und ungenau.')
+      plus(`Ich frage kurz nach und vereinbare: Material holen, dann zurück zur Aufgabe.`, 'Kooperative Verhaltensmodifikation: Anlassklärung, Ziel und Rückkehrregel werden verbunden.'),
+      zero(`Ich schicke sie sofort zurück, damit niemand anderes aufsteht.`, 'Das sichert Ordnung, prüft aber den möglichen Materialbedarf nicht.'),
+      minus(`Ich rufe quer durch den Raum, dass der Schrank tabu ist.`, 'Die Reaktion ist öffentlich und klärt weder Bedürfnis noch Regel.')
     ], [n(problem.emily), 'Schrank']);
 
   add('S37', 'Classroom Management', true, 'classFocus', 'Viele schauen zur Störung',
     `Eine kleine Störung zieht plötzlich viele Blicke auf sich. Der Unterricht droht, seinen Fokus zu verlieren.`,
     [
-      plus(`Ich halte die Intervention klein: kurze Nähe zur betroffenen Person, klare Aufgabe für alle, dann sofort weiterarbeiten lassen.`, 'So bekommt die Störung wenig Bühne.'),
-      zero(`Ich warte, bis sich die Aufmerksamkeit wieder verteilt.`, 'Das kann funktionieren, verliert aber Zeit.'),
-      minus(`Ich bespreche mit der ganzen Klasse, warum solche Störungen stören.`, 'Die Besprechung macht die Störung zum Mittelpunkt.')
+      plus(`Ich halte die Intervention klein und gebe allen sofort eine klare Aufgabe.`, 'Classroom Management: Gruppenfokus und aktive Lernzeit bleiben im Vordergrund.'),
+      zero(`Ich warte, bis sich die Aufmerksamkeit wieder verteilt.`, 'Das kann funktionieren, verliert aber wertvolle Arbeitszeit.'),
+      minus(`Ich bespreche mit der ganzen Klasse, warum Störungen stören.`, 'Die Besprechung macht die Störung zum Mittelpunkt.')
     ], ['Aufmerksamkeit']);
 
   add('S38', 'Kooperative Verhaltensmodifikation', true, 'supportPlan', 'Ein Plan für den nächsten Versuch',
     `${n(problem.niklas)} hat die Regel erneut nicht eingehalten. Die akute Situation ist gestoppt, aber eine Wiederholung ist wahrscheinlich.`,
     [
-      plus(`Ich vereinbare nach der Stunde kurz einen konkreten Wenn-dann-Plan und erinnere in der nächsten Stunde zu Beginn daran.`, 'Das entspricht kooperativer Verhaltensmodifikation: Problem klären, Vereinbarung treffen, Einhaltung unterstützen.'),
+      plus(`Ich vereinbare kurz einen Wenn-dann-Plan und erinnere daran zu Stundenbeginn.`, 'Kooperative Verhaltensmodifikation: Ziel, Bedingung und Kontrolle unterstützen Selbststeuerung.'),
       zero(`Ich notiere mir, das irgendwann im Klassenrat anzusprechen.`, 'Eine spätere Klärung kann helfen, ist aber zu unkonkret.'),
-      minus(`Ich kündige an, dass beim nächsten Mal sofort eine harte Konsequenz kommt.`, 'Die Drohung ersetzt keine tragfähige Verhaltenshilfe.')
+      minus(`Ich kündige für das nächste Mal sofort eine harte Konsequenz an.`, 'Die Drohung ersetzt keine kooperative Planungs- und Kontrollhilfe.')
     ], [n(problem.niklas), 'Wenn-dann-Plan']);
 
   add('S39', 'Classroom Management', true, 'overlap', 'Zwei Ereignisse gleichzeitig',
     `Während eine Störung bearbeitet wird, entsteht an anderer Stelle ein zweites Warnsignal. Die Lehrkraft muss priorisieren.`,
     [
-      plus(`Ich beende die erste Intervention knapp, sichere die Klasse mit einem kurzen Arbeitsauftrag und gehe dann zum dringenderen Warnsignal.`, 'Die Reaktion priorisiert ohne Hektik und hält den Arbeitsrahmen.'),
-      zero(`Ich versuche beide Situationen von der Mitte des Raumes aus anzusprechen.`, 'Das ist schnell, bleibt aber ungenau.'),
-      minus(`Ich ignoriere das zweite Signal, bis die erste Situation vollständig geklärt ist.`, 'Dadurch kann die zweite Störung eskalieren.')
+      plus(`Ich schließe das Erste knapp ab und gehe dann zum dringenderen Signal.`, 'Classroom Management: Overlapping und Priorisierung halten den Unterrichtsrahmen stabil.'),
+      zero(`Ich spreche beide Situationen von der Mitte des Raumes aus an.`, 'Das ist schnell, bleibt aber ungenau und nutzt Präsenz kaum.'),
+      minus(`Ich ignoriere das zweite Signal, bis die erste Situation ganz geklärt ist.`, 'Die zweite Störung kann eskalieren; Withitness wird nicht genutzt.')
     ], ['Priorisierung']);
 
   add('S40', 'Kooperative Verhaltensmodifikation', true, 'closing', 'Ruhiger Abschluss einer Intervention',
     `Die Situation ist geklärt. Entscheidend ist jetzt, ob die Klasse wieder schnell in die Aufgabe findet.`,
     [
-      plus(`Ich fasse die Erwartung in einem Satz zusammen, gebe den nächsten Arbeitsschritt und wende mich wieder dem Unterricht zu.`, 'Die Intervention endet klar und kurz; der Unterricht bleibt im Vordergrund.'),
-      zero(`Ich frage noch nach, ob jetzt wirklich alles verstanden wurde.`, 'Das kann Sicherheit geben, verlängert aber unnötig.'),
-      minus(`Ich wiederhole noch einmal ausführlich, was falsch lief.`, 'Die Störung wird erneut aktiviert.')
+      plus(`Ich fasse die Erwartung kurz zusammen und gebe den nächsten Arbeitsschritt.`, 'Kooperative Verhaltensmodifikation: Das Zielverhalten bleibt klar, ohne die Störung zu verlängern.'),
+      zero(`Ich frage nach, ob jetzt wirklich alles verstanden wurde.`, 'Das kann Sicherheit geben, verlängert aber die Störung und Lernzeit sinkt.'),
+      minus(`Ich wiederhole ausführlich, was vorher falsch lief.`, 'Die Störung wird reaktiviert und die aktive Lernzeit sinkt.')
     ], ['Abschluss']);
 
   return s;
 }
-
 
 
 function init() {
@@ -1331,10 +1330,10 @@ function buildWanderScenario(student, targetType, reason) {
   const targetLabel = reason.targetLabel;
   const isToilet = reason.subtype === 'toilet';
   const allowFeedback = isToilet
-    ? `${student.name} bekommt eine kurze Erlaubnis, verlässt den Raum für einen begrenzten Zeitraum und kehrt danach zurück. Die Regel bleibt klar und die Klasse arbeitet weiter.`
-    : `${student.name} erklärt den nachvollziehbaren Grund, geht kontrolliert ${targetLabel}, bleibt dort kurz und kehrt anschließend zum Platz zurück.`;
-  const returnFeedback = `${student.name} kehrt an den Platz zurück. Das stoppt die Bewegung, klärt den Anlass aber nur teilweise.`;
-  const badFeedback = 'Die Situation wird öffentlich oder unklar behandelt. Die Bewegung bekommt zu viel Aufmerksamkeit und die Arbeitsruhe sinkt.';
+    ? `Kooperative Verhaltensmodifikation: Der berechtigte Anlass wird leise geklärt; die Rückkehrregel hält Bedürfnis und Klassenregel zusammen.`
+    : `Kooperative Verhaltensmodifikation: Der nachvollziehbare Grund wird geprüft und mit einer klaren Rückkehrregel verbunden.`;
+  const returnFeedback = 'Die Bewegung endet, aber kooperative Diagnose und Bedürfnisprüfung bleiben unvollständig.';
+  const badFeedback = 'Die Situation wird öffentlich; die Regel bekommt Bühne statt ruhiger Klärung.';
 
   if (reason.hasGoodReason) {
     return {
@@ -1346,9 +1345,9 @@ function buildWanderScenario(student, targetType, reason) {
       wanderScenario: true,
       wanderMeta: { targetType, hasGoodReason: true, subtype: reason.subtype },
       answers: [
-        { delta: 1, action: 'allow-target-return', text: `Ich gehe ruhig zu ${student.name}, frage kurz nach dem Grund und erlaube den Weg mit klarer Rückkehrregel.`, feedback: allowFeedback },
-        { delta: 0, action: 'return-seat', text: `Ich gebe ein knappes Rückkehrsignal und kläre den Grund erst später.`, feedback: returnFeedback },
-        { delta: -1, action: 'return-seat', text: `Ich kommentiere den Gang laut vor der Klasse, damit alle merken, dass Aufstehen problematisch ist.`, feedback: badFeedback }
+        { delta: 1, action: 'allow-target-return', text: `Ich frage leise nach dem Grund und erlaube den Weg mit Rückkehrregel.`, feedback: allowFeedback },
+        { delta: 0, action: 'return-seat', text: `Ich gebe ein Rückkehrsignal und kläre den Grund später.`, feedback: returnFeedback },
+        { delta: -1, action: 'return-seat', text: `Ich kommentiere den Gang laut vor der Klasse.`, feedback: badFeedback }
       ]
     };
   }
@@ -1362,13 +1361,12 @@ function buildWanderScenario(student, targetType, reason) {
     wanderScenario: true,
     wanderMeta: { targetType, hasGoodReason: false, subtype: reason.subtype },
     answers: [
-      { delta: 1, action: 'return-seat', text: `Ich gehe ruhig zu ${student.name}, frage kurz nach und verweise knapp auf die Regel: erst melden oder fragen, dann den Platz verlassen. Danach geht ${student.name} zurück an den Platz.`, feedback: `${student.name} bekommt eine klare Grenze, ohne bloßgestellt zu werden. Die Regel wird unmittelbar kommuniziert.` },
-      { delta: 0, action: 'return-seat', text: `Ich schicke ${student.name} mit einem kurzen Zeichen zurück, ohne die Regel zu klären.`, feedback: 'Die Bewegung endet, aber die Erwartung bleibt unklar.' },
-      { delta: -1, action: 'allow-target-return', text: `Ich lasse ${student.name} weitergehen, damit der Unterricht nicht länger unterbrochen wird.`, feedback: 'Die Bewegung wird nicht geklärt. Andere sehen, dass man den Platz ohne Auftrag verlassen kann.' }
+      { delta: 1, action: 'return-seat', text: `Ich frage kurz nach und verweise auf die Platz-Regel; danach geht ${student.name} zurück.`, feedback: 'Classroom Management: Die Regel wird kurz geklärt und der Unterrichtsfluss bleibt erhalten.' },
+      { delta: 0, action: 'return-seat', text: `Ich schicke ${student.name} mit einem kurzen Zeichen zurück.`, feedback: 'Das stoppt die Bewegung, lässt aber Regel und Ersatzverhalten unklar.' },
+      { delta: -1, action: 'allow-target-return', text: `Ich lasse ${student.name} weitergehen, damit der Unterricht nicht stockt.`, feedback: 'Die Platz-Regel wird übergangen; andere sehen ein unkontrolliertes Ausweichmodell.' }
     ]
   };
 }
-
 
 
 function targetTypes() {

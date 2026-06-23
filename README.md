@@ -92,3 +92,7 @@ Assets liegen im Ordner `assets/`:
 - `assets/teachers/` – Lehrkraft-Bilder je nach aktueller Stabilität
 - `assets/outcomes/win.png` – Abschlussbild bei gewonnener Runde
 - `assets/outcomes/lose.png` – Abschlussbild bei verlorener Runde
+
+## Version 12: Szenarioantworten und Ergebnisfeedback
+
+Die Szenarioantworten in `scenarios.js` wurden gekürzt und stärker vereinheitlicht, damit sie innerhalb der 20-sekündigen Antwortzeit lesbar bleiben. Das Ergebnisfeedback nimmt nun deutlicher Bezug auf Classroom Management, Klassenregeln, kooperative Verhaltensmodifikation, Selbststeuerung, Verstärkung, Präsenz, Unterrichtsfluss und situative Bedingungen nach Stein & Stein.
