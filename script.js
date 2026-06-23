@@ -303,39 +303,15 @@ function installPageUtilities() {
     bar = document.createElement('div');
     bar.className = 'page-utility-bar';
     bar.innerHTML = `
-      <button type="button" id="utilityDemoBtn" class="utility-btn utility-btn-demo">Demo</button>
       <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
     `;
     document.body.prepend(bar);
   }
-
-  const demoBtn = bar.querySelector('#utilityDemoBtn');
   const resetUtilityBtn = bar.querySelector('#utilityResetBtn');
-  if (demoBtn) demoBtn.onclick = applyDemoSetup;
   if (resetUtilityBtn) resetUtilityBtn.onclick = resetAppAndReload;
-  window.classroomDemo = applyDemoSetup;
   window.classroomReset = resetAppAndReload;
 }
 
-function applyDemoSetup() {
-  stopPreparationTimer();
-  gameStarted = false;
-  if (tutorialOverlay) tutorialOverlay.hidden = true;
-  if (startGateOverlay) startGateOverlay.hidden = true;
-  if (evaluationOverlay) evaluationOverlay.hidden = true;
-  evaluationSession = null;
-
-  clearAllClassroomData();
-  initLayout('rows', false);
-  state.assignments = { ...DEMO_ASSIGNMENTS };
-  state.objects = normalizeRoomObjects({
-    ...state.objects,
-    trash: (state.objects.trash || []).map(item => ({ ...item, removed: true }))
-  });
-  state.selectedStudentId = null;
-  clearResults();
-  render();
-}
 
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
@@ -2097,17 +2073,4 @@ bindGlobalEvents();
 bindTutorialEvents();
 initLayout('rows');
 if (startGateOverlay) startGateOverlay.hidden = true;
-try {
-  if (sessionStorage.getItem('classroomGame.demoRequested') === '1') {
-    sessionStorage.removeItem('classroomGame.demoRequested');
-    applyDemoSetup();
-  } else {
-    openTutorial();
-  }
-} catch (error) {
-  openTutorial();
-}
-if (new URLSearchParams(window.location.search).has('demo')) {
-  applyDemoSetup();
-  window.history.replaceState(null, '', window.location.pathname);
-}
+openTutorial();

@@ -1318,6 +1318,7 @@ function toggleLessonPause() {
     stopTeacherMovement();
     updateFootstepsAudio();
     if (teacherStatus) teacherStatus.textContent = 'Unterricht pausiert.';
+    updateFootstepsAudio();
   } else {
     game.manualPause = false;
     applyPausedTimeShift();
@@ -1959,7 +1960,11 @@ function failIncidentLate(incident) {
     removeDynamicTrash(incident.id);
     addHighscoreEvent(0, 'Müll nicht rechtzeitig entfernt, keine Reaktionspunkte.', 'neutral');
   } else if (incident.kind === 'wander') {
+    if (game.studentPositions?.[incident.student.id]) {
+      delete game.studentPositions[incident.student.id];
+    }
     stopStudentMovement(incident.student.id);
+    updateFootstepsAudio();
     addHighscoreEvent(-500, `${incident.student.name}: erreicht das Ziel ohne Klärung.`, 'bad');
   } else {
     addHighscoreEvent(0, `${incident.student.name}: zu spät erreicht, keine Reaktionspunkte.`, 'neutral');
@@ -1991,8 +1996,12 @@ function startStudentMovement(incident, path, onArrive) {
       return;
     }
     if (!queue.length) {
+      if (game.studentPositions[studentId]) {
+        game.studentPositions[studentId] = { ...game.studentPositions[studentId], state: 'arrived' };
+      }
       stopStudentMovement(studentId);
       if (typeof onArrive === 'function') onArrive();
+      updateFootstepsAudio();
       renderBranchGame();
       return;
     }
@@ -2025,12 +2034,14 @@ function moveStudentToSeat(studentId) {
   const desk = context.deskByStudentId[studentId];
   if (!desk) {
     delete game.studentPositions[studentId];
+    updateFootstepsAudio();
     renderBranchGame();
     return;
   }
   const current = game.studentPositions[studentId];
   if (!current || current.state === 'hidden') {
     delete game.studentPositions[studentId];
+    updateFootstepsAudio();
     renderBranchGame();
     return;
   }
@@ -2038,11 +2049,13 @@ function moveStudentToSeat(studentId) {
   const pseudo = { id: `return-${studentId}-${Date.now()}`, student: context.studentById[studentId], desk, start: { row: current.row, col: current.col }, targetType: 'seat' };
   if (!path.length) {
     delete game.studentPositions[studentId];
+    updateFootstepsAudio();
     renderBranchGame();
     return;
   }
   startStudentMovement(pseudo, path, () => {
     delete game.studentPositions[studentId];
+    updateFootstepsAudio();
     renderBranchGame();
   });
 }
@@ -2054,6 +2067,7 @@ function moveStudentToTargetThenReturn(incident) {
   const afterTarget = () => {
     if (incident.scenario?.wanderMeta?.subtype === 'toilet' && incident.targetType === 'door') {
       game.studentPositions[studentId] = { row: incident.target.row, col: incident.target.col, state: 'hidden', incidentId: incident.id, targetType: incident.targetType };
+      updateFootstepsAudio();
       renderBranchGame();
       const returnAfterToilet = () => {
         if (game.finished) return;
@@ -2062,6 +2076,7 @@ function moveStudentToTargetThenReturn(incident) {
           return;
         }
         game.studentPositions[studentId] = { row: incident.target.row, col: incident.target.col, state: 'moving', incidentId: incident.id, targetType: incident.targetType };
+        updateFootstepsAudio();
         moveStudentToSeat(studentId);
       };
       window.setTimeout(returnAfterToilet, 10000);
@@ -2069,6 +2084,7 @@ function moveStudentToTargetThenReturn(incident) {
     }
     if (incident.targetType === 'sink' || incident.targetType === 'cabinet') {
       game.studentPositions[studentId] = { row: incident.target.row, col: incident.target.col, state: 'at-target', incidentId: incident.id, targetType: incident.targetType };
+      updateFootstepsAudio();
       renderBranchGame();
       const returnAfterTargetWait = () => {
         if (game.finished) return;
@@ -2098,6 +2114,7 @@ function handleWanderTargetReached(incident) {
   active.reachedTarget = true;
   active.deadline = null;
   game.studentPositions[active.student.id] = { row: active.target.row, col: active.target.col, state: active.targetType === 'door' && active.scenario?.wanderMeta?.subtype === 'toilet' ? 'hidden' : 'at-target', incidentId: active.id, targetType: active.targetType };
+  updateFootstepsAudio();
   renderBranchGame();
   renderIncidents();
 
@@ -2115,6 +2132,7 @@ function handleWanderTargetReached(incident) {
     logEvent(`${stillActive.student.name} hat das Ziel erreicht und befindet sich nun auf dem Rückweg, ohne dass die Lehrkraft nachgefragt oder eine Regel geklärt hat. Das kostet 1 Stabilität und 500 Punkte.`, 'bad');
     if (stillActive.targetType === 'door' && stillActive.scenario?.wanderMeta?.subtype === 'toilet') {
       game.studentPositions[stillActive.student.id] = { row: stillActive.target.row, col: stillActive.target.col, state: 'moving', incidentId: stillActive.id, targetType: stillActive.targetType };
+      updateFootstepsAudio();
     }
     moveStudentToSeat(stillActive.student.id);
     if (!ended) {
@@ -2456,7 +2474,12 @@ function checkArrivalAtIncident() {
   addHighscoreEvent(reactionPoints, `${reachable.student.name}: rechtzeitig erreicht (${reactionPoints} Reaktionspunkte).`, reactionPoints > 0 ? 'good' : 'neutral');
   stopTeacherMovement();
   if (reachable.kind === 'wander') {
+    const currentPos = game.studentPositions?.[reachable.student.id];
+    if (currentPos) {
+      game.studentPositions[reachable.student.id] = { ...currentPos, state: 'stopped' };
+    }
     stopStudentMovement(reachable.student.id);
+    updateFootstepsAudio();
     renderBranchGame();
     renderIncidents();
     openScenarioModal(reachable);

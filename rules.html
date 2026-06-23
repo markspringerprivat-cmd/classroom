@@ -8,7 +8,6 @@
 </head>
 <body class="rules-page">
   <div class="page-utility-bar" style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:8px;flex-wrap:wrap;">
-    <button type="button" id="utilityDemoBtn" class="utility-btn utility-btn-demo">Demo</button>
     <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
   </div>
 
@@ -51,6 +50,14 @@
         <p id="currentRuleHint">Ziehe diese Regel in eine Liste.</p>
       </article>
 
+      <section class="rules-stability-panel" aria-live="polite" aria-label="Auswirkung auf die Unterrichtsstabilität">
+        <div>
+          <span>Unterrichtsstabilität nach Regeln</span>
+          <strong id="rulesStabilityPreview">–/10 Balken</strong>
+        </div>
+        <p id="rulesStabilityDetails">Wähle fünf Regeln aus. Passende Regeln decken konkrete Schülerprobleme ab.</p>
+      </section>
+
       <div class="rule-lists" aria-label="Regellisten">
         <section class="rule-list-card accepted-list" data-list="accepted">
           <div class="rule-list-head">
@@ -80,12 +87,43 @@
         </section>
       </div>
 
-      <div class="rules-status-bar">
-        <p id="rulesStatusText" class="rules-status neutral">Ordne die aktuelle Regel zu.</p>
+      <div class="rules-status-bar rules-status-bar-clean">
+        <p id="rulesStatusText" class="rules-status neutral" aria-live="polite"></p>
         <button type="button" id="finishRulesBtn" class="primary-btn" disabled>Regelauswahl speichern &amp; zu Schritt 3</button>
       </div>
     </section>
   </main>
+
+
+  <section id="rulesTutorialOverlay" class="tutorial-overlay rules-tutorial-overlay" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="rulesTutorialTitle">
+    <div class="tutorial-backdrop"></div>
+    <article class="tutorial-book rules-tutorial-book" role="document">
+      <div class="tutorial-topline">
+        <span class="tutorial-progress-pill">Schritt 2</span>
+        <button type="button" id="rulesTutorialSkipBtn" class="tutorial-skip">Überspringen</button>
+      </div>
+      <section class="tutorial-slide-card rules-tutorial-card">
+        <div class="rules-tutorial-visual" aria-hidden="true">
+          <div class="rules-tutorial-mini-card rules-tutorial-student">Niklas<br><small>Handy unter dem Tisch</small></div>
+          <div class="rules-tutorial-arrow">→</div>
+          <div class="rules-tutorial-mini-card rules-tutorial-rule">Handys bleiben ausgeschaltet in der Tasche.</div>
+        </div>
+        <div class="tutorial-content">
+          <p class="eyebrow">Spielerklärung</p>
+          <h2 id="rulesTutorialTitle">Regeln passend auswählen</h2>
+          <p>Wähle genau fünf Klassenregeln. Entscheidend ist, ob eine Regel ein konkretes Schülerproblem aus der vorbereiteten Klasse abdeckt.</p>
+          <ul class="tutorial-list">
+            <li>Eine passende Regel stabilisiert den späteren Unterricht.</li>
+            <li>Eine unpassende oder riskante Regel schwächt die Unterrichtsstabilität.</li>
+            <li>Beispiel: Niklas versteckt gern das Handy; deshalb passt eine klare Handyregel.</li>
+          </ul>
+        </div>
+      </section>
+      <div class="tutorial-controls">
+        <button type="button" id="rulesTutorialDoneBtn" class="primary-btn">Verstanden</button>
+      </div>
+    </article>
+  </section>
 
   <script src="rules.js"></script>
 </body>

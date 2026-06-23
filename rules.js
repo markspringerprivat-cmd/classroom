@@ -71,6 +71,11 @@ const rejectedCounter = document.getElementById('rejectedCounter');
 const statusText = document.getElementById('rulesStatusText');
 const finishBtn = document.getElementById('finishRulesBtn');
 const backBtn = document.getElementById('backToRoomBtn');
+const rulesStabilityPreview = document.getElementById('rulesStabilityPreview');
+const rulesStabilityDetails = document.getElementById('rulesStabilityDetails');
+const rulesTutorialOverlay = document.getElementById('rulesTutorialOverlay');
+const rulesTutorialSkipBtn = document.getElementById('rulesTutorialSkipBtn');
+const rulesTutorialDoneBtn = document.getElementById('rulesTutorialDoneBtn');
 
 
 function clearAllClassroomData() {
@@ -107,10 +112,6 @@ function resetAppAndReload() {
   window.location.href = 'index.html';
 }
 
-function applyDemoSetup() {
-  clearAllClassroomData();
-  window.location.href = 'index.html?demo=1';
-}
 
 function installPageUtilities() {
   let bar = document.querySelector('.page-utility-bar');
@@ -118,16 +119,12 @@ function installPageUtilities() {
     bar = document.createElement('div');
     bar.className = 'page-utility-bar';
     bar.innerHTML = `
-      <button type="button" id="utilityDemoBtn" class="utility-btn utility-btn-demo">Demo</button>
       <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
     `;
     document.body.prepend(bar);
   }
-  const demoBtn = bar.querySelector('#utilityDemoBtn');
   const resetUtilityBtn = bar.querySelector('#utilityResetBtn');
-  if (demoBtn) demoBtn.onclick = applyDemoSetup;
   if (resetUtilityBtn) resetUtilityBtn.onclick = resetAppAndReload;
-  window.classroomDemo = applyDemoSetup;
   window.classroomReset = resetAppAndReload;
 }
 
@@ -282,6 +279,7 @@ function init() {
   renderStudents();
   renderRules();
   bindEvents();
+  openRulesTutorialOnce();
 }
 
 function restoreRuleState() {
@@ -407,6 +405,7 @@ function renderRules() {
   renderList('pending', pendingList);
   renderList('rejected', rejectedList);
   updateCountersAndStatus();
+  updateRuleStabilityPreview();
   saveDraft();
 }
 
@@ -453,7 +452,7 @@ function renderList(listName, container) {
     card.draggable = true;
     card.dataset.ruleId = rule.id;
     card.dataset.source = listName;
-    card.innerHTML = `<strong>${rule.text}</strong><span class="rule-mini-hint">${rule.hint || ''}</span>`;
+    card.innerHTML = `<span class="rule-item-text">${rule.text}</span><span class="rule-mini-hint">${rule.hint || ''}</span>`;
     card.title = 'Per Drag & Drop in eine andere Liste ziehen.';
     card.addEventListener('dragstart', event => startRuleDrag(event, rule.id, listName));
     card.addEventListener('dragend', clearRuleDrag);
@@ -556,8 +555,54 @@ function updateCountersAndStatus() {
 }
 
 function setStatus(message, tone = 'neutral') {
-  statusText.textContent = message;
+  if (!statusText) return;
+  statusText.textContent = '';
   statusText.className = `rules-status ${tone}`;
+  statusText.dataset.message = message || '';
+}
+
+
+function updateRuleStabilityPreview() {
+  if (!rulesStabilityPreview && !rulesStabilityDetails) return;
+  const preview = evaluateAcceptedRules();
+  const acceptedIds = new Set(ruleState.lists.accepted);
+  const accepted = ruleState.lists.accepted.length;
+  const helpfulChosen = rules.filter(rule => acceptedIds.has(rule.id) && rule.tone === 'beneficial').length;
+  const harmfulChosen = rules.filter(rule => acceptedIds.has(rule.id) && rule.tone === 'harmful').length;
+  if (rulesStabilityPreview) rulesStabilityPreview.textContent = `${preview.finalLives}/10 Balken`;
+  if (rulesStabilityDetails) {
+    const missing = Math.max(0, REQUIRED_ACCEPTED - accepted);
+    if (missing > 0) {
+      rulesStabilityDetails.textContent = `Noch ${missing} Regel${missing === 1 ? '' : 'n'} auswählen. Passende Regeln decken konkrete Schülerprobleme ab.`;
+    } else {
+      rulesStabilityDetails.textContent = `${helpfulChosen} passende Regel${helpfulChosen === 1 ? '' : 'n'} gewählt, ${harmfulChosen} riskante Regel${harmfulChosen === 1 ? '' : 'n'} gewählt.`;
+    }
+  }
+}
+
+function openRulesTutorialOnce() {
+  if (!rulesTutorialOverlay) return;
+  try {
+    if (sessionStorage.getItem('classroomGame.rulesTutorialSeen') === '1') {
+      rulesTutorialOverlay.hidden = true;
+      return;
+    }
+  } catch (error) {
+    // ignore
+  }
+  rulesTutorialOverlay.hidden = false;
+  document.body.classList.add('tutorial-open');
+}
+
+function closeRulesTutorial() {
+  if (!rulesTutorialOverlay) return;
+  rulesTutorialOverlay.hidden = true;
+  document.body.classList.remove('tutorial-open');
+  try {
+    sessionStorage.setItem('classroomGame.rulesTutorialSeen', '1');
+  } catch (error) {
+    // ignore
+  }
 }
 
 function saveDraft() {
@@ -628,7 +673,6 @@ function finishRules() {
   };
   try {
     localStorage.setItem('classroomGame.step2.rules', JSON.stringify(data));
-    setStatus(`Regelauswahl gespeichert. Neue Unterrichtsstabilität: ${evaluation.finalLives}/10 Balken. Schritt 3 wird geöffnet.`, 'ready');
     finishBtn.textContent = 'Weiter zu Schritt 3';
     window.location.href = 'scenarios.html';
   } catch (error) {

@@ -5191,9 +5191,6 @@ body.rules-page {
   border-color: rgba(255, 255, 255, 0.42);
 }
 
-.utility-btn-demo {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
-}
 
 .utility-btn-reset {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
@@ -6318,4 +6315,231 @@ body.rules-page {
 .branch-tutorial-overview-card {
   width: min(100%, 520px) !important;
   margin-inline: auto !important;
+}
+
+
+/* ===== Version 21: Schritt 2 Feinschliff ===== */
+.rules-page .page-utility-bar #utilityDemoBtn {
+  display: none !important;
+}
+
+.rules-shell.rules-shell-v4 {
+  align-items: stretch;
+}
+
+.rules-main.compact-rules-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.rules-main.compact-rules-main .rule-lists {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.rules-main.compact-rules-main .rule-list-card {
+  min-height: 0;
+}
+
+.rules-main.compact-rules-main .accepted-list .rule-dropzone,
+.rules-main.compact-rules-main .rejected-list .rule-dropzone,
+.rules-main.compact-rules-main .pending-list .rule-dropzone {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: calc(100vh - 430px);
+  overflow-y: auto;
+}
+
+.rule-item .rule-item-text,
+.rule-item strong {
+  font-weight: 400 !important;
+  line-height: 1.28;
+}
+
+.rule-mini-hint {
+  font-weight: 400 !important;
+}
+
+.rules-status-bar-clean {
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.rules-status-bar-clean .rules-status {
+  display: none !important;
+}
+
+.rules-stability-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin: -4px 0 14px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.14), rgba(37, 99, 235, 0.12));
+  border: 1px solid rgba(147, 197, 253, 0.22);
+}
+
+.rules-stability-panel span {
+  display: block;
+  color: rgba(191, 219, 254, 0.78);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 850;
+}
+
+.rules-stability-panel strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 1.2rem;
+  margin-top: 3px;
+}
+
+.rules-stability-panel p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.84);
+  line-height: 1.35;
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.rules-left.rules-left-v4 .frozen-grid {
+  --frozen-cell: 34px !important;
+  --frozen-gap: 5px;
+  gap: var(--frozen-gap) !important;
+  padding: 12px !important;
+  overflow: visible !important;
+  max-width: none !important;
+  background: rgba(5, 12, 31, 0.95) !important;
+  border-color: rgba(77, 103, 150, 0.38) !important;
+  border-radius: 18px !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03) !important;
+}
+
+.rules-left.rules-left-v4 .frozen-cell {
+  width: var(--frozen-cell) !important;
+  height: var(--frozen-cell) !important;
+  border-radius: 9px !important;
+  background: rgba(15, 23, 42, 0.78) !important;
+  border: 1px dashed rgba(148, 163, 184, 0.28) !important;
+  overflow: visible !important;
+}
+
+.rules-left.rules-left-v4 .frozen-blocked-label {
+  top: -1px !important;
+  left: -1px !important;
+  width: calc(var(--frozen-span-cols) * var(--frozen-cell) + (var(--frozen-span-cols) - 1) * var(--frozen-gap) + 2px) !important;
+  height: calc(var(--frozen-span-rows) * var(--frozen-cell) + (var(--frozen-span-rows) - 1) * var(--frozen-gap) + 2px) !important;
+  border-radius: 10px !important;
+  font-size: 0.47rem !important;
+  line-height: 0.98 !important;
+  letter-spacing: 0.04em !important;
+  z-index: 3 !important;
+}
+
+.rules-left.rules-left-v4 .frozen-blocked-label.side-label span {
+  writing-mode: vertical-rl !important;
+  transform: rotate(180deg) !important;
+  white-space: normal !important;
+}
+
+.rules-left.rules-left-v4 .frozen-desk {
+  inset: 1px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, rgba(245, 188, 42, 0.98), rgba(203, 139, 18, 0.98)) !important;
+  border: 2px solid rgba(244, 210, 110, 0.94) !important;
+  overflow: hidden !important;
+}
+
+.rules-left.rules-left-v4 .frozen-teacher {
+  inset: 6px !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, #4367b9, #2c4f9b) !important;
+  color: #fff !important;
+  border: 1px solid rgba(191, 219, 254, 0.42) !important;
+}
+
+.rules-left.rules-left-v4 .frozen-object {
+  inset: 1px !important;
+  border-radius: 10px !important;
+  z-index: 5 !important;
+}
+
+.rules-left.rules-left-v4 .frozen-object-bin {
+  background: rgba(255,255,255,0.94) !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+}
+
+.rules-tutorial-book {
+  width: min(880px, 94vw);
+  min-height: auto;
+}
+
+.rules-tutorial-card {
+  min-height: 360px;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  background: transparent;
+  border: 0;
+  padding: 6px 0 0;
+}
+
+.rules-tutorial-visual {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.rules-tutorial-mini-card {
+  min-height: 130px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border-radius: 22px;
+  text-align: center;
+  color: #f8fafc;
+  line-height: 1.25;
+  border: 1px solid rgba(147, 197, 253, 0.22);
+}
+
+.rules-tutorial-mini-card small {
+  display: block;
+  margin-top: 7px;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.rules-tutorial-student {
+  background: rgba(30, 41, 59, 0.78);
+}
+
+.rules-tutorial-rule {
+  background: rgba(22, 101, 52, 0.52);
+}
+
+.rules-tutorial-arrow {
+  color: #93c5fd;
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .rules-tutorial-card {
+    grid-template-columns: 1fr;
+  }
+  .rules-stability-panel {
+    display: grid;
+    text-align: left;
+  }
+  .rules-stability-panel p {
+    text-align: left;
+  }
 }
