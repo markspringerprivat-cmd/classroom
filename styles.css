@@ -6255,3 +6255,67 @@ body.rules-page {
   top: 38%;
   width: 38%;
 }
+
+
+/* ===== Version 20: stabile Zielkreise, robuste Drop-Ziele, ruhigere Anleitung ===== */
+.branch-approach-arrow {
+  animation: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.branch-cell.branch-bin-drop-cell,
+.branch-cell.trash-drop-ready {
+  outline: 3px solid rgba(34, 197, 94, 0.44);
+  outline-offset: 2px;
+}
+
+.tutorial-slide-card--phase3 {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  gap: clamp(18px, 3vw, 34px) !important;
+  align-items: center !important;
+}
+
+.tutorial-visual--phase3 {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.branch-tutorial-image,
+.branch-tutorial-figure {
+  width: auto !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  background: rgba(15, 23, 42, 0.56) !important;
+  border: 1px solid rgba(147, 197, 253, 0.18) !important;
+  box-shadow: 0 18px 42px rgba(2, 6, 23, 0.34) !important;
+}
+
+.branch-tutorial-figure img,
+.branch-tutorial-image img {
+  width: auto !important;
+  height: auto !important;
+  max-width: min(100%, 520px) !important;
+  max-height: min(58vh, 520px) !important;
+  object-fit: contain !important;
+  image-rendering: auto !important;
+}
+
+.branch-tutorial-dual {
+  grid-template-columns: 1fr !important;
+  align-items: center !important;
+  justify-items: center !important;
+}
+
+.branch-tutorial-dual .branch-tutorial-figure img {
+  max-height: min(28vh, 260px) !important;
+}
+
+.branch-tutorial-overview-card {
+  width: min(100%, 520px) !important;
+  margin-inline: auto !important;
+}

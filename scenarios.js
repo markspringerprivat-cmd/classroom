@@ -954,7 +954,9 @@ const audioState = {
   timer: null,
   alert: null,
   good: null,
-  bad: null
+  bad: null,
+  footsteps: null,
+  paper: null
 };
 
 const game = {
@@ -991,10 +993,80 @@ const game = {
   studentPositions: {},
   studentMoveTimers: {},
   pendingWanderResolution: null,
+  lastProblemSpawnAt: 0,
   bin: context.stepData?.objects?.bin || context.stepData?.objects?.broom || { id: 'trash-bin-1', type: 'bin', row: (context.stepData?.rows || 9) - 1, col: (context.stepData?.cols || 10) - 1 }
 };
 
 const liveTrashDragState = { objectId: null };
+
+const PROBLEM_SPAWN_DELAY_MIN_MS = 2000;
+const PROBLEM_SPAWN_DELAY_MAX_MS = 3000;
+
+function nextProblemDelay() {
+  return randomInt(PROBLEM_SPAWN_DELAY_MIN_MS, PROBLEM_SPAWN_DELAY_MAX_MS);
+}
+
+function canStartNewProblem(now = Date.now()) {
+  return !game.lastProblemSpawnAt || now - game.lastProblemSpawnAt >= PROBLEM_SPAWN_DELAY_MIN_MS;
+}
+
+function markProblemStarted(now = Date.now()) {
+  game.lastProblemSpawnAt = now;
+}
+
+function cueKey(cue) {
+  return cue ? `${cue.row},${cue.col}` : '';
+}
+
+function assignedApproachCue(incident, reservedKeys = new Set()) {
+  const cue = bestApproachCellForIncident(incident, reservedKeys);
+  if (!cue) return null;
+  return { row: cue.row, col: cue.col, arrow: cue.arrow, studentName: cue.studentName, incidentId: incident.id || null };
+}
+
+function isTeacherOnApproachCue(incident) {
+  if (!incident?.approachCue) return false;
+  return game.teacher.row === incident.approachCue.row && game.teacher.col === incident.approachCue.col;
+}
+
+
+function draggedTrashObjectId(event) {
+  return event?.dataTransfer?.getData('objectId') || liveTrashDragState.objectId || null;
+}
+
+function canAcceptTrashDrop(event) {
+  const type = event?.dataTransfer?.getData('type');
+  const objectId = draggedTrashObjectId(event);
+  return Boolean(objectId && (!type || type === 'trash'));
+}
+
+function handleTrashDrop(event, dropEl = null) {
+  if (!canAcceptTrashDrop(event)) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  if (dropEl) dropEl.classList.remove('trash-drop-ready');
+  const objectId = draggedTrashObjectId(event);
+  const target = (game.dynamicTrash || []).find(item => item.id === objectId && !item.removed)
+    || (context.stepData?.objects?.trash || []).find(item => item.id === objectId && !item.removed);
+  liveTrashDragState.objectId = null;
+  if (!target) return false;
+  clearTrashIncidentAt(target.row, target.col);
+  return true;
+}
+
+function attachTrashDropTarget(el) {
+  if (!el || el.dataset.trashDropBound === 'true') return;
+  el.dataset.trashDropBound = 'true';
+  el.addEventListener('dragover', event => {
+    if (!canAcceptTrashDrop(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    el.classList.add('trash-drop-ready');
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('trash-drop-ready'));
+  el.addEventListener('drop', event => handleTrashDrop(event, el));
+}
 
 const branchTutorialSlides = [
   {
@@ -1009,11 +1081,11 @@ const branchTutorialSlides = [
   },
   {
     title: 'Zu Problemen hingehen',
-    text: 'Wenn ein Problem auftritt, erscheint ein gelbes Zielfeld. Klicke dorthin: Die Lehrkraft läuft automatisch zum Feld und kann die Situation dann klären.',
+    text: 'Wenn ein Problem am Tisch auftritt, erscheint ein gelber Kreis auf genau der Seite, von der die Lehrkraft den Schüler ansprechen soll. Klicke dieses Feld an: Erst wenn die Lehrkraft dort steht, gilt das Problem als erreicht.',
     bullets: [
       'Rote Countdown-Felder zeigen akuten Handlungsdruck.',
       'Die Lehrkraft muss rechtzeitig in die Nähe des Problems gelangen.',
-      'Ein gelber Richtungsmarker zeigt, wo du hinklicken solltest.'
+      'Der gelbe Kreis bleibt statisch an dieser Stelle und zeigt auf den betroffenen Schüler.'
     ],
     visual: { type: 'annotated-single', src: 'assets/tutorial/phase3_problem_move.png', alt: 'Lehrkraft, gelber Richtungsmarker und rotes Countdown-Feld' }
   },
@@ -1244,6 +1316,7 @@ function toggleLessonPause() {
     game.manualPause = true;
     game.pausedAt = Date.now();
     stopTeacherMovement();
+    updateFootstepsAudio();
     if (teacherStatus) teacherStatus.textContent = 'Unterricht pausiert.';
   } else {
     game.manualPause = false;
@@ -1251,6 +1324,7 @@ function toggleLessonPause() {
     game.pausedAt = null;
     if (teacherStatus) teacherStatus.textContent = 'Unterricht fortgesetzt.';
     if (game.teacherPath.length) queueNextTeacherStep();
+    updateFootstepsAudio();
     renderBranchGame();
   }
   updateControlButtons();
@@ -1400,6 +1474,7 @@ function finishLesson(reason = 'time') {
   clearTimeout(game.spawnTimer);
   clearAnswerCountdown();
   stopTimerAudio();
+  stopFootstepsAudio();
   game.activeIncidents = [];
   game.scenarioOpen = false;
   game.currentScenarioIncident = null;
@@ -1478,13 +1553,16 @@ function maybeSpawnIncident() {
 
 function maybeSpawnStudentIncidents(now) {
   if (now < game.nextIncidentAt) return;
+  if (!canStartNewProblem(now)) {
+    game.nextIncidentAt = now + 500;
+    return;
+  }
   const limit = Math.min(3, currentDifficultyLimit());
   const activeProblemIncidents = game.activeIncidents.filter(incident => incident.kind !== 'trash').length;
   const activeStudentIncidents = game.activeIncidents.filter(incident => incident.kind === 'student').length;
   const freeSlots = Math.max(0, Math.min(limit, 3) - Math.max(activeProblemIncidents, activeStudentIncidents));
   if (freeSlots > 0) {
-    const spawnCount = Math.max(1, Math.min(freeSlots, progressBasedSpawnCount()));
-    for (let i = 0; i < spawnCount; i++) spawnIncident();
+    spawnIncident();
   }
   const latePhase = game.lessonLeft < 90;
   game.nextIncidentAt = now + (latePhase
@@ -1508,6 +1586,10 @@ function wanderLimit() {
 
 function maybeSpawnWanderEvents(now) {
   if (now < game.nextWanderAt) return;
+  if (!canStartNewProblem(now)) {
+    game.nextWanderAt = now + 500;
+    return;
+  }
   const activeProblems = game.activeIncidents.filter(incident => incident.kind !== 'trash').length;
   const activeWander = game.activeIncidents.filter(incident => incident.kind === 'wander').length;
   if (activeProblems < 3 && activeWander < wanderLimit()) {
@@ -1539,6 +1621,10 @@ function spawnIncident() {
     handled: false,
     escalation: buildEscalationMessage(candidate.student, candidate.scenario)
   };
+  incident.approachCue = assignedApproachCue(incident, currentApproachCueKeys());
+  if (!incident.approachCue) return false;
+  markProblemStarted(incident.createdAt);
+  game.nextIncidentAt = incident.createdAt + nextProblemDelay();
   game.activeIncidents.push(incident);
   playAlertAudio();
   logEvent(`${candidate.student.name} zeigt ein Warnsignal. Du hast 7 Sekunden, um die Lehrkraft in die Nähe zu bewegen.`, 'warn');
@@ -1616,6 +1702,7 @@ function spawnTrashIncident() {
   };
   game.dynamicTrash.push({ id, type: 'trash', row: candidate.row, col: candidate.col, asset: pickRandomTrashAsset(), removed: false });
   game.activeIncidents.push(incident);
+  playPaperAudio();
   playAlertAudio();
   logEvent(`Müll taucht nahe bei ${candidate.nearStudent.name} auf. Er blockiert Laufwege zusätzlich zu den Schülerereignissen, bis du ihn in den Mülleimer ziehst.`, 'warn');
   renderBranchGame();
@@ -1779,6 +1866,8 @@ function spawnWanderIncident() {
     reachedTarget: false,
     escalation: `${candidate.student.name} erreicht ${reason.targetLabel}, ohne dass die Lehrkraft die Situation klärt. Die Regel zum Verlassen des Platzes bleibt unklar.`
   };
+  markProblemStarted(incident.createdAt);
+  game.nextWanderAt = incident.createdAt + nextProblemDelay();
   game.activeIncidents.push(incident);
   startStudentMovement(incident, candidate.path, () => handleWanderTargetReached(incident));
   playAlertAudio();
@@ -1896,8 +1985,8 @@ function startStudentMovement(incident, path, onArrive) {
   stopStudentMovement(studentId);
   const queue = [...path];
   const step = () => {
-    if (game.finished) return;
-    if (isGameplayPaused()) {
+    if (game.finished) { updateFootstepsAudio(); return; }
+    if (isGameplayPaused()) { updateFootstepsAudio();
       game.studentMoveTimers[studentId] = window.setTimeout(step, 500);
       return;
     }
@@ -1909,11 +1998,13 @@ function startStudentMovement(incident, path, onArrive) {
     }
     const next = queue.shift();
     game.studentPositions[studentId] = { row: next.row, col: next.col, state: 'moving', incidentId: incident.id, targetType: incident.targetType };
+    playFootstepsAudio();
     renderBranchGame();
     game.studentMoveTimers[studentId] = window.setTimeout(step, STUDENT_STEP_MS);
   };
   const startPosition = incident.start || incident.desk;
   game.studentPositions[studentId] = { row: startPosition.row, col: startPosition.col, state: 'moving', incidentId: incident.id, targetType: incident.targetType };
+  playFootstepsAudio();
   game.studentMoveTimers[studentId] = window.setTimeout(step, STUDENT_STEP_MS);
 }
 
@@ -1921,11 +2012,13 @@ function stopStudentMovement(studentId) {
   const timer = game.studentMoveTimers?.[studentId];
   if (timer) window.clearTimeout(timer);
   if (game.studentMoveTimers) delete game.studentMoveTimers[studentId];
+  updateFootstepsAudio();
 }
 
 function clearAllStudentMovement() {
   Object.keys(game.studentMoveTimers || {}).forEach(stopStudentMovement);
   game.studentMoveTimers = {};
+  stopFootstepsAudio();
 }
 
 function moveStudentToSeat(studentId) {
@@ -2088,15 +2181,12 @@ function bestApproachCellForIncident(incident, reservedKeys = new Set()) {
 
 function buildApproachCueMap(incidents = game.activeIncidents) {
   const map = new Map();
-  const reservedKeys = new Set();
   incidents
-    .filter(incident => incident.kind === 'student')
+    .filter(incident => incident.kind === 'student' && incident.approachCue)
     .forEach(incident => {
-      const cue = bestApproachCellForIncident(incident, reservedKeys);
-      if (!cue) return;
-      const key = `${cue.row},${cue.col}`;
-      reservedKeys.add(key);
-      map.set(key, cue);
+      const key = cueKey(incident.approachCue);
+      if (!key || map.has(key)) return;
+      map.set(key, incident.approachCue);
     });
   return map;
 }
@@ -2177,6 +2267,7 @@ function renderBranchGame() {
         if (object.type === 'bin') {
           obj.innerHTML = '<span class="branch-object-icon" aria-hidden="true">🗑️</span>';
           obj.title = 'Mülleimer: Ziehe Müll hier hinein.';
+          attachTrashDropTarget(cell);
           obj.addEventListener('dragover', event => {
             const type = event.dataTransfer?.getData('type');
             const objectId = event.dataTransfer?.getData('objectId') || liveTrashDragState.objectId;
@@ -2187,19 +2278,7 @@ function renderBranchGame() {
             obj.classList.add('trash-drop-ready');
           });
           obj.addEventListener('dragleave', () => obj.classList.remove('trash-drop-ready'));
-          obj.addEventListener('drop', event => {
-            const type = event.dataTransfer?.getData('type');
-            const objectId = event.dataTransfer?.getData('objectId') || liveTrashDragState.objectId;
-            if ((type && type !== 'trash') || !objectId) return;
-            event.preventDefault();
-            event.stopPropagation();
-            obj.classList.remove('trash-drop-ready');
-            const target = (game.dynamicTrash || []).find(item => item.id === objectId && !item.removed)
-              || (context.stepData?.objects?.trash || []).find(item => item.id === objectId && !item.removed);
-            liveTrashDragState.objectId = null;
-            if (!target) return;
-            clearTrashIncidentAt(target.row, target.col);
-          });
+          obj.addEventListener('drop', event => handleTrashDrop(event, obj));
         } else {
           obj.draggable = true;
           obj.innerHTML = trashImageMarkup(object, 'trash-visual-img branch-trash-img', 'Müll im Klassenraum');
@@ -2298,6 +2377,7 @@ function clearTrashIncidentAt(row, col) {
     }
   
     renderBranchGame();
+    renderIncidents();
     return;
   }
   removeIncident(incident.id);
@@ -2363,9 +2443,8 @@ function checkArrivalAtIncident() {
   if (!game.activeIncidents.length || isGameplayPaused()) return;
   const reachable = game.activeIncidents.find(incident => {
     if (incident.kind === 'trash') return false;
-    const position = incident.kind === 'wander'
-      ? (game.studentPositions[incident.student.id] || incident.desk)
-      : incident.desk;
+    if (incident.kind === 'student') return isTeacherOnApproachCue(incident);
+    const position = game.studentPositions[incident.student.id] || incident.desk;
     return position && position.state !== 'hidden' && manhattan(game.teacher, position) <= 1;
   });
   if (!reachable) return;
@@ -2895,10 +2974,10 @@ function formatRoomLabel(group) {
 
 function unlockAudio() {
   audioState.unlocked = true;
-  ['timer', 'alert', 'good', 'bad'].forEach(kind => {
+  ['timer', 'alert', 'good', 'bad', 'footsteps', 'paper'].forEach(kind => {
     const audio = getAudio(kind);
     if (!audio) return;
-    audio.volume = kind === 'timer' ? 0.35 : 0.55;
+    audio.volume = kind === 'timer' ? 0.35 : kind === 'footsteps' ? 0.42 : kind === 'paper' ? 0.65 : 0.55;
   });
 }
 
@@ -2907,6 +2986,8 @@ function audioCandidates(kind) {
   if (kind === 'bad') return ['Bad.mp3'];
   if (kind === 'timer') return ['Timer.mp3'];
   if (kind === 'alert') return ['Alert.mp3'];
+  if (kind === 'footsteps') return ['assets/sounds/footsteps.mp3'];
+  if (kind === 'paper') return ['assets/sounds/tear-paper.mp3'];
   return [];
 }
 
@@ -2933,6 +3014,34 @@ function playOnce(kind) {
 function playAlertAudio() { playOnce('alert'); }
 function playGoodAudio() { playOnce('good'); }
 function playBadAudio() { playOnce('bad'); }
+function playPaperAudio() { playOnce('paper'); }
+
+function hasMovingStudentAudioState() {
+  return Object.values(game.studentPositions || {}).some(pos => pos && pos.state === 'moving');
+}
+
+function updateFootstepsAudio() {
+  const audio = getAudio('footsteps');
+  if (!audio || !audioState.unlocked) return;
+  const shouldPlay = hasMovingStudentAudioState() && !game.finished && !game.scenarioOpen && !game.manualPause && !game.tutorialOpen;
+  if (shouldPlay) {
+    audio.loop = true;
+    if (audio.paused) audio.play().catch(() => {});
+  } else {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.loop = false;
+  }
+}
+
+function playFootstepsAudio() { updateFootstepsAudio(); }
+function stopFootstepsAudio() {
+  const audio = audioState.footsteps;
+  if (!audio) return;
+  audio.pause();
+  audio.currentTime = 0;
+  audio.loop = false;
+}
 
 function playTimerAudio() {
   if (!audioState.unlocked) return;
