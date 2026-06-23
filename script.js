@@ -262,17 +262,23 @@ function resetAppAndReload() {
 }
 
 function installPageUtilities() {
-  if (document.querySelector('.page-utility-bar')) return;
-  const bar = document.createElement('div');
-  bar.className = 'page-utility-bar';
-  bar.innerHTML = `
-    <button type="button" id="utilityDemoBtn" class="utility-btn utility-btn-demo">Demo</button>
-    <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
-  `;
-  document.body.prepend(bar);
+  let bar = document.querySelector('.page-utility-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'page-utility-bar';
+    bar.innerHTML = `
+      <button type="button" id="utilityDemoBtn" class="utility-btn utility-btn-demo">Demo</button>
+      <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
+    `;
+    document.body.prepend(bar);
+  }
 
-  bar.querySelector('#utilityDemoBtn')?.addEventListener('click', applyDemoSetup);
-  bar.querySelector('#utilityResetBtn')?.addEventListener('click', resetAppAndReload);
+  const demoBtn = bar.querySelector('#utilityDemoBtn');
+  const resetUtilityBtn = bar.querySelector('#utilityResetBtn');
+  if (demoBtn) demoBtn.onclick = applyDemoSetup;
+  if (resetUtilityBtn) resetUtilityBtn.onclick = resetAppAndReload;
+  window.classroomDemo = applyDemoSetup;
+  window.classroomReset = resetAppAndReload;
 }
 
 function applyDemoSetup() {
@@ -2015,3 +2021,7 @@ bindTutorialEvents();
 initLayout('rows');
 if (startGateOverlay) startGateOverlay.hidden = true;
 openTutorial();
+if (new URLSearchParams(window.location.search).has('demo')) {
+  applyDemoSetup();
+  window.history.replaceState(null, '', window.location.pathname);
+}
