@@ -5524,3 +5524,56 @@ body.rules-page {
     filter: brightness(1.32) saturate(1.25);
   }
 }
+
+
+/* ===== Version 11: Szenario-Spiel Feinschliff ===== */
+.branch-approach-arrow {
+  position: absolute;
+  inset: 7px;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #111827;
+  background: radial-gradient(circle, rgba(253, 224, 71, 0.98), rgba(245, 158, 11, 0.94));
+  border: 2px solid rgba(255, 247, 153, 0.95);
+  font-size: 2rem;
+  font-weight: 1000;
+  line-height: 1;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.22), 0 10px 24px rgba(146, 64, 14, 0.36);
+  pointer-events: none;
+  animation: branchApproachArrowPulse 0.75s ease-in-out infinite;
+}
+
+@keyframes branchApproachArrowPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.18); }
+}
+
+.branch-moving-student {
+  inset: 7px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.branch-moving-student.wander-active {
+  background: rgba(239, 68, 68, 0.24) !important;
+  border: 2px solid rgba(248, 113, 113, 0.92) !important;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 24px rgba(127, 29, 29, 0.32) !important;
+}
+
+.branch-moving-student-avatar {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.branch-desk.student-away strong {
+  display: none !important;
+}
+
+.branch-desk.student-away {
+  opacity: 1 !important;
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.96), rgba(217, 119, 6, 0.96)) !important;
+}
