@@ -485,6 +485,8 @@ function bindEvents() {
 
   finishBtn.addEventListener('click', finishRules);
   backBtn.addEventListener('click', () => { window.location.href = 'index.html'; });
+  if (rulesTutorialSkipBtn) rulesTutorialSkipBtn.addEventListener('click', closeRulesTutorial);
+  if (rulesTutorialDoneBtn) rulesTutorialDoneBtn.addEventListener('click', closeRulesTutorial);
 }
 
 function startRuleDrag(event, ruleId, source) {

@@ -6543,3 +6543,55 @@ body.rules-page {
     text-align: left;
   }
 }
+
+
+/* ===== Version 22: Schritt-2-Anleitung klickbar und bedienbar ===== */
+.rules-tutorial-overlay {
+  overflow: auto;
+}
+
+.rules-tutorial-overlay .tutorial-backdrop {
+  pointer-events: none;
+}
+
+.rules-tutorial-book {
+  position: relative;
+  z-index: 2;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  pointer-events: auto;
+}
+
+.rules-tutorial-book .tutorial-topline,
+.rules-tutorial-book .tutorial-controls {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.rules-tutorial-book button {
+  pointer-events: auto;
+}
+
+.rules-tutorial-card {
+  min-height: min(360px, calc(100vh - 210px));
+}
+
+@media (max-height: 760px) {
+  .rules-tutorial-book {
+    padding: 18px;
+    gap: 12px;
+  }
+
+  .rules-tutorial-card {
+    min-height: auto;
+  }
+
+  .rules-tutorial-mini-card {
+    min-height: 104px;
+  }
+
+  .rules-tutorial-card .tutorial-content h2 {
+    font-size: clamp(2rem, 5vw, 3.1rem);
+  }
+}
