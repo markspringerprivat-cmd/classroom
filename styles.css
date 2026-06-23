@@ -5828,3 +5828,52 @@ body.rules-page {
   place-items: center !important;
   overflow: hidden !important;
 }
+
+
+/* Version 16: laufende Schüler vollständig im roten Feld + kollisionsfreie Pfeile */
+.branch-moving-student,
+.branch-moving-student.wander-active {
+  inset: 4px !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: calc(100% - 8px) !important;
+  max-height: calc(100% - 8px) !important;
+  overflow: hidden !important;
+  border-radius: 13px !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 3px !important;
+  transform: none !important;
+}
+
+.branch-moving-student-avatar,
+.branch-moving-student.wander-active .branch-moving-student-avatar {
+  display: block !important;
+  width: 86% !important;
+  height: 86% !important;
+  max-width: 86% !important;
+  max-height: 86% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.branch-moving-student.wander-active {
+  background: rgba(239, 68, 68, 0.22) !important;
+  border: 2px solid rgba(248, 113, 113, 0.95) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.20), 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
+  animation: wanderStudentContainedFramePulse 0.68s ease-in-out infinite !important;
+}
+
+@keyframes wanderStudentContainedFramePulse {
+  0%, 100% {
+    background: rgba(239, 68, 68, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 0 0 2px rgba(239, 68, 68, 0.10);
+  }
+  50% {
+    background: rgba(239, 68, 68, 0.32);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.24), 0 0 0 5px rgba(239, 68, 68, 0.18);
+  }
+}

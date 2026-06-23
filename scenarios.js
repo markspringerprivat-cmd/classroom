@@ -1440,12 +1440,14 @@ function findStudentPath(start, target, studentId) {
 
 function spawnWanderIncident() {
   const candidates = [];
+  const reserved = currentApproachCueKeys();
   const shuffledStudents = shuffle(context.students
     .map(student => ({ student, desk: context.deskByStudentId[student.id] }))
     .filter(item => item.desk)
     .filter(item => !hasActiveStudentIncident(item.student.id))
     .filter(item => !isStudentAway(item.student.id))
-    .filter(item => !isDeskWithinTeacherRadius(item.desk)));
+    .filter(item => !isDeskWithinTeacherRadius(item.desk))
+    .filter(item => hasAvailableApproachCue({ kind: 'wander', student: item.student, desk: item.desk }, reserved)));
 
   shuffledStudents.forEach(item => {
     shuffle(targetTypes()).forEach(type => {
@@ -1461,7 +1463,8 @@ function spawnWanderIncident() {
   });
 
   if (!candidates.length) return false;
-  const candidate = candidates[randomInt(0, candidates.length - 1)];
+  const candidate = shuffle(candidates).find(item => hasAvailableApproachCue({ kind: 'wander', student: item.student, desk: item.desk }, reserved));
+  if (!candidate) return false;
   const reason = pickWanderReason(candidate.targetType, candidate.student);
   const id = `incident-${++game.eventSeq}`;
   const incident = {
@@ -1505,7 +1508,11 @@ function pickIncidentCandidate() {
     const weight = (item.student.hidden?.risk || 1) + (item.student.hidden?.needsMonitoring ? 2 : 0) + (item.student.hidden?.stabilizer ? 0 : 1);
     for (let i = 0; i < weight; i++) weighted.push(item);
   });
-  const chosen = weighted[randomInt(0, weighted.length - 1)] || eligible[0];
+
+  const reserved = currentApproachCueKeys();
+  const pool = shuffle(weighted.length ? weighted : eligible);
+  const chosen = pool.find(item => hasAvailableApproachCue({ kind: 'student', student: item.student, desk: item.desk }, reserved));
+  if (!chosen) return null;
   return { ...chosen, scenario: pickScenarioForStudent(chosen.student) };
 }
 
@@ -1761,35 +1768,51 @@ function incidentPosition(incident) {
   return null;
 }
 
-function bestApproachCellForIncident(incident) {
+function approachCellsForIncident(incident) {
   const pos = incidentPosition(incident);
-  if (!pos) return null;
+  if (!pos) return [];
   const candidates = neighbors(pos)
     .filter(cell => isWalkable(cell.row, cell.col));
-  if (!candidates.length) return null;
   candidates.sort((a, b) => {
     const teacherDiff = manhattan(game.teacher, a) - manhattan(game.teacher, b);
     if (teacherDiff !== 0) return teacherDiff;
     return a.row - b.row || a.col - b.col;
   });
-  const cell = candidates[0];
-  let arrow = '➜';
-  if (cell.row < pos.row) arrow = '↓';
-  else if (cell.row > pos.row) arrow = '↑';
-  else if (cell.col < pos.col) arrow = '→';
-  else if (cell.col > pos.col) arrow = '←';
-  return { ...cell, arrow, studentName: incident.student?.name || 'Schüler*in' };
+  return candidates.map(cell => {
+    let arrow = '➜';
+    if (cell.row < pos.row) arrow = '↓';
+    else if (cell.row > pos.row) arrow = '↑';
+    else if (cell.col < pos.col) arrow = '→';
+    else if (cell.col > pos.col) arrow = '←';
+    return { ...cell, arrow, studentName: incident.student?.name || 'Schüler*in', incidentId: incident.id || null };
+  });
 }
 
-function buildApproachCueMap() {
+function bestApproachCellForIncident(incident, reservedKeys = new Set()) {
+  return approachCellsForIncident(incident).find(cell => !reservedKeys.has(`${cell.row},${cell.col}`)) || null;
+}
+
+function buildApproachCueMap(incidents = game.activeIncidents) {
   const map = new Map();
-  game.activeIncidents
+  const reservedKeys = new Set();
+  incidents
     .filter(incident => incident.kind !== 'trash')
     .forEach(incident => {
-      const cue = bestApproachCellForIncident(incident);
-      if (cue) map.set(`${cue.row},${cue.col}`, cue);
+      const cue = bestApproachCellForIncident(incident, reservedKeys);
+      if (!cue) return;
+      const key = `${cue.row},${cue.col}`;
+      reservedKeys.add(key);
+      map.set(key, cue);
     });
   return map;
+}
+
+function currentApproachCueKeys() {
+  return new Set(buildApproachCueMap().keys());
+}
+
+function hasAvailableApproachCue(incident, reservedKeys = currentApproachCueKeys()) {
+  return Boolean(bestApproachCellForIncident(incident, reservedKeys));
 }
 
 function renderBranchGame() {
