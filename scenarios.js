@@ -774,14 +774,14 @@ const INCIDENT_REACTION_MS = 7000;
 const ANSWER_SECONDS = 20;
 const TEACHER_FIRST_STEP_MS = 100;
 const TEACHER_STEP_MS = 400;
-const STUDENT_STEP_MS = 600;
+const STUDENT_STEP_MS = 1500;
 const SCORE_PER_LIFE = 500;
 const SCORE_GOOD_ANSWER = 200;
 const SCORE_BAD_ANSWER = -200;
 const EVENT_SPEED_PER_MINUTE = 0.85;
 const MIN_STUDENT_EVENT_DELAY_MS = 1200;
 const MIN_TRASH_EVENT_DELAY_MS = 1400;
-const MIN_WANDER_EVENT_DELAY_MS = 2200;
+const WANDER_EVENT_INTERVAL_MS = 30000;
 
 const audioState = {
   unlocked: false,
@@ -903,7 +903,7 @@ function startLesson() {
   game.scoreEvents = [];
   game.nextIncidentAt = Date.now() + scaledDelay(3000, 5000, MIN_STUDENT_EVENT_DELAY_MS);
   game.nextTrashAt = Date.now() + scaledDelay(4500, 7000, MIN_TRASH_EVENT_DELAY_MS);
-  game.nextWanderAt = Date.now() + scaledDelay(9000, 15000, MIN_WANDER_EVENT_DELAY_MS);
+  game.nextWanderAt = Date.now() + WANDER_EVENT_INTERVAL_MS;
   game.dynamicTrash = [];
   clearAllStudentMovement();
   game.studentPositions = {};
@@ -1060,17 +1060,13 @@ function wanderLimit() {
   return elapsedWholeMinutes() >= 3 ? 2 : 1;
 }
 
-function wanderSpawnChance() {
-  return Math.min(0.72, 0.24 + elapsedWholeMinutes() * 0.1);
-}
-
 function maybeSpawnWanderEvents(now) {
   if (now < game.nextWanderAt) return;
   const activeWander = game.activeIncidents.filter(incident => incident.kind === 'wander').length;
-  if (activeWander < wanderLimit() && Math.random() < wanderSpawnChance()) {
+  if (activeWander < wanderLimit()) {
     spawnWanderIncident();
   }
-  game.nextWanderAt = now + scaledDelay(10500, 17500, MIN_WANDER_EVENT_DELAY_MS);
+  game.nextWanderAt = now + WANDER_EVENT_INTERVAL_MS;
 }
 
 function progressBasedSpawnCount() {
