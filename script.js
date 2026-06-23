@@ -211,6 +211,91 @@ let preparationTimeLeft = 300;
 let evaluationTimers = [];
 let evaluationSession = null;
 
+
+const DEMO_ASSIGNMENTS = {
+  'desk-1': 'petra',
+  'desk-2': 'ben',
+  'desk-3': 'julius',
+  'desk-4': 'tom',
+  'desk-5': 'niklas',
+  'desk-6': 'sara',
+  'desk-7': 'amira',
+  'desk-8': 'lina',
+  'desk-9': 'emily',
+  'desk-10': 'mehmet'
+};
+
+function clearAllClassroomData() {
+  try {
+    const localKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('classroomGame')) localKeys.push(key);
+    }
+    localKeys.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.warn('LocalStorage konnte nicht vollständig geleert werden.', error);
+  }
+
+  try {
+    sessionStorage.clear();
+  } catch (error) {
+    console.warn('SessionStorage konnte nicht geleert werden.', error);
+  }
+
+  try {
+    document.cookie.split(';').forEach(cookie => {
+      const eqIndex = cookie.indexOf('=');
+      const name = eqIndex > -1 ? cookie.slice(0, eqIndex).trim() : cookie.trim();
+      if (!name) return;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${location.pathname}`;
+    });
+  } catch (error) {
+    console.warn('Cookies konnten nicht vollständig gelöscht werden.', error);
+  }
+}
+
+function resetAppAndReload() {
+  clearAllClassroomData();
+  window.location.href = 'index.html';
+}
+
+function installPageUtilities() {
+  if (document.querySelector('.page-utility-bar')) return;
+  const bar = document.createElement('div');
+  bar.className = 'page-utility-bar';
+  bar.innerHTML = `
+    <button type="button" id="utilityDemoBtn" class="utility-btn utility-btn-demo">Demo</button>
+    <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
+  `;
+  document.body.prepend(bar);
+
+  bar.querySelector('#utilityDemoBtn')?.addEventListener('click', applyDemoSetup);
+  bar.querySelector('#utilityResetBtn')?.addEventListener('click', resetAppAndReload);
+}
+
+function applyDemoSetup() {
+  stopPreparationTimer();
+  gameStarted = false;
+  if (tutorialOverlay) tutorialOverlay.hidden = true;
+  if (startGateOverlay) startGateOverlay.hidden = true;
+  if (evaluationOverlay) evaluationOverlay.hidden = true;
+  evaluationSession = null;
+
+  clearAllClassroomData();
+  initLayout('rows', false);
+  state.assignments = { ...DEMO_ASSIGNMENTS };
+  state.objects = {
+    ...state.objects,
+    trash: (state.objects.trash || []).map(item => ({ ...item, removed: true }))
+  };
+  state.cleaningMode = false;
+  state.selectedStudentId = null;
+  clearResults();
+  render();
+}
+
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
   state.layout = layoutKey;
@@ -1919,16 +2004,12 @@ function bindGlobalEvents() {
     }
   });
   evaluateBtn.addEventListener('click', evaluatePreparation);
-  resetBtn.addEventListener('click', () => {
-    const wasStarted = gameStarted;
-    initLayout(state.layout, false);
-    gameStarted = wasStarted;
-    if (wasStarted) startPreparationTimer();
-  });
+  resetBtn.addEventListener('click', resetAppAndReload);
   document.addEventListener('dragend', clearDragState);
   document.addEventListener('drop', () => clearDragState());
 }
 
+installPageUtilities();
 bindGlobalEvents();
 bindTutorialEvents();
 initLayout('rows');

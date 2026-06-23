@@ -65,6 +65,50 @@ function readJson(key, fallback = null) {
 const step1 = readJson('classroomGame.step1', {});
 const rulesData = readJson('classroomGame.step2.rules', { acceptedRules: [], acceptedRuleIds: [] });
 const context = buildContext(step1, rulesData);
+
+
+function clearAllClassroomData() {
+  try {
+    const localKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('classroomGame')) localKeys.push(key);
+    }
+    localKeys.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.warn('LocalStorage konnte nicht vollständig geleert werden.', error);
+  }
+  try {
+    sessionStorage.clear();
+  } catch (error) {
+    console.warn('SessionStorage konnte nicht geleert werden.', error);
+  }
+  try {
+    document.cookie.split(';').forEach(cookie => {
+      const eqIndex = cookie.indexOf('=');
+      const name = eqIndex > -1 ? cookie.slice(0, eqIndex).trim() : cookie.trim();
+      if (!name) return;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${location.pathname}`;
+    });
+  } catch (error) {
+    console.warn('Cookies konnten nicht vollständig gelöscht werden.', error);
+  }
+}
+
+function resetAppAndReload() {
+  clearAllClassroomData();
+  window.location.href = 'index.html';
+}
+
+function installPageUtilities() {
+  if (document.querySelector('.page-utility-bar')) return;
+  const bar = document.createElement('div');
+  bar.className = 'page-utility-bar';
+  bar.innerHTML = '<button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>';
+  document.body.prepend(bar);
+  bar.querySelector('#utilityResetBtn')?.addEventListener('click', resetAppAndReload);
+}
 const SCENARIOS = buildDynamicScenarios(context);
 
 
@@ -1809,4 +1853,5 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+installPageUtilities();
 init();
