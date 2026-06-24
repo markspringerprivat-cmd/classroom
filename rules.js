@@ -16,20 +16,20 @@ const fallbackStudents = [
 ];
 
 const rules = [
-  { id: 'focus-neighbours', text: 'Während Arbeitsphasen arbeiten wir leise und lenken unsere Sitznachbar*innen nicht ab.', hint: 'Passt besonders zu Petra.', tone: 'beneficial', targetStudent: 'petra' },
-  { id: 'respect-no-mock', text: 'Wir sprechen respektvoll miteinander und machen uns nicht über Fehler oder Beiträge lustig.', hint: 'Passt besonders zu Lina.', tone: 'beneficial', targetStudent: 'lina' },
-  { id: 'first-instruction', text: 'Anweisungen der Lehrkraft werden beim ersten Signal umgesetzt.', hint: 'Passt besonders zu Ben.', tone: 'beneficial', targetStudent: 'ben' },
-  { id: 'raise-hand', text: 'Wir melden uns, bevor wir sprechen.', hint: 'Passt besonders zu Tom.', tone: 'beneficial', targetStudent: 'tom' },
-  { id: 'phone-away', text: 'Handys bleiben während des Unterrichts ausgeschaltet in der Tasche.', hint: 'Passt besonders zu Niklas.', tone: 'beneficial', targetStudent: 'niklas' },
   { id: 'help-signal', text: 'Wenn wir Hilfe brauchen, nutzen wir zuerst das vereinbarte Hilfesignal.', hint: 'Strukturiert Hilfen im Unterricht.', tone: 'neutral' },
-  { id: 'material-ready', text: 'Zu Beginn liegen Arbeitsmaterialien bereit und die Startaufgabe beginnt sofort.', hint: 'Unterstützt einen ruhigen Start.', tone: 'neutral' },
-  { id: 'group-roles', text: 'Bei Gruppenarbeit hat jede Person eine klare Aufgabe.', hint: 'Stärkt kooperative Arbeitsphasen.', tone: 'neutral' },
-  { id: 'transition-signal', text: 'Beim Wechsel der Sozialform warten wir auf das Startsignal.', hint: 'Hilft besonders in Übergängen.', tone: 'neutral' },
-  { id: 'walkway', text: 'Material wird nur nach dem vereinbarten Ablauf geholt.', hint: 'Reduziert unnötige Wege im Raum.', tone: 'neutral' },
+  { id: 'phone-away', text: 'Handys bleiben während des Unterrichts ausgeschaltet in der Tasche.', hint: 'Passt besonders zu Niklas.', tone: 'beneficial', targetStudent: 'niklas' },
   { id: 'free-walk', text: 'Wer fertig ist, darf ohne Rückfrage durch den Raum laufen.', hint: 'Fördert eher Unruhe und Ablenkung.', tone: 'harmful' },
+  { id: 'focus-neighbours', text: 'Während Arbeitsphasen arbeiten wir leise und lenken unsere Sitznachbar*innen nicht ab.', hint: 'Passt besonders zu Petra.', tone: 'beneficial', targetStudent: 'petra' },
+  { id: 'material-ready', text: 'Zu Beginn liegen Arbeitsmaterialien bereit und die Startaufgabe beginnt sofort.', hint: 'Unterstützt einen ruhigen Start.', tone: 'neutral' },
   { id: 'public-comments', text: 'Fehler oder Regelverstöße werden sofort vor der ganzen Klasse kommentiert.', hint: 'Belastet Beziehungen und Sicherheit.', tone: 'harmful' },
+  { id: 'respect-no-mock', text: 'Wir sprechen respektvoll miteinander und machen uns nicht über Fehler oder Beiträge lustig.', hint: 'Passt besonders zu Lina.', tone: 'beneficial', targetStudent: 'lina' },
+  { id: 'group-roles', text: 'Bei Gruppenarbeit hat jede Person eine klare Aufgabe.', hint: 'Stärkt kooperative Arbeitsphasen.', tone: 'neutral' },
   { id: 'phone-if-done', text: 'Wer fertig ist, darf kurz das Handy nutzen.', hint: 'Untergräbt klare Handygrenzen.', tone: 'harmful' },
+  { id: 'first-instruction', text: 'Anweisungen der Lehrkraft werden beim ersten Signal umgesetzt.', hint: 'Passt besonders zu Ben.', tone: 'beneficial', targetStudent: 'ben' },
+  { id: 'transition-signal', text: 'Beim Wechsel der Sozialform warten wir auf das Startsignal.', hint: 'Hilft besonders in Übergängen.', tone: 'neutral' },
   { id: 'call-out-open', text: 'Zwischenrufe sind in offenen Phasen grundsätzlich in Ordnung.', hint: 'Erhöht das Risiko für Reinrufen.', tone: 'harmful' },
+  { id: 'raise-hand', text: 'Wir melden uns, bevor wir sprechen.', hint: 'Passt besonders zu Tom.', tone: 'beneficial', targetStudent: 'tom' },
+  { id: 'walkway', text: 'Material wird nur nach dem vereinbarten Ablauf geholt.', hint: 'Reduziert unnötige Wege im Raum.', tone: 'neutral' },
   { id: 'seat-swap', text: 'Sitzplätze dürfen während der Stunde spontan getauscht werden, wenn es interessanter ist.', hint: 'Schwächt Verlässlichkeit und Struktur.', tone: 'harmful' }
 ];
 
@@ -482,7 +482,7 @@ function renderList(listName, container) {
     const rule = getRule(ruleId);
     if (!rule) return;
     const card = document.createElement('article');
-    card.className = `rule-item ${listName} tone-${rule.tone || 'neutral'}`;
+    card.className = 'rule-item';
     card.draggable = true;
     card.dataset.ruleId = rule.id;
     card.dataset.source = listName;

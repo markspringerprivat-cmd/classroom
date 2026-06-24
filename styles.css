@@ -7037,3 +7037,173 @@ body.rules-page {
     font-size: 1.05rem !important;
   }
 }
+
+
+/* ===== Version 26: Regelkarten nicht vorbewerten, Listenhöhe fixieren ===== */
+.rules-main.compact-rules-main .rule-list-card {
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.rules-main.compact-rules-main .rule-lists {
+  min-height: 0 !important;
+  overflow: hidden !important;
+  align-items: stretch !important;
+}
+
+.rules-main.compact-rules-main .rule-dropzone {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  align-content: start !important;
+  padding: 8px 10px 8px 8px !important;
+}
+
+.rules-main.compact-rules-main .rule-item,
+.rules-main.compact-rules-main .rule-item.accepted,
+.rules-main.compact-rules-main .rule-item.pending,
+.rules-main.compact-rules-main .rule-item.rejected,
+.rules-main.compact-rules-main .rule-item.tone-beneficial,
+.rules-main.compact-rules-main .rule-item.tone-harmful,
+.rules-main.compact-rules-main .rule-item.tone-neutral {
+  background: rgba(15, 23, 42, 0.34) !important;
+  border-color: rgba(226, 232, 240, 0.18) !important;
+  color: rgba(248, 250, 252, 0.96) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 7px 14px rgba(2, 6, 23, 0.18) !important;
+}
+
+.rules-main.compact-rules-main .accepted-list .rule-item {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(187, 247, 208, 0.26) !important;
+}
+
+.rules-main.compact-rules-main .rejected-list .rule-item {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(254, 202, 202, 0.24) !important;
+}
+
+.rules-main.compact-rules-main .pending-list .rule-item {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(253, 230, 138, 0.23) !important;
+}
+
+.rules-main.compact-rules-main .rule-item .rule-item-text,
+.rules-main.compact-rules-main .rule-item strong {
+  color: rgba(248, 250, 252, 0.96) !important;
+  font-weight: 400 !important;
+  line-height: 1.34 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.rules-main.compact-rules-main .accepted-list .rule-dropzone,
+.rules-main.compact-rules-main .rejected-list .rule-dropzone,
+.rules-main.compact-rules-main .pending-list .rule-dropzone {
+  scrollbar-width: thin;
+}
+
+.rules-main.compact-rules-main .accepted-list .rule-dropzone::-webkit-scrollbar,
+.rules-main.compact-rules-main .rejected-list .rule-dropzone::-webkit-scrollbar,
+.rules-main.compact-rules-main .pending-list .rule-dropzone::-webkit-scrollbar {
+  width: 9px;
+}
+
+.rules-main.compact-rules-main .accepted-list .rule-dropzone::-webkit-scrollbar-track {
+  background: rgba(6, 78, 59, 0.24);
+  border-radius: 999px;
+}
+
+.rules-main.compact-rules-main .rejected-list .rule-dropzone::-webkit-scrollbar-track {
+  background: rgba(127, 29, 29, 0.24);
+  border-radius: 999px;
+}
+
+.rules-main.compact-rules-main .pending-list .rule-dropzone::-webkit-scrollbar-track {
+  background: rgba(120, 53, 15, 0.22);
+  border-radius: 999px;
+}
+
+.rules-main.compact-rules-main .accepted-list .rule-dropzone::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(74, 222, 128, 0.92), rgba(22, 163, 74, 0.70));
+  border: 2px solid rgba(6, 78, 59, 0.24);
+  border-radius: 999px;
+}
+
+.rules-main.compact-rules-main .rejected-list .rule-dropzone::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.92), rgba(185, 28, 28, 0.70));
+  border: 2px solid rgba(127, 29, 29, 0.24);
+  border-radius: 999px;
+}
+
+.rules-main.compact-rules-main .pending-list .rule-dropzone::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.90), rgba(202, 138, 4, 0.68));
+  border: 2px solid rgba(120, 53, 15, 0.22);
+  border-radius: 999px;
+}
+
+/* ===== Version 27: Regelkarten geben keine Ergebnisfarbe preis ===== */
+.rules-main.compact-rules-main .rule-dropzone > .rule-item,
+.rules-main.compact-rules-main .rule-dropzone > .rule-item.accepted,
+.rules-main.compact-rules-main .rule-dropzone > .rule-item.pending,
+.rules-main.compact-rules-main .rule-dropzone > .rule-item.rejected,
+.rules-main.compact-rules-main .rule-dropzone > .rule-item.tone-beneficial,
+.rules-main.compact-rules-main .rule-dropzone > .rule-item.tone-harmful,
+.rules-main.compact-rules-main .rule-dropzone > .rule-item.tone-neutral,
+.rule-dropzone > .rule-item,
+.rule-dropzone > .rule-item.accepted,
+.rule-dropzone > .rule-item.pending,
+.rule-dropzone > .rule-item.rejected,
+.rule-dropzone > .rule-item.tone-beneficial,
+.rule-dropzone > .rule-item.tone-harmful,
+.rule-dropzone > .rule-item.tone-neutral {
+  background: rgba(255, 255, 255, 0.055) !important;
+  color: rgba(248, 250, 252, 0.96) !important;
+  border-color: rgba(226, 232, 240, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 7px 14px rgba(2, 6, 23, 0.18) !important;
+}
+
+.accepted-list .rule-dropzone > .rule-item,
+.accepted-list .rule-dropzone > .rule-item.accepted,
+.accepted-list .rule-dropzone > .rule-item.pending,
+.accepted-list .rule-dropzone > .rule-item.rejected,
+.accepted-list .rule-dropzone > .rule-item.tone-beneficial,
+.accepted-list .rule-dropzone > .rule-item.tone-harmful,
+.accepted-list .rule-dropzone > .rule-item.tone-neutral {
+  background: rgba(20, 83, 45, 0.22) !important;
+  border-color: rgba(187, 247, 208, 0.28) !important;
+}
+
+.rejected-list .rule-dropzone > .rule-item,
+.rejected-list .rule-dropzone > .rule-item.accepted,
+.rejected-list .rule-dropzone > .rule-item.pending,
+.rejected-list .rule-dropzone > .rule-item.rejected,
+.rejected-list .rule-dropzone > .rule-item.tone-beneficial,
+.rejected-list .rule-dropzone > .rule-item.tone-harmful,
+.rejected-list .rule-dropzone > .rule-item.tone-neutral {
+  background: rgba(127, 29, 29, 0.20) !important;
+  border-color: rgba(254, 202, 202, 0.26) !important;
+}
+
+.pending-list .rule-dropzone > .rule-item,
+.pending-list .rule-dropzone > .rule-item.accepted,
+.pending-list .rule-dropzone > .rule-item.pending,
+.pending-list .rule-dropzone > .rule-item.rejected,
+.pending-list .rule-dropzone > .rule-item.tone-beneficial,
+.pending-list .rule-dropzone > .rule-item.tone-harmful,
+.pending-list .rule-dropzone > .rule-item.tone-neutral {
+  background: rgba(120, 53, 15, 0.18) !important;
+  border-color: rgba(253, 230, 138, 0.26) !important;
+}
+
+.rules-main.compact-rules-main .rule-item .rule-item-text,
+.rule-dropzone > .rule-item .rule-item-text {
+  font-weight: 400 !important;
+  color: rgba(248, 250, 252, 0.96) !important;
+}
