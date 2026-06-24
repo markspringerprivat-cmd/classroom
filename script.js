@@ -280,6 +280,8 @@ const lifeSegments = document.getElementById('lifeSegments');
 const animatedCurrentScore = document.getElementById('animatedCurrentScore');
 const animatedFinalScore = document.getElementById('animatedFinalScore');
 const step1Highscore = document.getElementById('step1Highscore');
+const mobileStep1Highscore = document.getElementById('mobileStep1Highscore');
+const mobilePrepTimerValue = document.getElementById('mobilePrepTimerValue');
 const evaluationHighscore = document.getElementById('evaluationHighscore');
 const evaluationActionArea = document.getElementById('evaluationActionArea');
 const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle');
@@ -1654,11 +1656,13 @@ function setStoredHighscore(value) {
     console.warn('Highscore konnte nicht gespeichert werden:', error);
   }
   if (step1Highscore) step1Highscore.textContent = String(numeric);
+  if (mobileStep1Highscore) mobileStep1Highscore.textContent = String(numeric);
   if (evaluationHighscore) evaluationHighscore.textContent = `Highscore: ${numeric}`;
 }
 
 function updateStep1Highscore(value = getStoredHighscore()) {
   if (step1Highscore) step1Highscore.textContent = String(Number(value) || 0);
+  if (mobileStep1Highscore) mobileStep1Highscore.textContent = String(Number(value) || 0);
   if (evaluationHighscore) evaluationHighscore.textContent = `Highscore: ${Number(value) || 0}`;
 }
 
@@ -2489,6 +2493,7 @@ function updatePreparationTimerDisplay() {
   const minutes = String(Math.floor(safe / 60)).padStart(2, '0');
   const seconds = String(safe % 60).padStart(2, '0');
   prepTimerValue.textContent = `${minutes}:${seconds}`;
+  if (mobilePrepTimerValue) mobilePrepTimerValue.textContent = `${minutes}:${seconds}`;
 }
 
 function stopPreparationTimer() {

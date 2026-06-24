@@ -27,6 +27,10 @@
     <section class="workspace" aria-label="Klassenraum">
       <div class="controls panel compact-controls">
         <button type="button" id="prepStepBtn" class="prep-chip active" aria-current="step">Vorbereitung</button>
+        <div class="tablet-mobile-status" aria-label="Zeit und Highscore">
+          <span>Zeit <strong id="mobilePrepTimerValue">05:00</strong></span>
+          <span>Highscore <strong id="mobileStep1Highscore">0</strong></span>
+        </div>
         <div class="button-stack">
           <div class="button-row">
             <button type="button" id="evaluateBtn" class="primary-btn" disabled>Vorbereitung auswerten</button>
@@ -175,6 +179,5 @@
   </section>
 
   <script src="script.js"></script>
-  <script src="fullscreen.js"></script>
 </body>
 </html>
