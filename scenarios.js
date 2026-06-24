@@ -949,6 +949,19 @@ const MIN_STUDENT_EVENT_DELAY_MS = 1200;
 const MIN_TRASH_EVENT_DELAY_MS = 2000;
 const WANDER_EVENT_INTERVAL_MS = 30000;
 
+function initialHighscoreFromPreviousSteps() {
+  const candidates = [
+    rulesData?.evaluation?.finalHighscore,
+    rulesData?.highscore,
+    context.stepData?.highscore
+  ];
+  try { candidates.push(localStorage.getItem('classroomGame.highscore')); } catch (error) {}
+  const found = candidates.map(Number).find(Number.isFinite);
+  return Number(found || 0);
+}
+
+const initialHighscore = initialHighscoreFromPreviousSteps();
+
 const audioState = {
   unlocked: false,
   timer: null,
@@ -983,9 +996,9 @@ const game = {
   pausedAt: null,
   eventSeq: 0,
   usedScenarioIds: new Set(),
-  highscoreBase: 0,
+  highscoreBase: initialHighscore,
   lifeBonus: 0,
-  finalHighscore: 0,
+  finalHighscore: initialHighscore,
   finalBonusAdded: false,
   finishReason: null,
   scoreEvents: [],
@@ -1414,9 +1427,9 @@ function startLesson() {
   game.finished = false;
   game.manualPause = false;
   game.lessonLeft = LESSON_SECONDS;
-  game.highscoreBase = 0;
+  game.highscoreBase = initialHighscore;
   game.lifeBonus = 0;
-  game.finalHighscore = 0;
+  game.finalHighscore = initialHighscore;
   game.finalBonusAdded = false;
   game.finishReason = null;
   game.scoreEvents = [];

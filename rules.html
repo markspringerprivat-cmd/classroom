@@ -41,7 +41,13 @@
           <p class="eyebrow">Aktuelle Regel</p>
           <h2 id="ruleDeckProgress">Regel 1/15</h2>
         </div>
-        <button type="button" id="backToRoomBtn" class="ghost-btn">Zurück zu Schritt 1</button>
+        <div class="rules-head-actions">
+          <aside class="global-highscore-card global-highscore-card--compact" aria-label="Highscore">
+            <span>Highscore</span>
+            <strong id="rulesHighscore">0</strong>
+          </aside>
+          <button type="button" id="backToRoomBtn" class="ghost-btn">Zurück zu Schritt 1</button>
+        </div>
       </div>
 
       <article id="currentRuleCard" class="current-rule-card" draggable="true" aria-live="polite">
@@ -109,6 +115,7 @@
             <li>Eine passende Regel stabilisiert den späteren Unterricht.</li>
             <li>Eine unpassende oder riskante Regel schwächt die Unterrichtsstabilität.</li>
             <li>Beispiel: Niklas versteckt gern das Handy; deshalb passt eine klare Handyregel.</li>
+            <li>Der Highscore aus Schritt 1 wird weitergeführt: passende Regel +500, riskante Regel -500, neutrale Regel 0.</li>
           </ul>
         </div>
       </section>
@@ -119,13 +126,20 @@
   </section>
 
 
-  <section id="rulesEvaluationOverlay" class="rules-evaluation-overlay" hidden aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="rulesEvaluationTitle">
+  <section id="rulesEvaluationOverlay" class="rules-evaluation-overlay" hidden aria-live="polite" aria-modal="true" role="dialog" aria-label="Auswertung der Klassenregeln">
     <div class="rules-evaluation-backdrop"></div>
-    <article class="rules-evaluation-card" role="document">
-      <div class="rules-evaluation-head">
-        <span id="rulesEvaluationStep" class="tutorial-progress-pill">Auswertung 1/5</span>
-        <h2 id="rulesEvaluationTitle">Regelauswahl wird bewertet</h2>
-        <p id="rulesEvaluationIntro">Jede gewählte Klassenregel wird mit den konkreten Schülerprofilen der Klasse abgeglichen.</p>
+    <article class="rules-evaluation-card rules-evaluation-card--minimal" role="document">
+      <div class="rules-evaluation-topline">
+        <div class="rules-evaluation-stability rules-evaluation-stability--top" aria-label="Aktuelle Unterrichtsstabilität nach dieser Regel">
+          <span class="rules-evaluation-mini-label">Unterrichtsstabilität</span>
+          <div id="rulesEvaluationSegments" class="branch-life-segments"></div>
+          <strong id="rulesEvaluationScoreText">–/10</strong>
+        </div>
+        <div class="rules-evaluation-highscore" aria-label="Highscore nach dieser Regel">
+          <span>Highscore</span>
+          <strong id="rulesEvaluationHighscore">0</strong>
+          <small id="rulesEvaluationHighscoreDelta">±0</small>
+        </div>
       </div>
 
       <div class="rules-evaluation-pair">
@@ -135,16 +149,6 @@
         </article>
         <div class="rules-evaluation-arrow" aria-hidden="true">→</div>
         <div id="rulesEvaluationStudentSlot" class="rules-evaluation-student-slot"></div>
-      </div>
-
-      <div id="rulesEvaluationResult" class="rules-evaluation-result">
-        <strong id="rulesEvaluationDelta">–</strong>
-        <p id="rulesEvaluationText">–</p>
-      </div>
-
-      <div class="rules-evaluation-stability" aria-label="Aktuelle Unterrichtsstabilität nach dieser Regel">
-        <div id="rulesEvaluationSegments" class="branch-life-segments"></div>
-        <span id="rulesEvaluationScoreText">–/10 Unterrichtsstabilität</span>
       </div>
 
       <div class="rules-evaluation-actions">

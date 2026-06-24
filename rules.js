@@ -71,6 +71,7 @@ const rejectedCounter = document.getElementById('rejectedCounter');
 const statusText = document.getElementById('rulesStatusText');
 const finishBtn = document.getElementById('finishRulesBtn');
 const backBtn = document.getElementById('backToRoomBtn');
+const rulesHighscore = document.getElementById('rulesHighscore');
 const rulesStabilityPreview = document.getElementById('rulesStabilityPreview');
 const rulesStabilityDetails = document.getElementById('rulesStabilityDetails');
 const rulesTutorialOverlay = document.getElementById('rulesTutorialOverlay');
@@ -88,6 +89,8 @@ const rulesEvaluationText = document.getElementById('rulesEvaluationText');
 const rulesEvaluationSegments = document.getElementById('rulesEvaluationSegments');
 const rulesEvaluationScoreText = document.getElementById('rulesEvaluationScoreText');
 const rulesEvaluationNextBtn = document.getElementById('rulesEvaluationNextBtn');
+const rulesEvaluationHighscore = document.getElementById('rulesEvaluationHighscore');
+const rulesEvaluationHighscoreDelta = document.getElementById('rulesEvaluationHighscoreDelta');
 
 let pendingRulesData = null;
 let rulesEvaluationIndex = 0;
@@ -518,7 +521,7 @@ function bindEvents() {
   });
 
   finishBtn.addEventListener('click', finishRules);
-  backBtn.addEventListener('click', () => { window.location.href = 'index.html'; });
+  backBtn.addEventListener('click', () => { window.location.href = 'step1.html'; });
   if (rulesEvaluationNextBtn) rulesEvaluationNextBtn.addEventListener('click', advanceRulesEvaluation);
   if (rulesTutorialSkipBtn) {
     rulesTutorialSkipBtn.addEventListener('pointerdown', handleRulesTutorialDismiss, true);
@@ -684,16 +687,24 @@ function saveDraft() {
 
 function evaluateAcceptedRules() {
   const startLives = clampLives(Number(step1Data.rawPreparationScore ?? step1Data.preparationScore ?? 5));
+  const startHighscore = readStoredHighscore();
   const acceptedRules = ruleState.lists.accepted.map(getRule).filter(Boolean);
   const acceptedRuleEvaluations = acceptedRules.map(rule => {
     const student = rule.targetStudent ? getStudent(rule.targetStudent) : null;
     const matched = Boolean(rule.tone === 'beneficial' && student);
+    const delta = deltaForRuleEvaluation(rule, matched);
+    const points = pointsForRuleEvaluation(rule, matched);
+    const result = matched ? 'good' : rule.tone === 'harmful' ? 'bad' : 'neutral';
     return {
       ruleId: rule.id,
       text: rule.text,
       tone: rule.tone || 'neutral',
-      delta: matched ? 1 : -1,
+      delta,
+      points,
+      result,
       matched,
+      harmful: rule.tone === 'harmful',
+      neutral: !matched && rule.tone !== 'harmful',
       studentId: matched ? student.id : null,
       studentName: matched ? student.name : null,
       studentAge: matched ? student.age : null,
@@ -701,16 +712,24 @@ function evaluateAcceptedRules() {
       studentAvatar: matched ? student.avatar : null,
       reason: matched
         ? `Diese Regel passt zu ${student.name}, weil sie das konkrete Risikoverhalten „${student.note}“ präventiv begrenzt.`
-        : 'Diese gewählte Regel ist keinem konkreten Schülerverhalten aus der aktuellen Klasse eindeutig zugeordnet.'
+        : rule.tone === 'harmful'
+          ? 'Diese Regel schwächt die Unterrichtsstruktur und senkt die Unterrichtsstabilität.'
+          : 'Diese Regel deckt kein konkretes Risikoverhalten der aktuellen Klasse ab.'
     };
   });
   const delta = acceptedRuleEvaluations.reduce((sum, item) => sum + item.delta, 0);
+  const highscoreDelta = acceptedRuleEvaluations.reduce((sum, item) => sum + item.points, 0);
   return {
     startLives,
     delta,
     finalLives: clampLives(startLives + delta),
+    startHighscore,
+    highscoreDelta,
+    finalHighscore: startHighscore + highscoreDelta,
     acceptedRuleEvaluations,
     matchedStudentRules: acceptedRuleEvaluations.filter(item => item.matched),
+    harmfulSelectedRules: acceptedRuleEvaluations.filter(item => item.harmful),
+    neutralSelectedRules: acceptedRuleEvaluations.filter(item => item.neutral),
     unmappedSelectedRules: acceptedRuleEvaluations.filter(item => !item.matched)
   };
 }
@@ -718,6 +737,39 @@ function evaluateAcceptedRules() {
 function clampLives(value) {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(10, Math.round(value)));
+}
+
+function readStoredHighscore() {
+  const candidates = [step1Data?.highscore];
+  try { candidates.push(localStorage.getItem('classroomGame.highscore')); } catch (error) {}
+  const value = candidates.map(Number).find(Number.isFinite);
+  return Number(value || 0);
+}
+
+function writeStoredHighscore(value) {
+  const numeric = Number(value) || 0;
+  try {
+    localStorage.setItem('classroomGame.highscore', String(numeric));
+  } catch (error) {
+    console.warn('Highscore konnte nicht gespeichert werden:', error);
+  }
+  if (rulesHighscore) rulesHighscore.textContent = String(numeric);
+}
+
+function updateRulesHighscore(value = readStoredHighscore()) {
+  if (rulesHighscore) rulesHighscore.textContent = String(Number(value) || 0);
+}
+
+function pointsForRuleEvaluation(rule, matched) {
+  if (matched) return 500;
+  if (rule?.tone === 'harmful') return -500;
+  return 0;
+}
+
+function deltaForRuleEvaluation(rule, matched) {
+  if (matched) return 1;
+  if (rule?.tone === 'harmful') return -1;
+  return 0;
 }
 
 function buildRulesData() {
@@ -732,7 +784,8 @@ function buildRulesData() {
     rejectedRuleIds: ruleState.lists.rejected,
     pendingRuleIds: ruleState.lists.pending,
     evaluation,
-    step1: step1Data
+    highscore: evaluation.finalHighscore,
+    step1: { ...step1Data, highscore: evaluation.startHighscore }
   };
 }
 
@@ -761,16 +814,18 @@ function renderRulesEvaluationStep() {
   if (!entry) return completeRulesEvaluation();
   const count = entries.length;
   const cumulativeDelta = entries.slice(0, rulesEvaluationIndex + 1).reduce((sum, item) => sum + item.delta, 0);
+  const cumulativePoints = entries.slice(0, rulesEvaluationIndex + 1).reduce((sum, item) => sum + item.points, 0);
   const currentLives = clampLives(pendingRulesData.evaluation.startLives + cumulativeDelta);
+  const currentHighscore = Number(pendingRulesData.evaluation.startHighscore || 0) + cumulativePoints;
 
-  if (rulesEvaluationStep) rulesEvaluationStep.textContent = `Auswertung ${rulesEvaluationIndex + 1}/${count}`;
-  if (rulesEvaluationTitle) rulesEvaluationTitle.textContent = entry.matched ? `Regel passt zu ${entry.studentName}` : 'Regel ohne konkrete Schülerzuordnung';
-  if (rulesEvaluationIntro) rulesEvaluationIntro.textContent = 'Die Unterrichtsstabilität verändert sich erst jetzt anhand deiner gewählten Klassenregeln.';
+  if (rulesEvaluationStep) rulesEvaluationStep.textContent = '';
+  if (rulesEvaluationTitle) rulesEvaluationTitle.textContent = '';
+  if (rulesEvaluationIntro) rulesEvaluationIntro.textContent = '';
   if (rulesEvaluationRuleText) rulesEvaluationRuleText.textContent = entry.text;
   if (rulesEvaluationResult) {
-    rulesEvaluationResult.className = `rules-evaluation-result ${entry.delta > 0 ? 'good' : 'bad'}`;
+    rulesEvaluationResult.className = `rules-evaluation-result ${entry.result || 'neutral'}`;
   }
-  if (rulesEvaluationDelta) rulesEvaluationDelta.textContent = entry.delta > 0 ? '+1 Unterrichtsstabilität' : '-1 Unterrichtsstabilität';
+  if (rulesEvaluationDelta) rulesEvaluationDelta.textContent = entry.delta > 0 ? '+1 Unterrichtsstabilität' : entry.delta < 0 ? '-1 Unterrichtsstabilität' : 'keine Veränderung';
   if (rulesEvaluationText) rulesEvaluationText.textContent = entry.reason;
   if (rulesEvaluationSegments) {
     rulesEvaluationSegments.classList.toggle('life-low', currentLives <= 3);
@@ -778,26 +833,44 @@ function renderRulesEvaluationStep() {
     rulesEvaluationSegments.classList.toggle('life-high', currentLives > 6);
     rulesEvaluationSegments.innerHTML = Array.from({ length: 10 }, (_, index) => `<span class="${index < currentLives ? 'filled' : ''}"></span>`).join('');
   }
-  if (rulesEvaluationScoreText) rulesEvaluationScoreText.textContent = `${currentLives}/10 Unterrichtsstabilität`;
+  if (rulesEvaluationScoreText) rulesEvaluationScoreText.textContent = `${currentLives}/10`;
+  if (rulesEvaluationHighscore) rulesEvaluationHighscore.textContent = String(currentHighscore);
+  if (rulesEvaluationHighscoreDelta) {
+    rulesEvaluationHighscoreDelta.textContent = entry.points > 0 ? `+${entry.points}` : String(entry.points || 0);
+    rulesEvaluationHighscoreDelta.className = entry.points > 0 ? 'good' : entry.points < 0 ? 'bad' : 'neutral';
+  }
   if (rulesEvaluationStudentSlot) {
     if (entry.matched) {
       rulesEvaluationStudentSlot.innerHTML = `
-        <article class="rules-evaluation-student-card">
+        <article class="rules-evaluation-student-card good">
           <div class="rules-student-avatar-wrap">${studentAvatarMarkup({ name: entry.studentName, avatar: entry.studentAvatar }, 'rules-student-avatar')}</div>
           <div>
-            <span>Schülerprofil</span>
+            <span>Passende Schülerkarte</span>
             <strong>${escapeHtml(entry.studentName)}${entry.studentAge ? ` (${escapeHtml(entry.studentAge)})` : ''}</strong>
             <p>${escapeHtml(entry.studentNote || '')}</p>
+            <small>+1 Stabilität · +500 Highscore</small>
+          </div>
+        </article>`;
+    } else if (entry.harmful) {
+      rulesEvaluationStudentSlot.innerHTML = `
+        <article class="rules-evaluation-student-card unmapped bad">
+          <div class="rules-evaluation-unmapped-icon">−</div>
+          <div>
+            <span>Riskante Regel</span>
+            <strong>Unterrichtsstruktur geschwächt</strong>
+            <p>Diese Regel begünstigt Unruhe oder unklare Grenzen.</p>
+            <small>-1 Stabilität · -500 Highscore</small>
           </div>
         </article>`;
     } else {
       rulesEvaluationStudentSlot.innerHTML = `
-        <article class="rules-evaluation-student-card unmapped">
-          <div class="rules-evaluation-unmapped-icon">–</div>
+        <article class="rules-evaluation-student-card unmapped neutral">
+          <div class="rules-evaluation-unmapped-icon">0</div>
           <div>
             <span>Keine passende Schülerkarte</span>
             <strong>Kein konkretes Verhalten abgedeckt</strong>
-            <p>Diese Regel kann allgemein sinnvoll wirken, trifft aber kein ausgewiesenes Risikoprofil der aktuellen Klasse.</p>
+            <p>Diese Regel deckt kein konkretes Risikoverhalten der aktuellen Klasse ab.</p>
+            <small>keine Stabilitätsänderung · 0 Highscore</small>
           </div>
         </article>`;
     }
@@ -820,6 +893,7 @@ function completeRulesEvaluation() {
   if (!pendingRulesData) pendingRulesData = buildRulesData();
   try {
     localStorage.setItem('classroomGame.step2.rules', JSON.stringify(pendingRulesData));
+    writeStoredHighscore(pendingRulesData?.evaluation?.finalHighscore ?? readStoredHighscore());
     if (rulesEvaluationOverlay) {
       rulesEvaluationOverlay.hidden = true;
       rulesEvaluationOverlay.setAttribute('hidden', '');

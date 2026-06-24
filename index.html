@@ -3,146 +3,49 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Klassenraum vorbereiten | Classroom-Management-Spiel</title>
+  <title>Klassenverwaltungsspiel | Classroom-Management-Spiel</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <div class="page-utility-bar" style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:8px;flex-wrap:wrap;">
-    <button type="button" id="utilityResetBtn" class="utility-btn utility-btn-reset">Zurücksetzen</button>
-  </div>
-
-  <header class="topbar compact-topbar">
-    <div>
-      <p class="eyebrow">Interaktive Phase · Schritt 1</p>
-      <h1>Klassenraum vorbereiten</h1>
-      <p class="subtitle">Ordne Tische, Schüler*innen und Lehrkraft so an, dass Störungen präventiv reduziert werden.</p>
-    </div>
-  </header>
-
-  <main class="app-shell single-column">
-    <section class="workspace" aria-label="Klassenraum">
-      <div class="controls panel compact-controls">
-        <button type="button" id="prepStepBtn" class="prep-chip active" aria-current="step">Vorbereitung</button>
-        <div class="button-stack">
-          <div class="button-row">
-            <button type="button" id="evaluateBtn" class="primary-btn" disabled>Vorbereitung auswerten</button>
-            <button type="button" id="resetBtn" class="ghost-btn">Zurücksetzen</button>
-            <button type="button" id="showTutorialBtn" class="ghost-btn">Anleitung</button>
-          </div>
-        </div>
+<body class="landing-page">
+  <main class="landing-shell" aria-label="Startseite des Klassenverwaltungsspiels">
+    <section class="landing-hero-card panel">
+      <div class="landing-copy">
+        <p class="eyebrow">Classroom Management · kooperative Verhaltensmodifikation</p>
+        <h1>Klassenverwaltungsspiel</h1>
+        <p class="landing-intro">Ein Spiel, in dem Classroom Management als präventive Maßnahme genutzt wird, um Unterricht zu strukturieren, Störungen vorzubeugen und bei auftretenden Störmustern mit kooperativer Verhaltensmodifikation professionell zu intervenieren.</p>
       </div>
 
-      <div class="room-wrap panel">
-        <div class="play-area">
-          <div class="play-stage">
-            <div class="room-header centered-room-header">
-              <div class="room-title-block">
-                <h2>Klassenraum</h2>
-                <p>Ziehe Tische in freie Felder und ziehe Schüler*innen auf Tischplätze.</p>
-              </div>
-              <div class="legend" aria-label="Legende">
-                <span><i class="legend-desk"></i> Tisch</span>
-                <span><i class="legend-teacher"></i> Lehrkraft</span>
-                <span><i class="legend-vision"></i> Sichtbereich / Präsenzzone</span>
-                <span><i class="legend-risk"></i> Störrisiko</span>
-                <span><i class="legend-neutral"></i> neutralisiert</span>
-              </div>
-            </div>
-            <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
-          </div>
-          <section class="embedded-students" aria-label="Schülerprofile">
-            <div class="prep-timer prep-timer-panel" aria-live="polite"><span class="timer-label">Zeit</span><strong id="prepTimerValue">05:00</strong></div>
-            <div class="section-title-row">
-              <h2>Schülerprofile</h2>
-              <span id="placedCounter" class="pill">0/10 platziert</span>
-            </div>
-            <div id="studentPalette" class="student-palette compact-student-palette"></div>
-          </section>
-        </div>
+      <div class="landing-flow" aria-label="Ablauf der drei Spielphasen">
+        <article class="landing-step-card">
+          <span class="landing-step-label">Schritt 1</span>
+          <div class="landing-image-frame"><img src="assets/landing/step1.png" alt="Klassenraum vorbereiten" /></div>
+          <h2>Klassenraum vorbereiten</h2>
+          <p>Du ordnest Tische, Schüler*innen und Lehrkraft so an, dass Störungen präventiv reduziert und stabile Arbeitsbedingungen geschaffen werden.</p>
+        </article>
 
-        <div id="teacherDirectionPopover" class="teacher-direction-popover" hidden>
-          <p>Blickrichtung wählen</p>
-          <div class="direction-tools popover-direction-tools" aria-label="Blickrichtung wählen">
-            <button type="button" class="dir-btn" data-dir="up" aria-label="Blickrichtung nach oben">↑</button>
-            <button type="button" class="dir-btn" data-dir="left" aria-label="Blickrichtung nach links">←</button>
-            <button type="button" class="dir-btn active" data-dir="down" aria-label="Blickrichtung nach unten">↓</button>
-            <button type="button" class="dir-btn" data-dir="right" aria-label="Blickrichtung nach rechts">→</button>
-          </div>
-        </div>
-        <div id="studentHoverCard" class="student-hover-card" hidden></div>
+        <div class="landing-arrow" aria-hidden="true">→</div>
 
-        <div id="evaluationOverlay" class="evaluation-overlay" hidden aria-live="polite">
-          <div class="evaluation-card evaluation-card-game" role="dialog" aria-modal="true" aria-labelledby="evaluationTitle">
-            <div class="evaluation-head evaluation-head-compact">
-              <div>
-                <p class="eyebrow">Auswertung der Vorbereitung</p>
-                <h2 id="evaluationTitle">Startstabilität wird berechnet</h2>
-              </div>
-              <button type="button" id="overlayCloseBtn" class="overlay-close" aria-label="Auswertung schließen">×</button>
-            </div>
-            <section class="evaluation-stage" aria-live="polite">
-              <div id="evaluationSlide" class="evaluation-slide">
-                <div class="step-meta">
-                  <span id="evaluationStepCounter">Schritt 0/0</span>
-                  <span id="evaluationStepDelta" class="step-delta neutral">0</span>
-                </div>
-                <div class="evaluation-message">
-                  <h3 id="evaluationCurrentText">Berechnung startet …</h3>
-                  <p id="evaluationCurrentDetail">Die einzelnen Entscheidungen werden nacheinander bewertet.</p>
-                </div>
-              </div>
-              <button type="button" id="evaluationNextBtn" class="stage-next-btn">Weiter</button>
-            </section>
-            <section class="life-panel" aria-label="Unterrichtsstabilität">
-              <div class="life-panel-topline"><strong>Unterrichtsstabilität</strong><span id="animatedCurrentScore">Punkte aktuell: 0</span></div>
-              <div id="lifeSegments" class="life-segments" aria-label="0 von 10 Stabilitätsbalken"></div>
-              <div class="life-panel-footline"><span>Minimum 0 Balken · Maximum 10 Balken</span><span id="animatedFinalScore">Endwert: –</span></div>
-            </section>
-            <section id="evaluationActionArea" class="evaluation-action-area" hidden>
-              <h3 id="evaluationOutcomeTitle">Auswertung abgeschlossen</h3>
-              <p id="evaluationOutcomeMessage"></p>
-              <div class="evaluation-action-buttons">
-                <button type="button" id="step2Btn" class="primary-btn">Weiter zu Schritt 2: Klassenregeln aufstellen</button>
-                <button type="button" id="newAttemptBtn" class="ghost-btn" hidden>Neuer Versuch</button>
-              </div>
-            </section>
-          </div>
-        </div>
-        </div>
+        <article class="landing-step-card">
+          <span class="landing-step-label">Schritt 2</span>
+          <div class="landing-image-frame"><img src="assets/landing/step2.png" alt="Klassenregeln aufstellen" /></div>
+          <h2>Klassenregeln aufstellen</h2>
+          <p>Du wählst Regeln aus, die zu den konkreten Schülerprofilen passen und den Unterricht präventiv strukturieren.</p>
+        </article>
+
+        <div class="landing-arrow" aria-hidden="true">→</div>
+
+        <article class="landing-step-card">
+          <span class="landing-step-label">Schritt 3</span>
+          <div class="landing-image-frame"><img src="assets/landing/step3.png" alt="Unterrichtsstunde spielen" /></div>
+          <h2>Unterrichtsstunde steuern</h2>
+          <p>Du reagierst im laufenden Unterricht auf Störungen, bewegst die Lehrkraft gezielt und triffst passende pädagogische Entscheidungen.</p>
+        </article>
+      </div>
+
+      <div class="landing-actions">
+        <a class="primary-btn landing-start-btn" href="step1.html">Spiel jetzt starten</a>
+      </div>
     </section>
   </main>
-
-
-  <div id="tutorialOverlay" class="tutorial-overlay" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="tutorialTitle">
-    <div class="tutorial-backdrop"></div>
-    <article class="tutorial-book" role="document">
-      <div class="tutorial-topline"><span id="tutorialProgress" class="tutorial-progress-pill">1/8</span><button type="button" id="tutorialSkipBtn" class="tutorial-skip">Überspringen</button></div>
-      <div class="tutorial-viewport">
-        <section id="tutorialSlide" class="tutorial-slide-card">
-          <div id="tutorialVisual" class="tutorial-visual" aria-hidden="true"></div>
-          <div class="tutorial-content">
-            <p class="eyebrow">Spielerklärung</p>
-            <h2 id="tutorialTitle">Klassenraum vorbereiten</h2>
-            <p id="tutorialText">Du gestaltest den Raum, bevor die Stunde beginnt. Gute Prävention erhöht die Startstabilität.</p>
-            <ul id="tutorialList" class="tutorial-list"></ul>
-          </div>
-        </section>
-      </div>
-      <div class="tutorial-controls"><button type="button" id="tutorialPrevBtn" class="ghost-btn">Zurück</button><div id="tutorialDots" class="tutorial-dots" aria-label="Fortschritt der Spielerklärung"></div><button type="button" id="tutorialNextBtn" class="primary-btn">Weiter</button></div>
-    </article>
-  </div>
-
-  <div id="startGateOverlay" class="start-gate-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="startGateTitle">
-    <div class="tutorial-backdrop"></div>
-    <article class="start-gate-card">
-      <p class="eyebrow">Vor dem Spielstart</p>
-      <h2 id="startGateTitle">Der Unterricht beginnt in fünf Minuten.</h2>
-      <p>Nutze diese Zeit, um den Klassenraum vorzubereiten: Tische sinnvoll platzieren, Schüler*innen passend setzen, Müll entfernen und den Sichtbereich der Lehrkraft beachten.</p>
-      <ul><li>Alle 10 Schüler*innen müssen einen Platz erhalten.</li><li>Störanfällige Schüler*innen sollten möglichst gut sichtbar sitzen.</li><li>Stabilisierende Nachbarschaften können Risiken ausgleichen.</li></ul>
-      <button type="button" id="startGameBtn" class="primary-btn">Spiel starten</button>
-    </article>
-  </div>
-
-  <script src="script.js"></script>
 </body>
 </html>

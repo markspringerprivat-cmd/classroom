@@ -219,6 +219,8 @@ const evaluationCurrentDetail = document.getElementById('evaluationCurrentDetail
 const lifeSegments = document.getElementById('lifeSegments');
 const animatedCurrentScore = document.getElementById('animatedCurrentScore');
 const animatedFinalScore = document.getElementById('animatedFinalScore');
+const step1Highscore = document.getElementById('step1Highscore');
+const evaluationHighscore = document.getElementById('evaluationHighscore');
 const evaluationActionArea = document.getElementById('evaluationActionArea');
 const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle');
 const evaluationOutcomeMessage = document.getElementById('evaluationOutcomeMessage');
@@ -1184,6 +1186,30 @@ function addFeedback(feedback, type, delta, text, detail = '') {
   feedback.push({ type, delta, text, detail });
 }
 
+function getStoredHighscore() {
+  try {
+    return Number(localStorage.getItem('classroomGame.highscore') || 0) || 0;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function setStoredHighscore(value) {
+  const numeric = Number(value) || 0;
+  try {
+    localStorage.setItem('classroomGame.highscore', String(numeric));
+  } catch (error) {
+    console.warn('Highscore konnte nicht gespeichert werden:', error);
+  }
+  if (step1Highscore) step1Highscore.textContent = String(numeric);
+  if (evaluationHighscore) evaluationHighscore.textContent = `Highscore: ${numeric}`;
+}
+
+function updateStep1Highscore(value = getStoredHighscore()) {
+  if (step1Highscore) step1Highscore.textContent = String(Number(value) || 0);
+  if (evaluationHighscore) evaluationHighscore.textContent = `Highscore: ${Number(value) || 0}`;
+}
+
 function evaluatePreparation() {
   if (!allStudentsPlaced()) {
     clearResults();
@@ -1271,6 +1297,8 @@ function evaluatePreparation() {
   metrics.clampedPreparationScore = displayScore;
   state.score = displayScore;
   state.rawScore = rawScore;
+  state.highscore = rawScore * 500;
+  setStoredHighscore(state.highscore);
   state.feedback = feedback;
   state.metrics = metrics;
   showResults(displayScore, rawScore, feedback, metrics);
@@ -1464,6 +1492,7 @@ function buildStepState() {
     students,
     preparationScore: state.score,
     rawPreparationScore: state.rawScore,
+    highscore: state.highscore,
     chosenLayout: { key: state.layout, label: layouts[state.layout].label },
     teacher: state.teacher,
     desks: state.desks,
@@ -1504,6 +1533,7 @@ function showResults(score, rawScore, feedback, metrics) {
   const exportData = {
     preparationScore: score,
     rawPreparationScore: rawScore,
+    highscore: state.highscore,
     chosenLayout: { key: state.layout, label: layouts[state.layout].label },
     teacher: state.teacher,
     desks: state.desks,
@@ -1712,9 +1742,11 @@ function clearResults() {
   clearEvaluationTimers();
   state.score = null;
   state.rawScore = null;
+  state.highscore = 0;
   state.feedback = [];
   state.metrics = {};
   if (scoreValue) scoreValue.textContent = '–';
+  updateStep1Highscore(state.highscore);
   if (resultsPanel) resultsPanel.hidden = true;
   if (evaluationOverlay) evaluationOverlay.hidden = true;
   if (overlayCloseBtn) overlayCloseBtn.hidden = false;
@@ -1769,6 +1801,12 @@ const tutorialSlides = [
     text: 'Die Vorbereitung wird streng bewertet. Einzelne riskante Nachbarschaften geben jeweils Abzug, gute Sichtbarkeit und stabile Nachbarschaften geben Punkte.',
     bullets: ['Alle 10 Schüler*innen müssen platziert sein', 'Müll möglichst entfernen', 'Störanfällige Schüler*innen sichtbar setzen', 'Riskante Paare trennen oder stabilisieren', 'Danach folgt Schritt 2: Klassenregeln auswählen'],
     visual: 'checklist'
+  },
+  {
+    title: 'Highscore in Schritt 1',
+    text: 'Die Auswertung zählt nicht nur Unterrichtsstabilität, sondern startet auch deinen Highscore für das ganze Spiel.',
+    bullets: ['Jeder gewonnene Stabilitätspunkt zählt +500 Highscore-Punkte', 'Jeder Abzug kostet 500 Highscore-Punkte', 'Der Highscore wird in Schritt 2 und Schritt 3 weitergeführt'],
+    visual: 'highscore'
   }
 ];
 
@@ -1815,6 +1853,13 @@ function tutorialVisualMarkup(type) {
       <span class="viz-cell red-2 trash-home"><img class="tutorial-trash-img" src="assets/trash/paper.png" alt="zerknülltes Papier" draggable="false" /></span><span class="viz-cell red-2"></span><span class="viz-cell"></span>
       <span class="viz-cell red-2"></span><span class="viz-cell"></span><span class="viz-cell"></span>
       <span class="viz-cell"></span><span class="viz-cell"></span><span class="viz-cell broom-home"><span class="tutorial-bin-icon" aria-hidden="true">🗑️</span></span>
+    </div>`;
+  if (type === 'highscore') return `
+    <div class="tutorial-highscore-demo">
+      <span>Highscore</span>
+      <strong>+500</strong>
+      <p>für jeden stabilisierenden Punkt</p>
+      <small>Der Wert begleitet dich durch alle drei Schritte.</small>
     </div>`;
   return `
     <div class="tutorial-check-demo">
