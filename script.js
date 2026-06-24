@@ -194,6 +194,7 @@ function getBlockedJoinClasses(group, row, col) {
 
 const gridEl = document.getElementById('classroomGrid');
 const paletteEl = document.getElementById('studentPalette');
+const studentEffectPreview = document.getElementById('studentEffectPreview');
 const layoutSelect = document.getElementById('layoutSelect');
 const teacherModeSelect = document.getElementById('teacherMode');
 const teacherToken = document.getElementById('teacherToken');
@@ -353,6 +354,7 @@ function initLayout(layoutKey, keepAssignments = false) {
 function render() {
   renderGrid();
   renderPalette();
+  renderStudentEffectPreview();
   updateCounter();
   updateEvaluateButton();
 }
@@ -650,6 +652,56 @@ function renderPalette() {
     card.addEventListener('click', () => selectStudent(student.id));
     paletteEl.appendChild(card);
   });
+}
+
+function renderStudentEffectPreview() {
+  if (!studentEffectPreview) return;
+  const student = getStudent(state.selectedStudentId);
+  if (!student) {
+    studentEffectPreview.innerHTML = `<p class="student-effect-empty">Wähle links ein Schülerprofil aus, um die Wirkfelder als Mini-Vorschau zu sehen.</p>`;
+    return;
+  }
+
+  const size = 9;
+  const center = 3;
+  const raw = createRawInfluenceMap();
+  const desk = { id: 'preview-desk', row: center, col: center, orientation: 'horizontal' };
+  addStudentSpecificInfluence(raw, desk, student, { preview: true });
+  const influenceMap = combineRawInfluence(raw);
+  let html = `<div class="student-effect-head"><strong>${student.name}</strong><span>${student.note}</span></div><div class="student-effect-grid" aria-label="Wirkvorschau von ${student.name}">`;
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      const key = cellKey(row, col);
+      const influence = influenceMap.get(key);
+      const classes = ['student-effect-cell'];
+      if (influence?.kind === 'good') classes.push(`preview-good-${influence.level}`);
+      if (influence?.kind === 'risk') classes.push(`preview-risk-${influence.level}`);
+      if (influence?.kind === 'neutral') classes.push('preview-neutral');
+      if (row === center && col === center) classes.push('student-effect-center');
+      html += `<span class="${classes.join(' ')}">${row === center && col === center ? studentAvatarMarkup(student, 'student-effect-avatar', ' Vorschau') : ''}</span>`;
+    }
+  }
+  html += '</div>';
+
+  const previewNote = getStudentEffectPreviewNote(student);
+  html += `<p class="student-effect-note">${previewNote}</p>`;
+  studentEffectPreview.innerHTML = html;
+}
+
+function getStudentEffectPreviewNote(student) {
+  const notes = {
+    julius: 'Wird seitlich rot, wenn direkt daneben ein Junge sitzt.',
+    petra: 'Lenkt links und rechts ab.',
+    mehmet: 'Stabilisiert links, rechts und hinter sich.',
+    lina: 'Reagiert stark auf die Qualität der Sitznachbarschaft.',
+    ben: 'Erzeugt rund um seinen Platz Störrisiko.',
+    sara: 'Stabilisiert links und rechts.',
+    tom: 'Wirkt in Blickrichtung über mehrere Felder störend.',
+    emily: 'Braucht starke Orientierung durch Lehrkraftnähe oder helfende Nachbarschaft.',
+    niklas: 'Wird riskanter, je weiter er vom Beobachtungsbereich der Lehrkraft entfernt ist.',
+    amira: 'Stabilisiert zwei Felder nach links und rechts.'
+  };
+  return notes[student.id] || 'Diese Vorschau zeigt die typische Feldwirkung des Profils.';
 }
 
 function bindCellDnD(cell) {
@@ -1112,6 +1164,7 @@ function isDeskEffectivelyInVision(desk) {
 }
 
 function visionGreenLevel(strength) {
+  if (strength >= 6) return 6;
   if (strength >= 5) return 5;
   if (strength >= 4) return 4;
   if (strength >= 3) return 3;
@@ -1120,65 +1173,158 @@ function visionGreenLevel(strength) {
   return 0;
 }
 
-function getCombinedInfluenceMap(visionMap = getVisionMap()) {
-  const raw = new Map();
-  const add = (row, col, type, value, source = '') => {
-    if (!insideGrid(row, col) || value <= 0) return;
-    const key = cellKey(row, col);
-    const current = raw.get(key) || { green: 0, red: 0, sources: [] };
-    current[type] = Math.min(18, current[type] + value);
-    current.sources.push(source);
-    raw.set(key, current);
-  };
+function createRawInfluenceMap() {
+  return new Map();
+}
 
-  const addOrthogonalInfluence = (desk, type, value, source) => {
-    add(desk.row - 1, desk.col, type, value, `${source}: oben`);
-    add(desk.row + 1, desk.col, type, value, `${source}: unten`);
-    add(desk.row, desk.col - 1, type, value, `${source}: links`);
-    add(desk.row, desk.col + 1, type, value, `${source}: rechts`);
-  };
+function addInfluence(raw, row, col, type, value, source = '') {
+  if (!insideGrid(row, col) || value <= 0) return;
+  const key = cellKey(row, col);
+  const current = raw.get(key) || { green: 0, red: 0, sources: [] };
+  current[type] = Math.min(24, current[type] + value);
+  current.sources.push(source);
+  raw.set(key, current);
+}
 
-  const addDiagonalInfluence = (desk, type, value, source) => {
-    add(desk.row - 1, desk.col - 1, type, value, `${source}: diagonal`);
-    add(desk.row - 1, desk.col + 1, type, value, `${source}: diagonal`);
-    add(desk.row + 1, desk.col - 1, type, value, `${source}: diagonal`);
-    add(desk.row + 1, desk.col + 1, type, value, `${source}: diagonal`);
-  };
+function getDeskFacingVector(desk = {}) {
+  return desk.orientation === 'vertical' ? { dr: 0, dc: 1 } : { dr: 1, dc: 0 };
+}
 
-  visionMap.forEach((vision, key) => {
-    const [row, col] = key.split(',').map(Number);
-    add(row, col, 'green', visionGreenLevel(vision.strength), `Beobachtungsring Stufe ${vision.strength}`);
-  });
+function rotateVectorRight(vector) {
+  return { dr: vector.dc, dc: -vector.dr };
+}
 
-  Object.entries(state.assignments).forEach(([deskId, studentId]) => {
-    const desk = state.desks.find(item => item.id === deskId);
-    const student = getStudent(studentId);
-    if (!desk || !student) return;
-    const h = student.hidden;
-    const disruptive = h.distractor || h.callsOut || h.boundaryTesting || h.conflictWithBoys || h.phoneRisk || h.needsMonitoring;
-    const stabilizing = h.stabilizer || h.mediator;
+function rotateVectorLeft(vector) {
+  return { dr: -vector.dc, dc: vector.dr };
+}
 
-    if (disruptive) {
-      add(desk.row, desk.col, 'red', 5, `${student.name}: eigenes Störrisiko`);
-      addOrthogonalInfluence(desk, 'red', 6, `${student.name}: Störrisiko im direkten Umfeld`);
-      addDiagonalInfluence(desk, 'red', 4, `${student.name}: diagonales Störrisiko`);
+function addAtVector(raw, desk, vector, distance, type, value, source) {
+  addInfluence(raw, desk.row + vector.dr * distance, desk.col + vector.dc * distance, type, value, source);
+}
+
+function addAround(raw, desk, type, value, source, includeCenter = false) {
+  if (includeCenter) addInfluence(raw, desk.row, desk.col, type, value, `${source}: eigenes Feld`);
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      addInfluence(raw, desk.row + dr, desk.col + dc, type, value, source);
     }
+  }
+}
 
-    if (stabilizing) {
-      add(desk.row, desk.col, 'green', 2, `${student.name}: stabilisiert den eigenen Arbeitsbereich`);
-      addOrthogonalInfluence(desk, 'green', 3, `${student.name}: stabilisiert direktes Umfeld`);
-      addDiagonalInfluence(desk, 'green', 2, `${student.name}: stabilisiert diagonal`);
+function isMaleStudent(student) {
+  return student?.hidden?.gender === 'm';
+}
+
+function isDisruptiveStudent(student) {
+  const h = student?.hidden || {};
+  return Boolean(h.distractor || h.callsOut || h.boundaryTesting || h.conflictWithBoys || h.phoneRisk || h.needsMonitoring);
+}
+
+function isHelperStudent(student) {
+  const h = student?.hidden || {};
+  return Boolean(h.stabilizer || h.mediator || student?.id === 'mehmet' || student?.id === 'sara' || student?.id === 'amira');
+}
+
+function getAdjacentAssignedStudents(desk) {
+  return Object.entries(state.assignments).map(([deskId, studentId]) => {
+    const otherDesk = state.desks.find(item => item.id === deskId);
+    const otherStudent = getStudent(studentId);
+    return otherDesk && otherStudent ? { desk: otherDesk, student: otherStudent } : null;
+  }).filter(Boolean).filter(item => item.desk.id !== desk.id && isNear(desk, item.desk));
+}
+
+function hasAdjacentHelper(desk) {
+  return getAdjacentAssignedStudents(desk).some(item => isHelperStudent(item.student));
+}
+
+function hasAdjacentDisruptive(desk) {
+  return getAdjacentAssignedStudents(desk).some(item => isDisruptiveStudent(item.student));
+}
+
+function addStudentSpecificInfluence(raw, desk, student, options = {}) {
+  if (!desk || !student) return;
+  const facing = getDeskFacingVector(desk);
+  const left = rotateVectorLeft(facing);
+  const right = rotateVectorRight(facing);
+  const back = { dr: -facing.dr, dc: -facing.dc };
+  const front = facing;
+  const preview = Boolean(options.preview);
+
+  switch (student.id) {
+    case 'julius': {
+      if (preview) {
+        addAtVector(raw, desk, left, 1, 'red', 4, 'Julius: rot, wenn direkt seitlich ein Junge sitzt');
+        addAtVector(raw, desk, right, 1, 'red', 4, 'Julius: rot, wenn direkt seitlich ein Junge sitzt');
+        break;
+      }
+      const sidePositions = [
+        { row: desk.row + left.dr, col: desk.col + left.dc },
+        { row: desk.row + right.dr, col: desk.col + right.dc }
+      ];
+      sidePositions.forEach(pos => {
+        const otherDesk = state.desks.find(item => item.id !== desk.id && item.row === pos.row && item.col === pos.col);
+        const otherStudent = otherDesk ? getStudent(state.assignments[otherDesk.id]) : null;
+        if (isMaleStudent(otherStudent)) {
+          addInfluence(raw, desk.row, desk.col, 'red', 4, `${student.name}: Konflikt mit ${otherStudent.name}`);
+          addInfluence(raw, otherDesk.row, otherDesk.col, 'red', 4, `${otherStudent.name}: Konflikt mit ${student.name}`);
+        }
+      });
+      break;
     }
-  });
+    case 'petra':
+      addAtVector(raw, desk, left, 1, 'red', 3, 'Petra: Ablenkung links');
+      addAtVector(raw, desk, right, 1, 'red', 3, 'Petra: Ablenkung rechts');
+      break;
+    case 'mehmet':
+      addAtVector(raw, desk, left, 1, 'green', 3, 'Mehmet: stabilisiert links');
+      addAtVector(raw, desk, right, 1, 'green', 3, 'Mehmet: stabilisiert rechts');
+      addAtVector(raw, desk, back, 1, 'green', 3, 'Mehmet: stabilisiert hinter sich');
+      break;
+    case 'lina': {
+      const badNeighbor = preview ? true : hasAdjacentDisruptive(desk);
+      const goodNeighbor = preview ? false : hasAdjacentHelper(desk);
+      if (badNeighbor) addAround(raw, desk, 'red', 3, 'Lina: empfindlich auf störendes Umfeld', true);
+      else if (goodNeighbor) addAround(raw, desk, 'green', 3, 'Lina: ruhiges Umfeld stabilisiert', true);
+      break;
+    }
+    case 'ben':
+      addAround(raw, desk, 'red', 3, 'Ben: testet Grenzen im Umfeld', true);
+      break;
+    case 'sara':
+      addAtVector(raw, desk, left, 1, 'green', 2, 'Sara: hilft links');
+      addAtVector(raw, desk, right, 1, 'green', 2, 'Sara: hilft rechts');
+      break;
+    case 'tom':
+      for (let distance = 1; distance <= 5; distance++) {
+        addAtVector(raw, desk, front, distance, 'red', 7 - distance, `Tom: Zwischenrufe nach vorne, Stufe ${7 - distance}`);
+      }
+      break;
+    case 'emily': {
+      const strongTeacherRing = getVisionStrengthAt(desk.row, desk.col) >= 6;
+      const supported = hasAdjacentHelper(desk);
+      if (preview || (!strongTeacherRing && !supported)) addInfluence(raw, desk.row, desk.col, 'red', 3, 'Emily: braucht klare Orientierung');
+      if (!preview && (strongTeacherRing || supported)) addInfluence(raw, desk.row, desk.col, 'green', 3, 'Emily: Orientierung durch Nähe oder Hilfe');
+      break;
+    }
+    case 'niklas': {
+      const distance = Math.max(Math.abs(desk.row - state.teacher.row), Math.abs(desk.col - state.teacher.col));
+      const redValue = preview ? 4 : Math.max(0, Math.min(6, distance - 1));
+      if (redValue > 0 && (preview || distance > 3)) addInfluence(raw, desk.row, desk.col, 'red', redValue, `Niklas: Handy-/Off-Task-Risiko bei Distanz ${distance}`);
+      break;
+    }
+    case 'amira':
+      addAtVector(raw, desk, left, 1, 'green', 3, 'Amira: vermittelt links');
+      addAtVector(raw, desk, left, 2, 'green', 3, 'Amira: vermittelt links erweitert');
+      addAtVector(raw, desk, right, 1, 'green', 3, 'Amira: vermittelt rechts');
+      addAtVector(raw, desk, right, 2, 'green', 3, 'Amira: vermittelt rechts erweitert');
+      break;
+    default:
+      break;
+  }
+}
 
-  getActiveTrash().forEach(trash => {
-    add(trash.row, trash.col, 'red', 4, 'Müll: unruhige Lernumgebung');
-    add(trash.row - 1, trash.col, 'red', 5, 'Müll: Störreiz oben');
-    add(trash.row + 1, trash.col, 'red', 5, 'Müll: Störreiz unten');
-    add(trash.row, trash.col - 1, 'red', 5, 'Müll: Störreiz links');
-    add(trash.row, trash.col + 1, 'red', 5, 'Müll: Störreiz rechts');
-  });
-
+function combineRawInfluence(raw) {
   const combined = new Map();
   raw.forEach((value, key) => {
     const green = value.green || 0;
@@ -1200,6 +1346,32 @@ function getCombinedInfluenceMap(visionMap = getVisionMap()) {
     combined.set(key, { green, red, net, kind, level, sources: value.sources });
   });
   return combined;
+}
+
+function getCombinedInfluenceMap(visionMap = getVisionMap()) {
+  const raw = createRawInfluenceMap();
+
+  visionMap.forEach((vision, key) => {
+    const [row, col] = key.split(',').map(Number);
+    addInfluence(raw, row, col, 'green', visionGreenLevel(vision.strength), `Beobachtungsring Stufe ${vision.strength}`);
+  });
+
+  Object.entries(state.assignments).forEach(([deskId, studentId]) => {
+    const desk = state.desks.find(item => item.id === deskId);
+    const student = getStudent(studentId);
+    if (!desk || !student) return;
+    addStudentSpecificInfluence(raw, desk, student);
+  });
+
+  getActiveTrash().forEach(trash => {
+    addInfluence(raw, trash.row, trash.col, 'red', 4, 'Müll: unruhige Lernumgebung');
+    addInfluence(raw, trash.row - 1, trash.col, 'red', 5, 'Müll: Störreiz oben');
+    addInfluence(raw, trash.row + 1, trash.col, 'red', 5, 'Müll: Störreiz unten');
+    addInfluence(raw, trash.row, trash.col - 1, 'red', 5, 'Müll: Störreiz links');
+    addInfluence(raw, trash.row, trash.col + 1, 'red', 5, 'Müll: Störreiz rechts');
+  });
+
+  return combineRawInfluence(raw);
 }
 
 function forEachNeighbor(desk, callback) {
@@ -1266,13 +1438,18 @@ function evaluatePreparation() {
   }
 
   const feedback = [];
+  const influenceMap = getCombinedInfluenceMap();
   const metrics = {
     layout: state.layout,
     layoutLabel: layouts[state.layout].label,
     placedStudents: Object.keys(state.assignments).length,
     teacherMode: state.teacher.mode,
     teacherDirection: state.teacher.dir,
-    visionModel: 'teacher-radius-rings-with-line-of-sight-table-attenuation',
+    visionModel: 'teacher-radius-rings-with-student-specific-field-evaluation',
+    studentFieldEvaluation: [],
+    greenFieldStudents: [],
+    neutralFieldStudents: [],
+    redFieldStudents: [],
     visionRiskStudents: [],
     weaklyVisibleRiskStudents: [],
     blindRiskStudents: [],
@@ -1286,54 +1463,23 @@ function evaluatePreparation() {
     futureScenarioHooks: []
   };
 
-  let score = 0;
-  addFeedback(feedback, 'good', +1, 'Alle Schüler*innen sind platziert.', 'Das erhöht die Planbarkeit der Stunde, weil spätere Szenarien eindeutig auf Sitzplätze und Personen zugreifen können.');
-  score += 1;
+  addFeedback(feedback, 'good', 0, 'Alle Schüler*innen sind platziert.', 'Die Auswertung zählt jetzt den Endzustand des jeweiligen Sitzfeldes: grün gibt +1, gelb/neutral 0, rot −1.');
 
-  const layoutEffect = evaluateLayoutBase();
-  score += layoutEffect.delta;
-  feedback.push(layoutEffect.feedback);
-
-  const spacingResult = metrics.spacing;
-  if (spacingResult.invalidPairs.length === 0) {
-    score += 1;
-    addFeedback(feedback, 'good', +1, 'Laufwege zwischen Tischreihen sind frei.', 'Vor und hinter Tischen bleibt ein Gang; die Lehrkraft kann sich besser bewegen und Hilfe leisten.');
-  } else {
-    score -= spacingResult.invalidPairs.length;
-    addFeedback(feedback, 'bad', -spacingResult.invalidPairs.length, `${spacingResult.invalidPairs.length} blockierte Laufwege erkannt.`, 'Jeder direkt hintereinander gesetzte Tisch erschwert Wege, Präsenz und schnelle Unterstützung. Jeder blockierte Gang zählt einzeln.');
-  }
+  const fieldResult = evaluateStudentFieldColors(influenceMap);
+  let score = fieldResult.delta;
+  feedback.push(...fieldResult.feedback);
+  metrics.studentFieldEvaluation = fieldResult.records;
+  metrics.greenFieldStudents = fieldResult.records.filter(item => item.kind === 'good');
+  metrics.neutralFieldStudents = fieldResult.records.filter(item => item.kind === 'neutral' || item.kind === 'none');
+  metrics.redFieldStudents = fieldResult.records.filter(item => item.kind === 'risk');
+  metrics.futureScenarioHooks.push(...fieldResult.hooks);
 
   const roomObjectResult = metrics.roomObjects;
-  score += roomObjectResult.delta;
-  feedback.push(...roomObjectResult.feedback);
-  metrics.futureScenarioHooks.push(...roomObjectResult.hooks);
-
-  const visionResult = evaluateRiskStudentVision();
-  score += visionResult.delta;
-  feedback.push(...visionResult.feedback);
-  metrics.visionRiskStudents = visionResult.visionRiskStudents;
-  metrics.weaklyVisibleRiskStudents = visionResult.weaklyVisibleRiskStudents;
-  metrics.blindRiskStudents = visionResult.blindRiskStudents;
-  metrics.futureScenarioHooks.push(...visionResult.hooks);
-
-  const pairResult = evaluatePairs();
-  score += pairResult.delta;
-  feedback.push(...pairResult.feedback);
-  metrics.riskyPairs = pairResult.riskyPairs;
-  metrics.neutralizedRiskPairs = pairResult.neutralizedRiskPairs;
-  metrics.stabilizingPairs = pairResult.stabilizingPairs;
-  metrics.futureScenarioHooks.push(...pairResult.hooks);
-
-  const backRowResult = evaluateBackRowRisks();
-  score += backRowResult.delta;
-  feedback.push(...backRowResult.feedback);
-  metrics.backRowRisks = backRowResult.backRowRisks;
-  metrics.futureScenarioHooks.push(...backRowResult.hooks);
-
-  const teacherResult = evaluateTeacherMode();
-  score += teacherResult.delta;
-  feedback.push(teacherResult.feedback);
-  metrics.futureScenarioHooks.push(...teacherResult.hooks);
+  if (roomObjectResult.delta < 0) {
+    score += roomObjectResult.delta;
+    feedback.push(...roomObjectResult.feedback);
+    metrics.futureScenarioHooks.push(...roomObjectResult.hooks);
+  }
 
   const rawScore = Math.round(score);
   const displayScore = Math.max(0, Math.min(10, rawScore));
@@ -1346,6 +1492,50 @@ function evaluatePreparation() {
   state.feedback = feedback;
   state.metrics = metrics;
   showResults(displayScore, rawScore, feedback, metrics);
+}
+
+function evaluateStudentFieldColors(influenceMap = getCombinedInfluenceMap()) {
+  const result = { delta: 0, feedback: [], records: [], hooks: [] };
+  students.forEach(student => {
+    const desk = getStudentDesk(student.id);
+    if (!desk) return;
+    const influence = influenceMap.get(cellKey(desk.row, desk.col));
+    const kind = influence?.kind || 'none';
+    let delta = 0;
+    let type = 'warning';
+    let text = `${student.name} sitzt in einem neutralen Feld.`;
+    let detail = 'Gelb oder nicht eindeutig gefärbte Felder verändern die Unterrichtsstabilität nicht.';
+
+    if (kind === 'good') {
+      delta = 1;
+      type = 'good';
+      text = `${student.name} sitzt in einem grünen Feld.`;
+      detail = 'Der Endzustand des Sitzfeldes wirkt stabilisierend: +1 Unterrichtsstabilität.';
+    } else if (kind === 'risk') {
+      delta = -1;
+      type = 'bad';
+      text = `${student.name} sitzt in einem roten Feld.`;
+      detail = 'Der Endzustand des Sitzfeldes wirkt störanfällig: −1 Unterrichtsstabilität.';
+      result.hooks.push(student.hidden.phoneRisk ? 'backrow-phone-or-offtask' : student.hidden.boundaryTesting ? 'boundary-testing-seat-risk' : 'student-field-risk');
+    }
+
+    result.delta += delta;
+    const record = {
+      studentId: student.id,
+      name: student.name,
+      deskId: desk.id,
+      row: desk.row,
+      col: desk.col,
+      kind,
+      level: influence?.level || 0,
+      green: influence?.green || 0,
+      red: influence?.red || 0,
+      delta
+    };
+    result.records.push(record);
+    addFeedback(result.feedback, type, delta, text, detail);
+  });
+  return result;
 }
 
 function evaluateLayoutBase() {
