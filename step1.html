@@ -54,21 +54,19 @@
             </div>
             <div id="classroomGrid" class="classroom-grid" aria-label="Raster des Klassenraums"></div>
           </div>
-          <section class="embedded-students" aria-label="Schülerprofile">
-            <div class="prep-timer prep-timer-panel" aria-live="polite"><span class="timer-label">Zeit</span><strong id="prepTimerValue">05:00</strong></div>
-            <div class="section-title-row">
-              <h2>Schülerprofile</h2>
-              <span id="placedCounter" class="pill">0/10 platziert</span>
-            </div>
-            <div id="studentPalette" class="student-palette compact-student-palette"></div>
-            <section class="student-effect-preview-card" aria-label="Wirkvorschau ausgewähltes Schülerprofil">
-              <div class="student-effect-preview-title">
-                <h3>Wirkvorschau</h3>
-                <span>Profilwirkung</span>
+          <div class="side-column">
+            <section class="embedded-students" aria-label="Schülerprofile">
+              <div class="prep-timer prep-timer-panel" aria-live="polite"><span class="timer-label">Zeit</span><strong id="prepTimerValue">05:00</strong></div>
+              <div class="section-title-row">
+                <h2>Schülerprofile</h2>
+                <span id="placedCounter" class="pill">0/10 platziert</span>
               </div>
+              <div id="studentPalette" class="student-palette compact-student-palette"></div>
+            </section>
+            <section class="student-effect-preview-card student-effect-preview-panel" aria-label="Wirkvorschau ausgewähltes Schülerprofil">
               <div id="studentEffectPreview" class="student-effect-preview"></div>
             </section>
-          </section>
+          </div>
         </div>
 
         <div id="teacherDirectionPopover" class="teacher-direction-popover" hidden>

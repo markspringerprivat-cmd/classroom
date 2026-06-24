@@ -83,6 +83,65 @@ const dragState = {
   objectId: null
 };
 
+const DESK_DIRECTIONS = ['up', 'right', 'down', 'left'];
+
+function normalizeDeskDirection(value = 'down') {
+  return DESK_DIRECTIONS.includes(value) ? value : 'down';
+}
+
+function getDeskDirection(desk = {}) {
+  if (desk.dir) return normalizeDeskDirection(desk.dir);
+  if (typeof desk.rotation === 'number') {
+    const index = ((Math.round(desk.rotation / 90) % 4) + 4) % 4;
+    return DESK_DIRECTIONS[index];
+  }
+  if (desk.orientation === 'vertical') return 'right';
+  return 'down';
+}
+
+function getDeskRotation(desk = {}) {
+  return ({ up: 0, right: 90, down: 180, left: 270 })[getDeskDirection(desk)] || 0;
+}
+
+function getNextDeskDirection(current = 'down') {
+  const index = DESK_DIRECTIONS.indexOf(normalizeDeskDirection(current));
+  return DESK_DIRECTIONS[(index + 1) % DESK_DIRECTIONS.length];
+}
+
+function deskDirectionArrow(desk = {}) {
+  return ({ up: '↑', right: '↑', down: '↑', left: '↑' })[getDeskDirection(desk)] || '↑';
+}
+
+function applyDeskOrientation(desk = {}) {
+  desk.dir = getDeskDirection(desk);
+  desk.rotation = getDeskRotation(desk);
+  desk.orientation = (desk.dir === 'left' || desk.dir === 'right') ? 'vertical' : 'horizontal';
+  return desk;
+}
+
+function deskContentMarkup(desk = {}, options = {}) {
+  const student = options.student || null;
+  const occupied = Boolean(student);
+  const directionArrow = deskDirectionArrow(desk);
+  const statusLabel = occupied ? escapeHtml(student.name) : 'freier Platz';
+  const deleteMarkup = occupied && options.showRemove !== false
+    ? `<button type="button" class="remove-student-btn" aria-label="${escapeHtml(student.name)} vom Tisch entfernen" title="${escapeHtml(student.name)} zurück in die Auswahlliste" draggable="false">×</button>`
+    : '';
+  const avatarMarkup = occupied
+    ? `<div class="student-chip student-chip-photo"><div class="student-chip-avatar-wrap">${studentAvatarMarkup(student, 'student-chip-avatar', ' am Tisch')}</div></div>`
+    : '<div class="empty-seat">freier Platz</div>';
+  return `
+    <div class="desk-core" style="--desk-rotation:${getDeskRotation(desk)}deg;">
+      <span class="desk-direction-badge" aria-hidden="true">${directionArrow}</span>
+      ${deleteMarkup}
+      <div class="desk-label"><span>Tisch</span></div>
+      <div class="desk-content ${occupied ? 'desk-content-occupied' : 'desk-content-empty'}">
+        ${avatarMarkup}
+      </div>
+      <span class="desk-seat-label">${statusLabel}</span>
+    </div>`;
+}
+
 function studentAvatarSrc(student) {
   return student?.avatar || (student?.id ? `assets/students/${student.id}.png` : '');
 }
@@ -328,7 +387,7 @@ function installPageUtilities() {
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
   state.layout = layoutKey;
-  state.desks = layout.deskPositions.map((pos, index) => ({ id: `desk-${index + 1}`, row: pos[0], col: pos[1], orientation: 'horizontal' }));
+  state.desks = layout.deskPositions.map((pos, index) => ({ id: `desk-${index + 1}`, row: pos[0], col: pos[1], orientation: 'horizontal', dir: 'down', rotation: 0 }));
 
   if (!keepAssignments) {
     state.assignments = {};
@@ -499,6 +558,7 @@ function createRoomObjectElement(object) {
 }
 
 function createDeskElement(desk, influence = null) {
+  applyDeskOrientation(desk);
   const deskEl = document.createElement('div');
   deskEl.className = `desk desk-${desk.orientation || 'horizontal'}`;
   if (influence) applyInfluenceClasses(deskEl, influence);
@@ -507,57 +567,18 @@ function createDeskElement(desk, influence = null) {
   deskEl.title = 'Tisch ziehen und in ein anderes Rasterfeld ablegen; einmal anklicken zum Drehen';
 
   const assignedStudentId = state.assignments[desk.id];
-  const seat = document.createElement('div');
-  if (assignedStudentId) {
-    deskEl.classList.add('has-student');
-    const student = getStudent(assignedStudentId);
-    seat.className = 'student-chip student-chip-photo';
-    seat.draggable = true;
-    seat.dataset.studentId = student.id;
-    seat.title = `${student.name} (${student.age}) · ${student.note}`;
+  const student = assignedStudentId ? getStudent(assignedStudentId) : null;
+  if (student) deskEl.classList.add('has-student');
+  deskEl.innerHTML = deskContentMarkup(desk, { student, showRemove: Boolean(student) });
 
-    const avatarWrap = document.createElement('div');
-    avatarWrap.className = 'student-chip-avatar-wrap';
-    avatarWrap.innerHTML = studentAvatarMarkup(student, 'student-chip-avatar', ' am Tisch');
-
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'remove-student-btn';
-    removeBtn.setAttribute('aria-label', `${student.name} vom Tisch entfernen`);
-    removeBtn.title = `${student.name} zurück in die Auswahlliste`;
-    removeBtn.textContent = '×';
-    removeBtn.draggable = false;
+  const removeBtn = deskEl.querySelector('.remove-student-btn');
+  if (removeBtn) {
     removeBtn.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
       removeStudentFromDesk(desk.id);
     });
     removeBtn.addEventListener('dragstart', event => event.preventDefault());
-
-    seat.appendChild(avatarWrap);
-    seat.appendChild(removeBtn);
-    seat.addEventListener('dragstart', event => {
-      event.stopPropagation();
-      startDrag(event, { type: 'desk', deskId: desk.id });
-      deskEl.classList.add('dragging');
-    });
-    seat.addEventListener('dragend', () => {
-      deskEl.classList.remove('dragging');
-      clearDragState();
-    });
-    seat.addEventListener('click', event => {
-      event.stopPropagation();
-      rotateDesk(desk.id);
-    });
-    deskEl.appendChild(seat);
-  } else {
-    const label = document.createElement('div');
-    label.className = 'desk-label';
-    label.innerHTML = `<span>Tisch</span><span>${desk.orientation === 'vertical' ? '↕' : '↔'}</span>`;
-    seat.className = 'empty-seat';
-    seat.textContent = 'freier Platz';
-    deskEl.appendChild(label);
-    deskEl.appendChild(seat);
   }
 
   deskEl.addEventListener('dragstart', event => {
@@ -589,13 +610,13 @@ function createDeskElement(desk, influence = null) {
   });
 
   deskEl.addEventListener('click', event => {
+    if (event.target.closest('.remove-student-btn')) return;
     event.stopPropagation();
     if (state.selectedStudentId) assignStudentToDesk(state.selectedStudentId, desk.id);
     else rotateDesk(desk.id);
   });
 
-  if (assignedStudentId) {
-    const student = getStudent(assignedStudentId);
+  if (student) {
     deskEl.addEventListener('mouseenter', event => showStudentHoverCard(student, event));
     deskEl.addEventListener('mousemove', event => moveStudentHoverCard(event));
     deskEl.addEventListener('mouseleave', hideStudentHoverCard);
@@ -658,17 +679,20 @@ function renderStudentEffectPreview() {
   if (!studentEffectPreview) return;
   const student = getStudent(state.selectedStudentId);
   if (!student) {
-    studentEffectPreview.innerHTML = `<p class="student-effect-empty">Wähle links ein Schülerprofil aus, um die Wirkfelder als Mini-Vorschau zu sehen.</p>`;
+    let empty = '<div class="student-effect-grid student-effect-grid-empty" aria-label="Leere Wirkvorschau">';
+    for (let i = 0; i < 121; i++) empty += '<span class="student-effect-cell"></span>';
+    empty += '</div>';
+    studentEffectPreview.innerHTML = empty;
     return;
   }
 
-  const size = 9;
-  const center = 3;
+  const size = 11;
+  const center = 5;
   const raw = createRawInfluenceMap();
-  const desk = { id: 'preview-desk', row: center, col: center, orientation: 'horizontal' };
+  const desk = applyDeskOrientation({ id: 'preview-desk', row: center, col: center, dir: 'up', rotation: 0, orientation: 'horizontal' });
   addStudentSpecificInfluence(raw, desk, student, { preview: true });
   const influenceMap = combineRawInfluence(raw);
-  let html = `<div class="student-effect-head"><strong>${student.name}</strong><span>${student.note}</span></div><div class="student-effect-grid" aria-label="Wirkvorschau von ${student.name}">`;
+  let html = `<div class="student-effect-grid" aria-label="Wirkvorschau von ${student.name}">`;
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
       const key = cellKey(row, col);
@@ -677,14 +701,11 @@ function renderStudentEffectPreview() {
       if (influence?.kind === 'good') classes.push(`preview-good-${influence.level}`);
       if (influence?.kind === 'risk') classes.push(`preview-risk-${influence.level}`);
       if (influence?.kind === 'neutral') classes.push('preview-neutral');
-      if (row === center && col === center) classes.push('student-effect-center');
-      html += `<span class="${classes.join(' ')}">${row === center && col === center ? studentAvatarMarkup(student, 'student-effect-avatar', ' Vorschau') : ''}</span>`;
+      if (row === center && col === center) classes.push('student-effect-cell-desk');
+      html += `<span class="${classes.join(' ')}">${row === center && col === center ? deskContentMarkup(desk, { student, showRemove: false }) : ''}</span>`;
     }
   }
   html += '</div>';
-
-  const previewNote = getStudentEffectPreviewNote(student);
-  html += `<p class="student-effect-note">${previewNote}</p>`;
   studentEffectPreview.innerHTML = html;
 }
 
@@ -838,9 +859,11 @@ function moveDesk(deskId, row, col) {
 function rotateDesk(deskId) {
   const desk = state.desks.find(item => item.id === deskId);
   if (!desk) return;
-  desk.orientation = desk.orientation === 'vertical' ? 'horizontal' : 'vertical';
+  desk.dir = getNextDeskDirection(getDeskDirection(desk));
+  applyDeskOrientation(desk);
   clearResults();
   renderGrid();
+  renderStudentEffectPreview();
 }
 
 function canPlaceDeskAt(deskId, row, col) {
@@ -1187,7 +1210,14 @@ function addInfluence(raw, row, col, type, value, source = '') {
 }
 
 function getDeskFacingVector(desk = {}) {
-  return desk.orientation === 'vertical' ? { dr: 0, dc: 1 } : { dr: 1, dc: 0 };
+  switch (getDeskDirection(desk)) {
+    case 'up': return { dr: -1, dc: 0 };
+    case 'right': return { dr: 0, dc: 1 };
+    case 'left': return { dr: 0, dc: -1 };
+    case 'down':
+    default:
+      return { dr: 1, dc: 0 };
+  }
 }
 
 function rotateVectorRight(vector) {
@@ -1364,11 +1394,13 @@ function getCombinedInfluenceMap(visionMap = getVisionMap()) {
   });
 
   getActiveTrash().forEach(trash => {
-    addInfluence(raw, trash.row, trash.col, 'red', 4, 'Müll: unruhige Lernumgebung');
-    addInfluence(raw, trash.row - 1, trash.col, 'red', 5, 'Müll: Störreiz oben');
-    addInfluence(raw, trash.row + 1, trash.col, 'red', 5, 'Müll: Störreiz unten');
-    addInfluence(raw, trash.row, trash.col - 1, 'red', 5, 'Müll: Störreiz links');
-    addInfluence(raw, trash.row, trash.col + 1, 'red', 5, 'Müll: Störreiz rechts');
+    addInfluence(raw, trash.row, trash.col, 'red', 6, 'Müll: starke direkte Störung');
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        addInfluence(raw, trash.row + dr, trash.col + dc, 'red', 6, 'Müll: direkter Störring');
+      }
+    }
   });
 
   return combineRawInfluence(raw);
@@ -1729,7 +1761,7 @@ function buildStepState() {
     highscore: state.highscore,
     chosenLayout: { key: state.layout, label: layouts[state.layout].label },
     teacher: state.teacher,
-    desks: state.desks,
+    desks: state.desks.map(desk => applyDeskOrientation({ ...desk })),
     assignments: state.assignments,
     blockedCells,
     objects: state.objects,
@@ -1770,7 +1802,7 @@ function showResults(score, rawScore, feedback, metrics) {
     highscore: state.highscore,
     chosenLayout: { key: state.layout, label: layouts[state.layout].label },
     teacher: state.teacher,
-    desks: state.desks,
+    desks: state.desks.map(desk => applyDeskOrientation({ ...desk })),
     assignments: state.assignments,
     blockedCells,
     objects: state.objects,

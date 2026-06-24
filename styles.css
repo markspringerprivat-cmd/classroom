@@ -7723,7 +7723,7 @@ body.rules-page {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 3px;
-  max-width: 250px;
+  max-width: 270px;
   margin: 0 auto;
 }
 
@@ -7763,4 +7763,256 @@ body.rules-page {
   height: 92%;
   object-fit: contain;
   display: block;
+}
+
+/* ===== Version 34: drehbare Tischkacheln + separate Wirkvorschau ===== */
+.play-area {
+  align-items: flex-start;
+}
+
+.side-column {
+  flex: 0 0 320px;
+  width: 320px;
+  max-height: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.embedded-students {
+  flex: 1 1 auto;
+  width: 100%;
+  max-height: none;
+  margin: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.compact-student-palette {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.student-effect-preview-panel {
+  margin-top: 0;
+  min-height: 210px;
+  padding: 14px;
+}
+
+.student-effect-preview {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+}
+
+.student-effect-grid {
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  gap: 5px;
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+.student-effect-grid-empty {
+  opacity: 0.8;
+}
+
+.student-effect-cell {
+  min-width: 0;
+  min-height: 0;
+}
+
+.student-effect-cell-desk {
+  overflow: visible;
+  border-color: transparent;
+  background: transparent;
+}
+
+.student-effect-cell .desk-core {
+  width: 100%;
+  height: 100%;
+}
+
+.desk::after,
+.frozen-desk::after,
+.branch-desk::after {
+  content: none !important;
+}
+
+.desk,
+.frozen-desk,
+.branch-desk {
+  overflow: hidden;
+}
+
+.desk-core {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: center;
+  justify-items: center;
+  padding: 6px 6px 5px;
+  transform: rotate(var(--desk-rotation, 0deg));
+  transform-origin: center center;
+  transition: transform 0.18s ease;
+}
+
+.desk-label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+
+.desk-content {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.empty-seat {
+  display: grid;
+  place-items: center;
+  width: calc(100% - 8px);
+  min-height: 28px;
+  padding: 5px 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.68);
+  background: rgba(255, 255, 255, 0.03);
+  color: #f8fafc;
+  font-size: 0.55rem;
+  line-height: 1.08;
+  text-align: center;
+}
+
+.desk-seat-label {
+  display: none;
+}
+
+.student-chip-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.student-chip-avatar-wrap {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.student-chip-avatar {
+  max-width: 88%;
+  max-height: 88%;
+  object-fit: contain;
+}
+
+.desk-direction-badge,
+.remove-student-btn {
+  position: absolute;
+  top: 5px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 0.78rem;
+  line-height: 1;
+  z-index: 3;
+}
+
+.desk-direction-badge {
+  left: 5px;
+  border: 1px solid rgba(191, 219, 254, 0.5);
+  background: rgba(30, 64, 175, 0.34);
+  color: #eff6ff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.desk:not(.has-student) .desk-direction-badge {
+  left: auto;
+  right: 5px;
+}
+
+.remove-student-btn {
+  right: 5px;
+  border: 1px solid rgba(248, 113, 113, 0.64) !important;
+  background: rgba(127, 29, 29, 0.72) !important;
+  color: #fff !important;
+  cursor: pointer;
+  padding: 0;
+}
+
+.remove-student-btn:hover,
+.remove-student-btn:focus-visible {
+  transform: scale(1.05);
+  outline: none;
+}
+
+.frozen-desk .desk-core,
+.branch-desk .desk-core {
+  padding: 4px;
+}
+
+.frozen-desk .desk-label,
+.branch-desk .desk-label {
+  font-size: 0.45rem;
+}
+
+.frozen-desk .empty-seat,
+.branch-desk .empty-seat {
+  min-height: 16px;
+  font-size: 0.42rem;
+  border-radius: 7px;
+}
+
+.frozen-desk .desk-direction-badge,
+.branch-desk .desk-direction-badge,
+.frozen-desk .remove-student-btn,
+.branch-desk .remove-student-btn {
+  width: 12px;
+  height: 12px;
+  top: 3px;
+  font-size: 0.5rem;
+}
+
+.frozen-desk:not(.has-student) .desk-direction-badge,
+.branch-desk:not(.has-student) .desk-direction-badge {
+  right: 3px;
+}
+
+.frozen-desk.has-student .desk-direction-badge,
+.branch-desk.has-student .desk-direction-badge {
+  left: 3px;
+}
+
+.rules-left.rules-left-v4 .frozen-desk,
+.branch-desk {
+  background: rgba(15, 23, 42, 0.06) !important;
+  border: 2px solid rgba(255, 255, 255, 0.88) !important;
+}
+
+@media (max-width: 1150px) {
+  .play-area {
+    flex-direction: column;
+  }
+  .side-column {
+    width: 100%;
+    max-height: none;
+  }
 }

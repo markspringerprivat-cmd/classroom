@@ -246,6 +246,34 @@ function studentAvatarMarkup(student, className = 'student-avatar', altSuffix = 
   return src ? `<img class="${className}" src="${src}" alt="${escapeHtml(alt)}" />` : `<span class="${className} avatar-fallback">${escapeHtml((student?.name || '?').charAt(0))}</span>`;
 }
 
+const DESK_DIRECTIONS = ['up', 'right', 'down', 'left'];
+function normalizeDeskDirection(value = 'down') {
+  return DESK_DIRECTIONS.includes(value) ? value : 'down';
+}
+function getDeskDirection(desk = {}) {
+  if (desk.dir) return normalizeDeskDirection(desk.dir);
+  if (typeof desk.rotation === 'number') {
+    const index = ((Math.round(desk.rotation / 90) % 4) + 4) % 4;
+    return DESK_DIRECTIONS[index];
+  }
+  if (desk.orientation === 'vertical') return 'right';
+  return 'down';
+}
+function getDeskRotation(desk = {}) {
+  return ({ up: 0, right: 90, down: 180, left: 270 })[getDeskDirection(desk)] || 0;
+}
+function deskMarkup(desk = {}, student = null, away = false, countdownMarkup = '') {
+  return `
+    <div class="desk-core" style="--desk-rotation:${getDeskRotation(desk)}deg;">
+      <span class="desk-direction-badge" aria-hidden="true">↑</span>
+      <div class="desk-label"><span>Tisch</span></div>
+      <div class="desk-content ${student && !away ? 'desk-content-occupied' : 'desk-content-empty'}">
+        ${student && !away ? `<div class="student-chip student-chip-photo"><div class="student-chip-avatar-wrap">${studentAvatarMarkup(student, 'branch-student-avatar', ' am Tisch')}</div></div>${countdownMarkup}` : '<div class="empty-seat">freier Platz</div>'}
+      </div>
+      <span class="desk-seat-label">${student && !away ? escapeHtml(student.name) : 'freier Platz'}</span>
+    </div>`;
+}
+
 function buildContext(stepData, ruleData) {
   const students = enrichStudents(Array.isArray(stepData?.students) ? stepData.students : fallbackStudents);
   const desks = Array.isArray(stepData?.desks) && stepData.desks.length ? stepData.desks : defaultBranchStep.desks;
@@ -2275,12 +2303,10 @@ function renderBranchGame() {
         const away = student ? isStudentAway(student.id) : false;
         const activeIncident = student && !away ? activeByStudent.get(student.id) : null;
         const deskEl = document.createElement('div');
-        deskEl.className = `branch-desk desk-${desk.orientation || 'horizontal'}${activeIncident ? ' incident-pulse' : ''}${student && !away ? ' has-student' : ''}${away ? ' student-away' : ''}`;
-        if (student && !away) {
-          deskEl.innerHTML = `${studentAvatarMarkup(student, 'branch-student-avatar', ' am Tisch')}${activeIncident ? `<strong class="incident-countdown-number">${Math.max(0, Math.ceil((activeIncident.deadline - Date.now()) / 1000))}</strong>` : '<strong class="sr-only">'+ escapeHtml(student.name) +'</strong>'}`;
-        } else {
-          deskEl.innerHTML = `<strong class="sr-only">Platz frei</strong>`;
-        }
+        const direction = getDeskDirection(desk);
+        deskEl.className = `branch-desk desk-${direction === 'left' || direction === 'right' ? 'vertical' : 'horizontal'}${activeIncident ? ' incident-pulse' : ''}${student && !away ? ' has-student' : ''}${away ? ' student-away' : ''}`;
+        const countdownMarkup = activeIncident ? `<strong class="incident-countdown-number">${Math.max(0, Math.ceil((activeIncident.deadline - Date.now()) / 1000))}</strong>` : '';
+        deskEl.innerHTML = deskMarkup(desk, student, away, countdownMarkup);
         if (activeIncident) {
           const left = Math.max(0, Math.ceil((activeIncident.deadline - Date.now()) / 1000));
           cell.setAttribute('aria-label', `${student.name}: Störung, noch ${left} Sekunden`);
