@@ -1116,7 +1116,14 @@ function isTouchDnDDevice() {
   return (navigator.maxTouchPoints || 0) > 0;
 }
 
+function cleanupLiveTrashGhosts() {
+  document.querySelectorAll('.live-trash-ghost, .touch-drag-ghost-trash').forEach(ghost => ghost.remove());
+  document.querySelectorAll('.branch-object-bin.trash-drop-ready, .branch-bin-drop-cell.trash-drop-ready, .branch-cell.trash-drop-ready').forEach(el => el.classList.remove('trash-drop-ready'));
+  document.body.classList.remove('touch-drag-active', 'live-trash-drag-active');
+}
+
 function createLiveTrashGhost(source) {
+  cleanupLiveTrashGhosts();
   const ghost = document.createElement('div');
   ghost.className = 'touch-drag-ghost touch-drag-ghost-trash live-trash-ghost';
   const rect = source.getBoundingClientRect();
@@ -1172,47 +1179,84 @@ function bindLiveTrashPointerDrag(source, object) {
   if (!source || source.dataset.liveTrashPointerBound === '1') return;
   source.dataset.liveTrashPointerBound = '1';
   source.style.touchAction = 'none';
+  source.style.webkitUserDrag = 'none';
   source.addEventListener('pointerdown', event => {
     if (!isTouchDnDDevice()) return;
     if (event.button !== undefined && event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+
+    if (liveTrashPointerDrag?.cancel) liveTrashPointerDrag.cancel();
+    cleanupLiveTrashGhosts();
+
     liveTrashDragState.objectId = object.id;
-    liveTrashPointerDrag = { pointerId: event.pointerId, objectId: object.id, source, ghost: createLiveTrashGhost(source), x: event.clientX, y: event.clientY };
+    const drag = {
+      pointerId: event.pointerId,
+      objectId: object.id,
+      source,
+      ghost: createLiveTrashGhost(source),
+      x: event.clientX,
+      y: event.clientY,
+      cleanup: null,
+      cancel: null
+    };
+    liveTrashPointerDrag = drag;
     source.classList.add('touch-drag-source');
-    document.body.classList.add('touch-drag-active');
+    document.body.classList.add('touch-drag-active', 'live-trash-drag-active');
     moveLiveTrashGhost(event.clientX, event.clientY);
     highlightLiveTrashDrop(event.clientX, event.clientY);
-    try { source.setPointerCapture(event.pointerId); } catch (error) {}
+
+    const move = moveEvent => {
+      if (!liveTrashPointerDrag || liveTrashPointerDrag !== drag || drag.pointerId !== moveEvent.pointerId) return;
+      moveEvent.preventDefault();
+      moveEvent.stopPropagation();
+      drag.x = moveEvent.clientX;
+      drag.y = moveEvent.clientY;
+      moveLiveTrashGhost(drag.x, drag.y);
+      highlightLiveTrashDrop(drag.x, drag.y);
+    };
+
+    const finish = (finishEvent, shouldDrop = true) => {
+      if (!liveTrashPointerDrag || liveTrashPointerDrag !== drag) return;
+      if (finishEvent && drag.pointerId !== finishEvent.pointerId) return;
+      finishEvent?.preventDefault?.();
+      finishEvent?.stopPropagation?.();
+
+      const dropX = finishEvent?.clientX ?? drag.x;
+      const dropY = finishEvent?.clientY ?? drag.y;
+      const objectId = drag.objectId;
+      const target = shouldDrop ? getLiveTrashDropTarget(dropX, dropY) : null;
+
+      drag.cleanup?.();
+      drag.ghost?.remove();
+      drag.source?.classList.remove('touch-drag-source');
+      document.querySelectorAll('.branch-object-bin.trash-drop-ready, .branch-bin-drop-cell.trash-drop-ready, .branch-cell.trash-drop-ready').forEach(el => el.classList.remove('trash-drop-ready'));
+      document.body.classList.remove('touch-drag-active', 'live-trash-drag-active');
+      liveTrashDragState.objectId = null;
+      liveTrashPointerDrag = null;
+
+      if (target) {
+        const trash = (game.dynamicTrash || []).find(item => item.id === objectId && !item.removed)
+          || (context.stepData?.objects?.trash || []).find(item => item.id === objectId && !item.removed);
+        if (trash) clearTrashIncidentAt(trash.row, trash.col);
+      }
+    };
+
+    const cancel = cancelEvent => finish(cancelEvent, false);
+    const cleanup = () => {
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', finish, true);
+      document.removeEventListener('pointercancel', cancel, true);
+      window.removeEventListener('blur', cancel, true);
+    };
+    drag.cleanup = cleanup;
+    drag.cancel = cancel;
+
+    document.addEventListener('pointermove', move, { passive: false, capture: true });
+    document.addEventListener('pointerup', finish, { passive: false, capture: true });
+    document.addEventListener('pointercancel', cancel, { passive: false, capture: true });
+    window.addEventListener('blur', cancel, { passive: false, capture: true });
   }, { passive: false });
-  source.addEventListener('pointermove', event => {
-    if (!liveTrashPointerDrag || liveTrashPointerDrag.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    event.stopPropagation();
-    liveTrashPointerDrag.x = event.clientX;
-    liveTrashPointerDrag.y = event.clientY;
-    moveLiveTrashGhost(event.clientX, event.clientY);
-    highlightLiveTrashDrop(event.clientX, event.clientY);
-  }, { passive: false });
-  function end(event) {
-    if (!liveTrashPointerDrag || liveTrashPointerDrag.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const target = getLiveTrashDropTarget(liveTrashPointerDrag.x, liveTrashPointerDrag.y);
-    if (target) {
-      const trash = (game.dynamicTrash || []).find(item => item.id === liveTrashPointerDrag.objectId && !item.removed)
-        || (context.stepData?.objects?.trash || []).find(item => item.id === liveTrashPointerDrag.objectId && !item.removed);
-      if (trash) clearTrashIncidentAt(trash.row, trash.col);
-    }
-    liveTrashPointerDrag.ghost?.remove();
-    liveTrashPointerDrag.source?.classList.remove('touch-drag-source');
-    document.body.classList.remove('touch-drag-active');
-    document.querySelectorAll('.branch-object-bin.trash-drop-ready, .branch-bin-drop-cell.trash-drop-ready').forEach(el => el.classList.remove('trash-drop-ready'));
-    liveTrashDragState.objectId = null;
-    liveTrashPointerDrag = null;
-  }
-  source.addEventListener('pointerup', end, { passive: false });
-  source.addEventListener('pointercancel', end, { passive: false });
 }
 
 const branchTutorialSlides = [
@@ -1600,8 +1644,13 @@ function tickLesson() {
   game.lessonLeft = Math.max(0, game.lessonLeft - 0.25);
   updateLessonTimer();
   checkIncidentTimeouts();
-  if (game.activeIncidents.length) renderBranchGame();
-  else renderIncidents();
+  if (liveTrashPointerDrag) {
+    renderIncidents();
+  } else if (game.activeIncidents.length) {
+    renderBranchGame();
+  } else {
+    renderIncidents();
+  }
   maybeSpawnIncident();
   if (game.lessonLeft <= 0) finishLesson('time');
 }
@@ -2374,6 +2423,7 @@ function hasAvailableApproachCue(incident, reservedKeys = currentApproachCueKeys
 
 function renderBranchGame() {
   if (!branchGrid) return;
+  if (liveTrashPointerDrag) return;
   const rows = context.stepData?.rows || 9;
   const cols = context.stepData?.cols || 10;
   branchGrid.style.setProperty('--branch-cols', cols);
@@ -2450,7 +2500,9 @@ function renderBranchGame() {
           obj.addEventListener('dragleave', () => obj.classList.remove('trash-drop-ready'));
           obj.addEventListener('drop', event => handleTrashDrop(event, obj));
         } else {
-          obj.draggable = true;
+          obj.draggable = !isTouchDnDDevice();
+          obj.style.touchAction = 'none';
+          obj.style.webkitUserDrag = 'none';
           obj.innerHTML = trashImageMarkup(object, 'trash-visual-img branch-trash-img', 'Müll im Klassenraum');
           obj.title = 'Ziehe dieses Müllbild in den Mülleimer unten rechts.';
           obj.addEventListener('dragstart', event => {
