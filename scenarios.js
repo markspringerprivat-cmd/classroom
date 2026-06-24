@@ -2839,7 +2839,7 @@ function showOutcomeModal(result) {
     outcomeImage.alt = won ? 'Gewonnener Unterrichtsverlauf' : 'Verlorener Unterrichtsverlauf';
   }
   if (outcomeEyebrow) outcomeEyebrow.textContent = won ? 'Unterricht geschafft' : 'Game over';
-  if (outcomeTitle) outcomeTitle.textContent = won ? 'Du hast den Unterricht stabil gehalten.' : 'Die Klasse ist gekippt.';
+  if (outcomeTitle) outcomeTitle.textContent = won ? 'Du hast den Unterricht stabil gehalten.' : 'Die Unterrichtsstimmung ist gekippt.';
   if (outcomeText) {
     outcomeText.textContent = won
       ? `Die fünf Minuten sind abgelaufen, ohne dass die Unterrichtsstabilität auf 0 gefallen ist. Übrig: ${game.score}/10 Stabilität.`

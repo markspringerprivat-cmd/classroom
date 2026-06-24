@@ -678,7 +678,7 @@ function renderPalette() {
 function renderStudentEffectPreview() {
   if (!studentEffectPreview) return;
   const student = getStudent(state.previewStudentId || state.selectedStudentId);
-  const size = 9;
+  const size = 5;
   const center = Math.floor(size / 2);
 
   if (!student) {
@@ -1978,7 +1978,7 @@ function showStep1GameOverModal() {
     outcomeImage.alt = 'Game-over-Bild';
   }
   if (outcomeEyebrow) outcomeEyebrow.textContent = 'Game over';
-  if (outcomeTitle) outcomeTitle.textContent = 'Die Klasse ist gekippt.';
+  if (outcomeTitle) outcomeTitle.textContent = 'Die Unterrichtsstimmung ist gekippt.';
   if (outcomeText) outcomeText.textContent = 'Die Unterrichtsstabilität ist bereits in der Vorbereitung auf 0 gefallen.';
   if (outcomeAdvice) outcomeAdvice.textContent = 'Achte beim nächsten Mal besonders auf kurze freie Laufwege, sichtbare Risikoschüler*innen, eine gute Blickrichtung der Lehrkraft und darauf, dass kritische Plätze möglichst in den starken vorderen Beobachtungsringen liegen.';
   if (outcomeHighscore) outcomeHighscore.textContent = String(finalScore);

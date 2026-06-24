@@ -8139,3 +8139,440 @@ body.rules-page {
 .branch-desk.student-away {
   opacity: 1 !important;
 }
+
+
+/* ===== Version 37: Vorschaugröße, Phase-3-Kopfzeile und responsive Varianten ===== */
+
+/* Schritt 1: rechte Spalte bündig bis zum unteren Rand des Klassenraumrasters führen. */
+.step1-page .play-area {
+  align-items: stretch !important;
+}
+
+.step1-page .play-stage {
+  display: flex;
+  flex-direction: column;
+}
+
+.step1-page .classroom-grid {
+  flex: 0 0 auto;
+}
+
+.step1-page .step1-side-column {
+  align-self: stretch !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 340px;
+  flex: 0 0 340px;
+  max-height: none !important;
+}
+
+.step1-page .step1-side-column .embedded-students {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.step1-page .step1-side-column .compact-student-palette {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+.step1-page .student-effect-preview-panel {
+  flex: 0 0 172px !important;
+  min-height: 172px !important;
+  max-height: 172px !important;
+  padding: 12px !important;
+  overflow: hidden !important;
+}
+
+.step1-page .student-effect-preview {
+  min-height: 0 !important;
+  height: 100% !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+}
+
+.step1-page .student-effect-grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  width: min(100%, 142px) !important;
+  max-width: 142px !important;
+  margin: 0 auto !important;
+}
+
+.step1-page .student-effect-cell {
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 7px !important;
+}
+
+.step1-page .student-effect-center-avatar {
+  width: 86% !important;
+  height: 86% !important;
+}
+
+/* Phase 3: Kopfzeile wie Schritt 1/2 und Bedienknöpfe sauber nebeneinander. */
+.phase3-topbar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  gap: 18px !important;
+}
+
+.phase3-header-copy .eyebrow {
+  margin: 0 0 6px !important;
+}
+
+.phase3-header-copy h1 {
+  margin: 0 0 6px !important;
+}
+
+.phase3-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  width: auto !important;
+}
+
+.phase3-actions .lesson-clock,
+.phase3-actions .primary-btn,
+.phase3-actions .ghost-btn {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+.phase3-actions .primary-btn,
+.phase3-actions .ghost-btn {
+  min-height: 48px;
+}
+
+/* Alle Game-over-Screens sprachlich ruhiger. */
+.branch-outcome-card #outcomeTitle {
+  text-wrap: balance;
+}
+
+/* iPad / Tablet: Desktop-Struktur beibehalten, aber ohne horizontales Abschneiden. */
+@media (max-width: 1180px) and (min-width: 761px) {
+  .topbar,
+  .compact-topbar,
+  .phase3-topbar,
+  .rules-topbar {
+    width: min(100% - 28px, 1100px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .room-wrap,
+  .rules-shell-v4,
+  .phase3-shell {
+    width: min(100% - 28px, 1100px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .step1-page .play-area {
+    gap: 18px !important;
+    justify-content: center !important;
+  }
+
+  .step1-page .step1-side-column {
+    flex-basis: 300px !important;
+    width: 300px !important;
+  }
+
+  .step1-page .student-card {
+    min-height: 78px;
+  }
+
+  .rules-shell-v4 {
+    grid-template-columns: 330px minmax(0, 1fr) !important;
+  }
+
+  .phase3-topbar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .phase3-actions {
+    justify-content: flex-start !important;
+  }
+
+  .phase3-shell {
+    grid-template-columns: 240px minmax(680px, 1fr) 280px !important;
+    overflow-x: auto !important;
+    align-items: stretch !important;
+  }
+}
+
+/* Smartphone: Spielfeld mittig, Profile griffbereit, Inhalte vertikal bedienbar. */
+@media (max-width: 760px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .page-utility-bar {
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 10000 !important;
+    padding: 6px 8px !important;
+    background: rgba(2, 6, 23, 0.82);
+    backdrop-filter: blur(12px);
+  }
+
+  .topbar,
+  .compact-topbar,
+  .phase3-topbar,
+  .rules-topbar {
+    width: calc(100% - 18px) !important;
+    margin: 8px auto 10px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .topbar h1,
+  .compact-topbar h1,
+  .phase3-header-copy h1 {
+    font-size: clamp(1.7rem, 8vw, 2.35rem) !important;
+    line-height: 1.05 !important;
+  }
+
+  .subtitle {
+    font-size: 0.92rem !important;
+  }
+
+  .controls.compact-controls,
+  .button-row {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
+  .controls.compact-controls {
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    width: calc(100% - 18px);
+    margin: 0 auto 10px;
+    backdrop-filter: blur(14px);
+  }
+
+  .room-wrap {
+    width: calc(100% - 12px) !important;
+    margin: 0 auto !important;
+    padding: 10px !important;
+    overflow: visible !important;
+  }
+
+  .step1-page .play-area {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  .step1-page .step1-side-column {
+    order: -1 !important;
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    max-height: none !important;
+    gap: 10px !important;
+  }
+
+  .step1-page .embedded-students {
+    max-height: none !important;
+    padding: 10px !important;
+  }
+
+  .step1-page .prep-timer-panel {
+    min-height: 54px !important;
+  }
+
+  .step1-page .compact-student-palette {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(210px, 74vw) !important;
+    grid-template-columns: none !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-height: 112px !important;
+    padding-bottom: 8px !important;
+    scroll-snap-type: x proximity;
+  }
+
+  .step1-page .student-card {
+    scroll-snap-align: start;
+    min-height: 92px !important;
+  }
+
+  .step1-page .student-effect-preview-panel {
+    min-height: 150px !important;
+    max-height: 150px !important;
+    flex-basis: 150px !important;
+  }
+
+  .step1-page .student-effect-grid {
+    width: 126px !important;
+    max-width: 126px !important;
+    gap: 4px !important;
+  }
+
+  .play-stage {
+    width: 100% !important;
+    align-items: center !important;
+  }
+
+  .room-header.centered-room-header {
+    width: 100%;
+    text-align: center;
+  }
+
+  .legend {
+    justify-content: center !important;
+    gap: 8px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .classroom-grid,
+  .branch-classroom-grid {
+    width: min(100%, 96vw) !important;
+    max-width: 96vw !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .grid-cell,
+  .branch-grid-cell {
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+
+  .rules-shell-v4 {
+    width: calc(100% - 12px) !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .rules-left-v4,
+  .rules-main-v4 {
+    width: 100% !important;
+  }
+
+  .rules-board {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .rule-column {
+    min-height: 260px !important;
+    max-height: 360px !important;
+  }
+
+  .rule-list {
+    overflow-y: auto !important;
+  }
+
+  .phase3-topbar {
+    align-items: stretch !important;
+  }
+
+  .phase3-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .phase3-actions .lesson-clock {
+    grid-column: 1 / -1;
+  }
+
+  .phase3-actions .primary-btn,
+  .phase3-actions .ghost-btn {
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+
+  .phase3-shell {
+    width: calc(100% - 12px) !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .phase3-room-panel {
+    order: 1 !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .phase3-left-panel {
+    order: 2 !important;
+  }
+
+  .phase3-right-panel {
+    order: 3 !important;
+  }
+
+  .teacher-image-only img {
+    max-height: 190px !important;
+  }
+
+  .landing-shell {
+    padding: 16px 10px !important;
+  }
+
+  .landing-flow {
+    grid-template-columns: 1fr !important;
+  }
+
+  .landing-step-arrow {
+    transform: rotate(90deg);
+    margin: 4px auto;
+  }
+
+  .tutorial-book,
+  .branch-modal-card,
+  .branch-outcome-card {
+    width: calc(100vw - 18px) !important;
+    max-height: calc(100vh - 18px) !important;
+  }
+}
+
+@media (max-width: 440px) {
+  .classroom-grid,
+  .branch-classroom-grid {
+    width: 98vw !important;
+    max-width: 98vw !important;
+  }
+
+  .grid-cell {
+    border-radius: 9px !important;
+  }
+
+  .desk-free-label {
+    font-size: 0.58rem !important;
+  }
+
+  .phase3-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .phase3-actions .lesson-clock {
+    grid-column: auto;
+  }
+}

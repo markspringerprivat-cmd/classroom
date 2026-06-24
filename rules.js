@@ -832,7 +832,7 @@ function showRulesGameOverModal(finalLives = 0, finalHighscore = readStoredHighs
     outcomeImage.alt = 'Game-over-Bild';
   }
   if (outcomeEyebrow) outcomeEyebrow.textContent = 'Game over';
-  if (outcomeTitle) outcomeTitle.textContent = 'Die Klasse ist gekippt.';
+  if (outcomeTitle) outcomeTitle.textContent = 'Die Unterrichtsstimmung ist gekippt.';
   if (outcomeText) outcomeText.textContent = 'Die Unterrichtsstabilität ist durch die Regelauswahl auf 0 gefallen.';
   if (outcomeAdvice) outcomeAdvice.textContent = 'Achte beim nächsten Mal darauf, Regeln mit konkreten Risikoprofilen der Klasse zu verbinden, riskante Regeln auszusortieren und neutrale Regeln nur dann zu wählen, wenn sie wirklich zur Situation passen.';
   if (outcomeHighscore) outcomeHighscore.textContent = String(Number(finalHighscore) || 0);
