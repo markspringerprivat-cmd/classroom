@@ -2536,6 +2536,22 @@ function closeStartGate() {
 
 function syncStep1SidebarLayout() {
   if (!gridEl || !step1SideColumnEl || !studentPreviewPanelEl || !document.body.classList.contains('step1-page')) return;
+  const tabletPortraitMode = document.body.classList.contains('ipad-game-mode') && window.matchMedia('(orientation: portrait) and (min-width: 700px) and (max-width: 1180px)').matches;
+  if (tabletPortraitMode) {
+    const embeddedStudents = step1SideColumnEl.querySelector('.embedded-students');
+    const paletteEl = step1SideColumnEl.querySelector('.compact-student-palette');
+    step1SideColumnEl.style.height = '';
+    step1SideColumnEl.style.maxHeight = '';
+    if (embeddedStudents) {
+      embeddedStudents.style.height = '';
+      embeddedStudents.style.maxHeight = '';
+      embeddedStudents.style.minHeight = '';
+    }
+    if (paletteEl) paletteEl.style.maxHeight = '';
+    if (roomHeaderEl) roomHeaderEl.style.maxWidth = '';
+    return;
+  }
+
   window.requestAnimationFrame(() => {
     const gridRect = gridEl.getBoundingClientRect();
     const sideRect = step1SideColumnEl.getBoundingClientRect();

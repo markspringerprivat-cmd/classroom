@@ -9787,3 +9787,436 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
     --branch-cell: clamp(31px, min(calc((100dvw - 322px) / 10), calc((100dvh - 145px) / 9)), 42px) !important;
   }
 }
+
+/* ===== Version 45: Tablet-Hochkant-Spielmodus ===== */
+@media (orientation: portrait) and (min-width: 700px) and (max-width: 1180px) {
+  html.ipad-game-mode,
+  body.ipad-game-mode {
+    width: 100%;
+    min-height: 100dvh;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    background: #07111f !important;
+  }
+
+  body.ipad-game-mode .fullscreen-exit-btn {
+    right: 12px !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    z-index: 20000 !important;
+  }
+
+  body.ipad-game-mode.step1-page,
+  body.ipad-game-mode.rules-page,
+  body.ipad-game-mode.scenarios-page {
+    padding: max(8px, env(safe-area-inset-top)) 10px max(18px, env(safe-area-inset-bottom)) !important;
+  }
+
+  body.ipad-game-mode.step1-page .topbar,
+  body.ipad-game-mode.rules-page .rules-topbar,
+  body.ipad-game-mode.scenarios-page .phase3-topbar {
+    width: min(100%, 760px) !important;
+    max-width: 760px !important;
+    margin: 0 auto 8px !important;
+    padding: 10px 12px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  body.ipad-game-mode .topbar h1,
+  body.ipad-game-mode .compact-topbar h1,
+  body.ipad-game-mode .phase3-header-copy h1 {
+    font-size: clamp(1.45rem, 4.2vw, 2.35rem) !important;
+    line-height: 1.04 !important;
+    margin: 0 !important;
+  }
+
+  body.ipad-game-mode .subtitle {
+    font-size: clamp(0.76rem, 1.9vw, 0.94rem) !important;
+    line-height: 1.25 !important;
+    max-width: 100% !important;
+  }
+
+  body.ipad-game-mode .eyebrow {
+    font-size: 0.66rem !important;
+  }
+
+  /* Schritt 1: Raster groß oben, Profile darunter als eigene scrollbare Liste. */
+  body.ipad-game-mode.step1-page .app-shell,
+  body.ipad-game-mode.step1-page .workspace,
+  body.ipad-game-mode.step1-page .room-wrap {
+    width: min(100%, 760px) !important;
+    max-width: 760px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.ipad-game-mode.step1-page .controls.compact-controls {
+    order: 0 !important;
+    width: 100% !important;
+    margin: 0 auto 8px !important;
+    padding: 8px 10px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  body.ipad-game-mode.step1-page .controls.compact-controls .button-row {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+
+  body.ipad-game-mode.step1-page .controls.compact-controls .primary-btn,
+  body.ipad-game-mode.step1-page .controls.compact-controls .ghost-btn,
+  body.ipad-game-mode.step1-page .controls.compact-controls .prep-chip {
+    min-height: 38px !important;
+    padding: 0 12px !important;
+    font-size: 0.78rem !important;
+  }
+
+  body.ipad-game-mode.step1-page .room-wrap {
+    padding: 10px !important;
+  }
+
+  body.ipad-game-mode.step1-page .play-area {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  body.ipad-game-mode.step1-page .play-stage {
+    order: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    overflow: visible !important;
+  }
+
+  body.ipad-game-mode.step1-page .room-header.centered-room-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    gap: 4px !important;
+  }
+
+  body.ipad-game-mode.step1-page .room-title-block h2 {
+    font-size: clamp(1.3rem, 3.4vw, 1.75rem) !important;
+  }
+
+  body.ipad-game-mode.step1-page .room-title-block p,
+  body.ipad-game-mode.step1-page .legend {
+    font-size: clamp(0.58rem, 1.35vw, 0.76rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  body.ipad-game-mode.step1-page .legend {
+    gap: 7px !important;
+    flex-wrap: wrap !important;
+  }
+
+  body.ipad-game-mode.step1-page .classroom-grid {
+    --cell-size: clamp(58px, min(calc((100dvw - 96px) / 10), calc((100dvh - 385px) / 9)), 68px) !important;
+    --grid-gap: 4px !important;
+    width: auto !important;
+    max-width: calc(100vw - 40px) !important;
+    align-self: center !important;
+    justify-self: center !important;
+    padding: 8px !important;
+    margin: 0 auto !important;
+  }
+
+  body.ipad-game-mode.step1-page .step1-side-column {
+    order: 2 !important;
+    width: min(100%, calc(10 * var(--cell-size) + 9 * var(--grid-gap) + 16px)) !important;
+    max-width: calc(100vw - 40px) !important;
+    height: clamp(165px, 22dvh, 230px) !important;
+    max-height: clamp(165px, 22dvh, 230px) !important;
+    min-height: 0 !important;
+    display: block !important;
+    overflow: hidden !important;
+    align-self: center !important;
+  }
+
+  body.ipad-game-mode.step1-page .embedded-students {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    padding: 8px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  body.ipad-game-mode.step1-page .prep-timer-panel {
+    display: none !important;
+  }
+
+  body.ipad-game-mode.step1-page .embedded-students .section-title-row {
+    flex: 0 0 auto !important;
+    margin-bottom: 6px !important;
+  }
+
+  body.ipad-game-mode.step1-page .compact-student-palette {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: unset !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    gap: 6px !important;
+    padding-right: 6px !important;
+    scroll-snap-type: none !important;
+  }
+
+  body.ipad-game-mode.step1-page .student-card {
+    min-height: 58px !important;
+    padding: 6px 8px !important;
+    gap: 8px !important;
+    scroll-snap-align: unset !important;
+  }
+
+  body.ipad-game-mode.step1-page .student-card-avatar-wrap {
+    width: 48px !important;
+    height: 48px !important;
+    flex: 0 0 48px !important;
+  }
+
+  body.ipad-game-mode.step1-page .student-card-avatar {
+    max-width: 48px !important;
+    max-height: 48px !important;
+    object-fit: contain !important;
+  }
+
+  body.ipad-game-mode.step1-page .student-name {
+    font-size: 0.78rem !important;
+  }
+
+  body.ipad-game-mode.step1-page .student-note {
+    font-size: 0.64rem !important;
+    line-height: 1.15 !important;
+  }
+
+  body.ipad-game-mode.step1-page .student-effect-preview-panel {
+    display: none !important;
+  }
+
+  /* Schritt 2: Hochkant als Regelauswahlfläche: Regel oben, drei Listen nebeneinander, Auswertung unten. */
+  body.ipad-game-mode.rules-page .rules-shell-v4 {
+    width: min(100%, 760px) !important;
+    max-width: 760px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  body.ipad-game-mode.rules-page .rules-left-v4 {
+    display: none !important;
+  }
+
+  body.ipad-game-mode.rules-page .compact-rules-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+    display: grid !important;
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+    gap: 10px !important;
+    overflow: visible !important;
+  }
+
+  body.ipad-game-mode.rules-page .rule-deck-head {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+
+  body.ipad-game-mode.rules-page .rules-head-actions {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+
+  body.ipad-game-mode.rules-page .current-rule-card {
+    min-height: 108px !important;
+    padding: 12px !important;
+  }
+
+  body.ipad-game-mode.rules-page .current-rule-card h3 {
+    font-size: clamp(1.05rem, 2.6vw, 1.45rem) !important;
+  }
+
+  body.ipad-game-mode.rules-page .rule-lists {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    height: clamp(430px, 55dvh, 590px) !important;
+  }
+
+  body.ipad-game-mode.rules-page .rule-list-card {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 9px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  body.ipad-game-mode.rules-page .rule-list-card .hint {
+    font-size: 0.58rem !important;
+    line-height: 1.12 !important;
+    margin-bottom: 6px !important;
+  }
+
+  body.ipad-game-mode.rules-page .rule-dropzone {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 4px !important;
+  }
+
+  body.ipad-game-mode.rules-page .rule-card,
+  body.ipad-game-mode.rules-page .rule-item {
+    padding: 9px 10px !important;
+    font-size: 0.74rem !important;
+    line-height: 1.22 !important;
+  }
+
+  body.ipad-game-mode.rules-page .rules-status-bar-clean {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding-top: 2px !important;
+  }
+
+  body.ipad-game-mode.rules-page #finishRulesBtn {
+    width: auto !important;
+    min-width: 220px !important;
+    min-height: 44px !important;
+  }
+
+  /* Schritt 3: Spielfeld zuerst und groß, Status-/Ereignispanels darunter. */
+  body.ipad-game-mode.scenarios-page .phase3-topbar {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .phase3-actions {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .phase3-actions .lesson-clock,
+  body.ipad-game-mode.scenarios-page .phase3-actions .primary-btn,
+  body.ipad-game-mode.scenarios-page .phase3-actions .ghost-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    padding: 6px 8px !important;
+    font-size: 0.74rem !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .phase3-shell {
+    width: min(100%, 760px) !important;
+    max-width: 760px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-areas:
+      'room room'
+      'left right' !important;
+    gap: 10px !important;
+    overflow: visible !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .phase3-room-panel {
+    grid-area: room !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+    overflow: visible !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .phase3-left-panel {
+    grid-area: left !important;
+    min-height: 0 !important;
+    height: clamp(220px, 25dvh, 285px) !important;
+    overflow-y: auto !important;
+    padding: 10px !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .phase3-right-panel {
+    grid-area: right !important;
+    min-height: 0 !important;
+    height: clamp(220px, 25dvh, 285px) !important;
+    overflow: hidden !important;
+    padding: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .branch-classroom-grid {
+    --branch-cell: clamp(54px, min(calc((100dvw - 70px) / 10), calc((100dvh - 410px) / 9)), 68px) !important;
+    gap: 4px !important;
+    padding: 8px !important;
+    margin: 0 auto !important;
+    max-width: calc(100vw - 40px) !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .teacher-image-only {
+    display: none !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .phase3-stability-card,
+  body.ipad-game-mode.scenarios-page .scoreboard-card,
+  body.ipad-game-mode.scenarios-page .score-events-card--plain {
+    margin-bottom: 8px !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .branch-event-cards,
+  body.ipad-game-mode.scenarios-page .branch-log {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .branch-log {
+    flex: 1 1 auto !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .event-card,
+  body.ipad-game-mode.scenarios-page .branch-log-entry,
+  body.ipad-game-mode.scenarios-page .score-event {
+    padding: 8px 9px !important;
+    font-size: 0.72rem !important;
+    line-height: 1.22 !important;
+  }
+
+  body.ipad-game-mode.scenarios-page .branch-context-students {
+    display: none !important;
+  }
+}
