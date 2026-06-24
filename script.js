@@ -327,7 +327,7 @@ function installPageUtilities() {
 function initLayout(layoutKey, keepAssignments = false) {
   const layout = layouts[layoutKey];
   state.layout = layoutKey;
-  state.desks = layout.deskPositions.map((pos, index) => ({ id: `desk-${index + 1}`, row: pos[0], col: pos[1] }));
+  state.desks = layout.deskPositions.map((pos, index) => ({ id: `desk-${index + 1}`, row: pos[0], col: pos[1], orientation: 'horizontal' }));
 
   if (!keepAssignments) {
     state.assignments = {};
@@ -498,11 +498,11 @@ function createRoomObjectElement(object) {
 
 function createDeskElement(desk, influence = null) {
   const deskEl = document.createElement('div');
-  deskEl.className = 'desk';
+  deskEl.className = `desk desk-${desk.orientation || 'horizontal'}`;
   if (influence) applyInfluenceClasses(deskEl, influence);
   deskEl.draggable = true;
   deskEl.dataset.deskId = desk.id;
-  deskEl.title = 'Tisch ziehen und in ein anderes Rasterfeld ablegen';
+  deskEl.title = 'Tisch ziehen und in ein anderes Rasterfeld ablegen; einmal anklicken zum Drehen';
 
   const assignedStudentId = state.assignments[desk.id];
   const seat = document.createElement('div');
@@ -536,18 +536,22 @@ function createDeskElement(desk, influence = null) {
     seat.appendChild(removeBtn);
     seat.addEventListener('dragstart', event => {
       event.stopPropagation();
-      startDrag(event, { type: 'student', studentId: student.id });
+      startDrag(event, { type: 'desk', deskId: desk.id });
+      deskEl.classList.add('dragging');
     });
-    seat.addEventListener('dragend', clearDragState);
+    seat.addEventListener('dragend', () => {
+      deskEl.classList.remove('dragging');
+      clearDragState();
+    });
     seat.addEventListener('click', event => {
       event.stopPropagation();
-      selectStudent(student.id);
+      rotateDesk(desk.id);
     });
     deskEl.appendChild(seat);
   } else {
     const label = document.createElement('div');
     label.className = 'desk-label';
-    label.innerHTML = `<span>Tisch</span><span>↕</span>`;
+    label.innerHTML = `<span>Tisch</span><span>${desk.orientation === 'vertical' ? '↕' : '↔'}</span>`;
     seat.className = 'empty-seat';
     seat.textContent = 'freier Platz';
     deskEl.appendChild(label);
@@ -555,7 +559,7 @@ function createDeskElement(desk, influence = null) {
   }
 
   deskEl.addEventListener('dragstart', event => {
-    if (event.target.closest('.student-chip, .remove-student-btn')) return;
+    if (event.target.closest('.remove-student-btn')) return;
     event.stopPropagation();
     startDrag(event, { type: 'desk', deskId: desk.id });
     deskEl.classList.add('dragging');
@@ -585,6 +589,7 @@ function createDeskElement(desk, influence = null) {
   deskEl.addEventListener('click', event => {
     event.stopPropagation();
     if (state.selectedStudentId) assignStudentToDesk(state.selectedStudentId, desk.id);
+    else rotateDesk(desk.id);
   });
 
   if (assignedStudentId) {
@@ -773,6 +778,15 @@ function moveDesk(deskId, row, col) {
   }
   desk.row = row;
   desk.col = col;
+  clearResults();
+  renderGrid();
+}
+
+
+function rotateDesk(deskId) {
+  const desk = state.desks.find(item => item.id === deskId);
+  if (!desk) return;
+  desk.orientation = desk.orientation === 'vertical' ? 'horizontal' : 'vertical';
   clearResults();
   renderGrid();
 }
@@ -1053,21 +1067,17 @@ function getReducedDirection(deltaRow, deltaCol) {
   return { dr: deltaRow / divisor, dc: deltaCol / divisor, steps: divisor };
 }
 
-function countStudentsBlockingSight(row, col) {
+function countLineOfSightBlockers(row, col) {
   const { row: teacherRow, col: teacherCol } = state.teacher;
   const targetDirection = getReducedDirection(row - teacherRow, col - teacherCol);
   if (!targetDirection) return 0;
 
   let blockers = 0;
-  Object.entries(state.assignments).forEach(([deskId, studentId]) => {
-    const desk = state.desks.find(item => item.id === deskId);
-    if (!desk || !studentId) return;
-
+  state.desks.forEach(desk => {
     const blockerDirection = getReducedDirection(desk.row - teacherRow, desk.col - teacherCol);
     if (!blockerDirection) return;
     if (blockerDirection.steps >= targetDirection.steps) return;
     if (blockerDirection.dr !== targetDirection.dr || blockerDirection.dc !== targetDirection.dc) return;
-
     blockers += 1;
   });
   return blockers;
@@ -1078,15 +1088,15 @@ function getVisionMap() {
   const candidates = getCandidateVisionCells();
 
   candidates.forEach(candidate => {
-    const studentBlockers = countStudentsBlockingSight(candidate.row, candidate.col);
-    const strength = Math.max(0, candidate.baseStrength - studentBlockers);
+    const lineBlockers = countLineOfSightBlockers(candidate.row, candidate.col);
+    const strength = Math.max(0, candidate.baseStrength - lineBlockers);
     if (strength <= 0) return;
 
     const level = Math.max(1, Math.min(5, 7 - strength)); // level 1 = dunkel/stark, level 5 = sehr schwach
     const key = cellKey(candidate.row, candidate.col);
     const existing = map.get(key);
     if (!existing || strength > existing.strength) {
-      map.set(key, { ...candidate, blockers: studentBlockers, strength, level });
+      map.set(key, { ...candidate, blockers: lineBlockers, strength, level });
     }
   });
 
@@ -1116,14 +1126,28 @@ function getCombinedInfluenceMap(visionMap = getVisionMap()) {
     if (!insideGrid(row, col) || value <= 0) return;
     const key = cellKey(row, col);
     const current = raw.get(key) || { green: 0, red: 0, sources: [] };
-    current[type] = Math.min(12, current[type] + value);
+    current[type] = Math.min(18, current[type] + value);
     current.sources.push(source);
     raw.set(key, current);
   };
 
+  const addOrthogonalInfluence = (desk, type, value, source) => {
+    add(desk.row - 1, desk.col, type, value, `${source}: oben`);
+    add(desk.row + 1, desk.col, type, value, `${source}: unten`);
+    add(desk.row, desk.col - 1, type, value, `${source}: links`);
+    add(desk.row, desk.col + 1, type, value, `${source}: rechts`);
+  };
+
+  const addDiagonalInfluence = (desk, type, value, source) => {
+    add(desk.row - 1, desk.col - 1, type, value, `${source}: diagonal`);
+    add(desk.row - 1, desk.col + 1, type, value, `${source}: diagonal`);
+    add(desk.row + 1, desk.col - 1, type, value, `${source}: diagonal`);
+    add(desk.row + 1, desk.col + 1, type, value, `${source}: diagonal`);
+  };
+
   visionMap.forEach((vision, key) => {
     const [row, col] = key.split(',').map(Number);
-    add(row, col, 'green', visionGreenLevel(vision.strength), `Sichtfeld Stufe ${vision.strength}`);
+    add(row, col, 'green', visionGreenLevel(vision.strength), `Beobachtungsring Stufe ${vision.strength}`);
   });
 
   Object.entries(state.assignments).forEach(([deskId, studentId]) => {
@@ -1131,45 +1155,28 @@ function getCombinedInfluenceMap(visionMap = getVisionMap()) {
     const student = getStudent(studentId);
     if (!desk || !student) return;
     const h = student.hidden;
+    const disruptive = h.distractor || h.callsOut || h.boundaryTesting || h.conflictWithBoys || h.phoneRisk || h.needsMonitoring;
+    const stabilizing = h.stabilizer || h.mediator;
 
-    if (h.distractor) {
-      add(desk.row, desk.col - 1, 'red', 4, `${student.name}: lenkt links ab`);
-      add(desk.row, desk.col + 1, 'red', 4, `${student.name}: lenkt rechts ab`);
-      add(desk.row, desk.col, 'red', 2, `${student.name}: Störpotenzial`);
-    }
-    if (h.callsOut) {
-      add(desk.row, desk.col, 'red', 3, `${student.name}: Zwischenrufe`);
-      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'red', 2, `${student.name}: Aufmerksamkeitssuche`));
-    }
-    if (h.boundaryTesting) {
-      add(desk.row, desk.col, 'red', 3, `${student.name}: testet Grenzen`);
-      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'red', 3, `${student.name}: provoziert Umfeld`));
-    }
-    if (h.conflictWithBoys) {
-      add(desk.row, desk.col, 'red', 2, `${student.name}: Konfliktrisiko`);
-      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'red', 2, `${student.name}: Konfliktrisiko Umfeld`));
-    }
-    if (h.phoneRisk) {
-      add(desk.row, desk.col, 'red', 3, `${student.name}: verdecktes Off-Task-Risiko`);
+    if (disruptive) {
+      add(desk.row, desk.col, 'red', 5, `${student.name}: eigenes Störrisiko`);
+      addOrthogonalInfluence(desk, 'red', 6, `${student.name}: Störrisiko im direkten Umfeld`);
+      addDiagonalInfluence(desk, 'red', 4, `${student.name}: diagonales Störrisiko`);
     }
 
-    if (h.stabilizer) {
-      add(desk.row, desk.col, 'green', 2, `${student.name}: stabilisiert`);
-      add(desk.row, desk.col - 1, 'green', 4, `${student.name}: hilft links`);
-      add(desk.row, desk.col + 1, 'green', 4, `${student.name}: hilft rechts`);
-    }
-    if (h.mediator) {
-      add(desk.row, desk.col, 'green', 3, `${student.name}: vermittelt`);
-      forEachNeighbor(desk, pos => add(pos.row, pos.col, 'green', 3, `${student.name}: vermittelt im Umfeld`));
+    if (stabilizing) {
+      add(desk.row, desk.col, 'green', 2, `${student.name}: stabilisiert den eigenen Arbeitsbereich`);
+      addOrthogonalInfluence(desk, 'green', 3, `${student.name}: stabilisiert direktes Umfeld`);
+      addDiagonalInfluence(desk, 'green', 2, `${student.name}: stabilisiert diagonal`);
     }
   });
 
   getActiveTrash().forEach(trash => {
-    add(trash.row, trash.col, 'red', 3, 'Müll: unruhige Lernumgebung');
-    add(trash.row - 1, trash.col, 'red', 4, 'Müll: Störreiz oben');
-    add(trash.row + 1, trash.col, 'red', 4, 'Müll: Störreiz unten');
-    add(trash.row, trash.col - 1, 'red', 4, 'Müll: Störreiz links');
-    add(trash.row, trash.col + 1, 'red', 4, 'Müll: Störreiz rechts');
+    add(trash.row, trash.col, 'red', 4, 'Müll: unruhige Lernumgebung');
+    add(trash.row - 1, trash.col, 'red', 5, 'Müll: Störreiz oben');
+    add(trash.row + 1, trash.col, 'red', 5, 'Müll: Störreiz unten');
+    add(trash.row, trash.col - 1, 'red', 5, 'Müll: Störreiz links');
+    add(trash.row, trash.col + 1, 'red', 5, 'Müll: Störreiz rechts');
   });
 
   const combined = new Map();
@@ -1180,15 +1187,15 @@ function getCombinedInfluenceMap(visionMap = getVisionMap()) {
     const net = green - red;
     const maxValue = Math.max(green, red);
     let kind = 'neutral';
-    let level = Math.max(1, Math.min(4, Math.ceil(maxValue / 3)));
+    let level = Math.max(1, Math.min(6, Math.ceil(maxValue / 3)));
     if (green && red && Math.abs(net) <= 1) {
       kind = 'neutral';
     } else if (net > 0) {
       kind = 'good';
-      level = Math.max(1, Math.min(4, Math.ceil(net / 2)));
+      level = Math.max(1, Math.min(6, Math.ceil(net / 2)));
     } else if (net < 0) {
       kind = 'risk';
-      level = Math.max(1, Math.min(4, Math.ceil(Math.abs(net) / 2)));
+      level = Math.max(1, Math.min(6, Math.ceil(Math.abs(net) / 2)));
     }
     combined.set(key, { green, red, net, kind, level, sources: value.sources });
   });
@@ -1265,7 +1272,7 @@ function evaluatePreparation() {
     placedStudents: Object.keys(state.assignments).length,
     teacherMode: state.teacher.mode,
     teacherDirection: state.teacher.dir,
-    visionModel: 'fan-or-linear-with-desk-attenuation-and-student-influence',
+    visionModel: 'teacher-radius-rings-with-line-of-sight-table-attenuation',
     visionRiskStudents: [],
     weaklyVisibleRiskStudents: [],
     blindRiskStudents: [],
@@ -1640,7 +1647,8 @@ function renderEvaluationStep(item, index, total) {
   if (evaluationNextBtn) {
     evaluationNextBtn.hidden = false;
     evaluationNextBtn.disabled = false;
-    evaluationNextBtn.textContent = index + 1 >= total ? 'Auswertung abschließen' : 'Weiter';
+    evaluationNextBtn.textContent = 'Weiter';
+    evaluationNextBtn.hidden = index + 1 >= total;
   }
 }
 
@@ -1685,6 +1693,17 @@ function advanceEvaluationStep(useAnimation = true) {
   const render = () => {
     renderEvaluationStep(item, nextIndex, evaluationSession.steps.length);
     updateLifeBar(evaluationSession.currentRaw);
+    if (nextIndex >= evaluationSession.steps.length - 1) {
+      evaluationSession.finalShown = true;
+      updateLifeBar(evaluationSession.rawScore);
+      const clamped = Math.max(0, Math.min(10, Math.round(evaluationSession.rawScore)));
+      if (evaluationTitle) evaluationTitle.textContent = `Auswertung abgeschlossen: ${clamped}/10 Balken`;
+      if (animatedFinalScore) animatedFinalScore.textContent = `Endwert: ${evaluationSession.rawScore} Punkte`;
+      if (evaluationStepCounter) evaluationStepCounter.textContent = `Fertig · ${evaluationSession.steps.length}/${evaluationSession.steps.length}`;
+      setStepDelta(0);
+      if (evaluationNextBtn) evaluationNextBtn.hidden = true;
+      showEvaluationOutcome(evaluationSession.rawScore);
+    }
   };
 
   if (useAnimation) showSlideTransition(render);
@@ -1846,7 +1865,7 @@ const tutorialSlides = [
   {
     title: 'Lehrkraft und Sichtbereich',
     text: 'Die Lehrkraft kann frei im Raum platziert werden. Der Sichtbereich arbeitet jetzt mit konzentrischen Beobachtungsringen um die Lehrkraft herum.',
-    bullets: ['Vorne starten die Ringe bei Stufe 1, hinter der Lehrkraft erst abgeschwächt ab Stufe 3', 'Dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Sitzende Schüler*innen schwächen nur die Felder direkt hinter sich auf derselben Linie ab', 'Lehrkraft anklicken: Blickrichtung ändern'],
+    bullets: ['Vorne starten die Ringe bei Stufe 1, hinter der Lehrkraft erst abgeschwächt ab Stufe 3', 'Dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Tische schwächen die Felder direkt hinter sich auf derselben Linie ab', 'Lehrkraft anklicken: Blickrichtung ändern'],
     visual: 'teacher'
   },
   {

@@ -2275,7 +2275,7 @@ function renderBranchGame() {
         const away = student ? isStudentAway(student.id) : false;
         const activeIncident = student && !away ? activeByStudent.get(student.id) : null;
         const deskEl = document.createElement('div');
-        deskEl.className = `branch-desk${activeIncident ? ' incident-pulse' : ''}${student && !away ? ' has-student' : ''}${away ? ' student-away' : ''}`;
+        deskEl.className = `branch-desk desk-${desk.orientation || 'horizontal'}${activeIncident ? ' incident-pulse' : ''}${student && !away ? ' has-student' : ''}${away ? ' student-away' : ''}`;
         if (student && !away) {
           deskEl.innerHTML = `${studentAvatarMarkup(student, 'branch-student-avatar', ' am Tisch')}${activeIncident ? `<strong class="incident-countdown-number">${Math.max(0, Math.ceil((activeIncident.deadline - Date.now()) / 1000))}</strong>` : '<strong class="sr-only">'+ escapeHtml(student.name) +'</strong>'}`;
         } else {

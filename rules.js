@@ -388,7 +388,7 @@ function renderFrozenGrid() {
         const deskEl = document.createElement('div');
         const studentId = step1Data.assignments?.[desk.id];
         const student = studentId ? getStudent(studentId) : null;
-        deskEl.className = `frozen-desk${student ? ' has-student' : ''}`;
+        deskEl.className = `frozen-desk desk-${desk.orientation || 'horizontal'}${student ? ' has-student' : ''}`;
         deskEl.innerHTML = student
           ? `${studentAvatarMarkup(student, 'frozen-student-avatar', ' am Tisch')}<strong class="sr-only">${student.name}</strong>`
           : `<strong>FREI</strong>`;
