@@ -314,6 +314,7 @@ const startGameBtn = document.getElementById('startGameBtn');
 const playStageEl = document.querySelector('.step1-page .play-stage');
 const step1SideColumnEl = document.querySelector('.step1-page .step1-side-column');
 const studentPreviewPanelEl = document.querySelector('.step1-page .student-effect-preview-panel');
+const roomHeaderEl = document.querySelector('.step1-page .room-header.centered-room-header');
 let tutorialIndex = 0;
 let gameStarted = false;
 let preparationTimerId = null;
@@ -1661,10 +1662,12 @@ function updateStep1Highscore(value = getStoredHighscore()) {
   if (evaluationHighscore) evaluationHighscore.textContent = `Highscore: ${Number(value) || 0}`;
 }
 
-function evaluatePreparation() {
-  if (!allStudentsPlaced()) {
+function evaluatePreparation(options = {}) {
+  const forceTimeUpEvaluation = Boolean(options.forceTimeUpEvaluation);
+  const missing = students.length - Object.keys(state.assignments).length;
+
+  if (!allStudentsPlaced() && !forceTimeUpEvaluation) {
     clearResults();
-    const missing = students.length - Object.keys(state.assignments).length;
     if (resultsPanel) resultsPanel.hidden = false;
     if (feedbackList) feedbackList.innerHTML = `<li class="warning">Die Vorbereitung kann erst ausgewertet werden, wenn alle 10 Schüler*innen platziert sind. Es fehlen noch ${missing}.</li>`;
     meterFill.style.width = '0%';
@@ -1672,12 +1675,15 @@ function evaluatePreparation() {
     return;
   }
 
+  stopPreparationTimer();
   const feedback = [];
   const influenceMap = getCombinedInfluenceMap();
   const metrics = {
     layout: state.layout,
     layoutLabel: layouts[state.layout].label,
     placedStudents: Object.keys(state.assignments).length,
+    missingStudents: missing,
+    timeUpEvaluation: forceTimeUpEvaluation,
     teacherMode: state.teacher.mode,
     teacherDirection: state.teacher.dir,
     visionModel: 'teacher-radius-rings-with-student-specific-field-evaluation',
@@ -1698,10 +1704,14 @@ function evaluatePreparation() {
     futureScenarioHooks: []
   };
 
-  addFeedback(feedback, 'good', 0, 'Alle Schüler*innen sind platziert.', 'Die Auswertung zählt jetzt den Endzustand des jeweiligen Sitzfeldes: grün gibt +1, gelb/neutral 0, rot −1.');
+  if (missing > 0) {
+    addFeedback(feedback, 'bad', -missing, `Zeit abgelaufen: ${missing} Schüler*in${missing === 1 ? '' : 'nen'} nicht platziert.`, 'Nicht platzierte Schüler*innen senken die Unterrichtsstabilität, weil die Vorbereitung unvollständig bleibt.');
+  } else {
+    addFeedback(feedback, 'good', 0, 'Alle Schüler*innen sind platziert.', 'Die Auswertung zählt jetzt den Endzustand des jeweiligen Sitzfeldes: grün gibt +1, gelb/neutral 0, rot −1.');
+  }
 
   const fieldResult = evaluateStudentFieldColors(influenceMap);
-  let score = fieldResult.delta;
+  let score = fieldResult.delta - missing;
   feedback.push(...fieldResult.feedback);
   metrics.studentFieldEvaluation = fieldResult.records;
   metrics.greenFieldStudents = fieldResult.records.filter(item => item.kind === 'good');
@@ -2491,23 +2501,8 @@ function stopPreparationTimer() {
 function showTimeUpState() {
   stopPreparationTimer();
   evaluationSession = null;
-  if (!evaluationOverlay) return;
-  evaluationOverlay.hidden = false;
-  if (overlayCloseBtn) overlayCloseBtn.hidden = true;
-  if (evaluationTitle) evaluationTitle.textContent = 'Zeit abgelaufen';
-  if (evaluationStepCounter) evaluationStepCounter.textContent = 'Zeitlimit erreicht';
-  if (evaluationStepDelta) {
-    evaluationStepDelta.textContent = '0';
-    evaluationStepDelta.className = 'step-delta neutral';
-  }
-  if (evaluationCurrentText) evaluationCurrentText.textContent = 'Die fünf Minuten für die Vorbereitung sind vorbei.';
-  if (evaluationCurrentDetail) evaluationCurrentDetail.textContent = 'Die Stunde beginnt jetzt. Für diese Runde ist die Vorbereitungsphase beendet.';
-  if (evaluationNextBtn) evaluationNextBtn.hidden = true;
-  if (evaluationActionArea) evaluationActionArea.hidden = false;
-  if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Zeit ist um';
-  if (evaluationOutcomeMessage) evaluationOutcomeMessage.textContent = 'Du kannst einen neuen Versuch starten und den Klassenraum noch einmal vorbereiten.';
-  if (step2Btn) step2Btn.hidden = true;
-  if (newAttemptBtn) newAttemptBtn.hidden = false;
+  showTemporaryHint('Zeit abgelaufen: Die Vorbereitung wird automatisch ausgewertet.');
+  evaluatePreparation({ forceTimeUpEvaluation: true });
 }
 
 function startPreparationTimer() {
@@ -2540,20 +2535,44 @@ function closeStartGate() {
 }
 
 function syncStep1SidebarLayout() {
-  if (!playStageEl || !step1SideColumnEl || !studentPreviewPanelEl || !document.body.classList.contains('step1-page')) return;
+  if (!gridEl || !step1SideColumnEl || !studentPreviewPanelEl || !document.body.classList.contains('step1-page')) return;
   window.requestAnimationFrame(() => {
-    const playStageRect = playStageEl.getBoundingClientRect();
-    if (!playStageRect.height) return;
-    const previewHeight = studentPreviewPanelEl.getBoundingClientRect().height || studentPreviewPanelEl.offsetHeight || 0;
-    const computed = window.getComputedStyle(step1SideColumnEl);
-    const rowGap = parseFloat(computed.rowGap || computed.gap || '0') || 0;
-    step1SideColumnEl.style.height = `${Math.round(playStageRect.height)}px`;
-    step1SideColumnEl.style.maxHeight = `${Math.round(playStageRect.height)}px`;
+    const gridRect = gridEl.getBoundingClientRect();
+    const sideRect = step1SideColumnEl.getBoundingClientRect();
+    if (!gridRect.height || !sideRect.top) return;
+
+    const previewHeight = Math.round(studentPreviewPanelEl.getBoundingClientRect().height || studentPreviewPanelEl.offsetHeight || 0);
     const embeddedStudents = step1SideColumnEl.querySelector('.embedded-students');
-    if (embeddedStudents && previewHeight) {
-      const remaining = Math.max(160, Math.round(playStageRect.height - previewHeight - rowGap));
+    const paletteEl = step1SideColumnEl.querySelector('.compact-student-palette');
+    const rowGap = parseFloat(window.getComputedStyle(step1SideColumnEl).rowGap || window.getComputedStyle(step1SideColumnEl).gap || '0') || 0;
+
+    const targetHeight = Math.max(260, Math.round(gridRect.bottom - sideRect.top));
+    step1SideColumnEl.style.height = `${targetHeight}px`;
+    step1SideColumnEl.style.maxHeight = `${targetHeight}px`;
+
+    if (embeddedStudents) {
+      const listHeight = Math.max(150, targetHeight - previewHeight - rowGap);
+      embeddedStudents.style.height = `${listHeight}px`;
+      embeddedStudents.style.maxHeight = `${listHeight}px`;
       embeddedStudents.style.minHeight = '0px';
-      embeddedStudents.style.maxHeight = `${remaining}px`;
+
+      if (paletteEl) {
+        const embeddedStyles = window.getComputedStyle(embeddedStudents);
+        const paletteTopBlock = Array.from(embeddedStudents.children)
+          .filter(child => child !== paletteEl)
+          .reduce((sum, child) => sum + child.getBoundingClientRect().height, 0);
+        const paddingTop = parseFloat(embeddedStyles.paddingTop || '0') || 0;
+        const paddingBottom = parseFloat(embeddedStyles.paddingBottom || '0') || 0;
+        const innerGap = parseFloat(embeddedStyles.rowGap || embeddedStyles.gap || '0') || 0;
+        const siblingCount = Math.max(0, embeddedStudents.children.length - 1);
+        const reserved = Math.round(paletteTopBlock + paddingTop + paddingBottom + innerGap * siblingCount + 2);
+        const paletteHeight = Math.max(96, listHeight - reserved);
+        paletteEl.style.maxHeight = `${paletteHeight}px`;
+      }
+    }
+
+    if (roomHeaderEl) {
+      roomHeaderEl.style.maxWidth = `${Math.round(gridRect.width)}px`;
     }
   });
 }
@@ -2644,11 +2663,17 @@ function bindGlobalEvents() {
   document.addEventListener('drop', () => clearDragState());
   window.addEventListener('resize', syncStep1SidebarLayout);
   window.addEventListener('orientationchange', syncStep1SidebarLayout);
+  window.addEventListener('load', syncStep1SidebarLayout);
 }
 
 installPageUtilities();
 bindGlobalEvents();
 bindTutorialEvents();
+if (typeof ResizeObserver !== 'undefined') {
+  const step1LayoutObserver = new ResizeObserver(() => syncStep1SidebarLayout());
+  if (gridEl) step1LayoutObserver.observe(gridEl);
+  if (roomHeaderEl) step1LayoutObserver.observe(roomHeaderEl);
+}
 initLayout('rows');
 syncStep1SidebarLayout();
 if (startGateOverlay) startGateOverlay.hidden = true;

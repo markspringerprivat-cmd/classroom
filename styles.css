@@ -8163,6 +8163,7 @@ body.rules-page {
   grid-template-rows: minmax(0, 1fr) 172px !important;
   width: 340px;
   flex: 0 0 340px;
+  overflow: hidden !important;
   max-height: none !important;
   min-height: 0 !important;
   gap: 12px !important;
@@ -8175,6 +8176,7 @@ body.rules-page {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 .step1-page .step1-side-column .compact-student-palette {
