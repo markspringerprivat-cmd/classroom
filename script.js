@@ -84,6 +84,9 @@ const dragState = {
   objectId: null
 };
 
+let activePointerDrag = null;
+let suppressClickUntil = 0;
+
 const DESK_DIRECTIONS = ['up', 'right', 'down', 'left'];
 
 function normalizeDeskDirection(value = 'up') {
@@ -551,6 +554,7 @@ function createRoomObjectElement(object) {
     el.classList.remove('dragging-trash');
     clearDragState();
   });
+  bindPointerDrag(el, { type: 'trash', objectId: object.id });
   return el;
 }
 
@@ -620,6 +624,7 @@ function createDeskElement(desk, influence = null) {
     deskEl.addEventListener('mouseleave', hideStudentHoverCard);
   }
 
+  bindPointerDrag(deskEl, { type: 'desk', deskId: desk.id });
   return deskEl;
 }
 
@@ -642,6 +647,7 @@ function createTeacherInRoom() {
     event.stopPropagation();
     openTeacherDirectionPopover(event.currentTarget);
   });
+  bindPointerDrag(el, { type: 'teacher' });
   return el;
 }
 
@@ -671,6 +677,7 @@ function renderPalette() {
       clearDragState();
     });
     card.addEventListener('click', () => selectStudent(student.id));
+    bindPointerDrag(card, { type: 'student', studentId: student.id });
     paletteEl.appendChild(card);
   });
 }
@@ -788,6 +795,167 @@ function clearDragState() {
   dragState.deskId = null;
   dragState.objectId = null;
 }
+
+function isTouchLayoutActive() {
+  return document.body.classList.contains('ipad-game-mode') || (navigator.maxTouchPoints || 0) > 0;
+}
+
+function setPointerPayload(payload = {}) {
+  dragState.type = payload.type || null;
+  dragState.studentId = payload.studentId || null;
+  dragState.deskId = payload.deskId || null;
+  dragState.objectId = payload.objectId || null;
+}
+
+function createDragGhost(source, payload) {
+  const ghost = document.createElement('div');
+  ghost.className = `touch-drag-ghost touch-drag-ghost-${payload.type || 'item'}`;
+  const rect = source.getBoundingClientRect();
+  ghost.style.width = `${Math.max(42, Math.min(82, rect.width))}px`;
+  ghost.style.height = `${Math.max(42, Math.min(82, rect.height))}px`;
+  ghost.innerHTML = source.innerHTML;
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+function moveDragGhost(ghost, x, y) {
+  if (!ghost) return;
+  ghost.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+}
+
+function clearDropHighlights() {
+  document.querySelectorAll('.touch-drop-target, .drop-hover, .trash-drop-ready').forEach(el => {
+    el.classList.remove('touch-drop-target', 'drop-hover', 'trash-drop-ready');
+  });
+}
+
+function getTouchDropTarget(x, y) {
+  const ghost = activePointerDrag?.ghost;
+  if (ghost) ghost.style.display = 'none';
+  const el = document.elementFromPoint(x, y);
+  if (ghost) ghost.style.display = '';
+  const bin = el?.closest?.('.room-object-bin, .room-object-broom');
+  const desk = el?.closest?.('.room-desk-shell, .desk');
+  const cell = el?.closest?.('.grid-cell');
+  return { el, bin, desk, cell };
+}
+
+function highlightTouchTarget(x, y) {
+  clearDropHighlights();
+  if (!activePointerDrag?.started) return;
+  const target = getTouchDropTarget(x, y);
+  const type = activePointerDrag.payload.type;
+  if (type === 'trash' && target.bin) target.bin.classList.add('trash-drop-ready', 'touch-drop-target');
+  else if ((type === 'desk' || type === 'teacher' || type === 'student' || type === 'trash') && target.cell) target.cell.classList.add('drop-hover', 'touch-drop-target');
+  if (type === 'student' && target.desk) target.desk.classList.add('touch-drop-target');
+}
+
+function finishTouchDrop(x, y) {
+  const payload = activePointerDrag?.payload || {};
+  const target = getTouchDropTarget(x, y);
+  setPointerPayload(payload);
+
+  if (payload.type === 'trash' && target.bin && payload.objectId) {
+    const targetTrash = (state.objects?.trash || []).find(item => item.id === payload.objectId && !item.removed);
+    if (targetTrash) {
+      targetTrash.removed = true;
+      clearResults();
+      showTemporaryHint('Müll entsorgt: Der Störreiz im Raum wurde reduziert.');
+      renderGrid();
+    }
+    return;
+  }
+
+  const cell = target.cell;
+  if (!cell) return;
+  const row = Number(cell.dataset.row);
+  const col = Number(cell.dataset.col);
+  if (Number.isNaN(row) || Number.isNaN(col)) return;
+
+  if (payload.type === 'desk') moveDesk(payload.deskId, row, col);
+  if (payload.type === 'teacher') placeTeacher(row, col);
+  if (payload.type === 'student') {
+    const desk = target.desk?.dataset?.deskId ? state.desks.find(item => item.id === target.desk.dataset.deskId) : getDeskAt(row, col);
+    if (desk) assignStudentToDesk(payload.studentId, desk.id);
+  }
+}
+
+function bindPointerDrag(source, payloadFactory, options = {}) {
+  if (!source || source.dataset.pointerDragBound === '1') return;
+  source.dataset.pointerDragBound = '1';
+  source.style.touchAction = options.touchAction || 'none';
+
+  source.addEventListener('pointerdown', event => {
+    if (!isTouchLayoutActive()) return;
+    if (event.button !== undefined && event.button !== 0) return;
+    if (event.target.closest('.remove-student-btn, button, a, input, textarea, select')) return;
+    const payload = typeof payloadFactory === 'function' ? payloadFactory(event) : payloadFactory;
+    if (!payload?.type) return;
+    activePointerDrag = {
+      pointerId: event.pointerId,
+      source,
+      payload,
+      started: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      ghost: null
+    };
+    setPointerPayload(payload);
+    if (payload.type === 'student' && payload.studentId) {
+      state.previewStudentId = payload.studentId;
+      renderStudentEffectPreview();
+    }
+    try { source.setPointerCapture(event.pointerId); } catch (error) {}
+  }, { passive: false });
+
+  source.addEventListener('pointermove', event => {
+    if (!activePointerDrag || activePointerDrag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - activePointerDrag.startX;
+    const dy = event.clientY - activePointerDrag.startY;
+    const distance = Math.hypot(dx, dy);
+    if (!activePointerDrag.started && distance >= 3) {
+      activePointerDrag.started = true;
+      activePointerDrag.ghost = createDragGhost(activePointerDrag.source, activePointerDrag.payload);
+      activePointerDrag.source.classList.add('touch-drag-source');
+      document.body.classList.add('touch-drag-active');
+    }
+    if (activePointerDrag.started) {
+      event.preventDefault();
+      activePointerDrag.lastX = event.clientX;
+      activePointerDrag.lastY = event.clientY;
+      moveDragGhost(activePointerDrag.ghost, event.clientX, event.clientY);
+      highlightTouchTarget(event.clientX, event.clientY);
+    }
+  }, { passive: false });
+
+  function endPointer(event) {
+    if (!activePointerDrag || activePointerDrag.pointerId !== event.pointerId) return;
+    const wasStarted = activePointerDrag.started;
+    if (wasStarted) {
+      event.preventDefault();
+      suppressClickUntil = Date.now() + 450;
+      finishTouchDrop(activePointerDrag.lastX, activePointerDrag.lastY);
+    }
+    activePointerDrag.ghost?.remove();
+    activePointerDrag.source.classList.remove('touch-drag-source');
+    document.body.classList.remove('touch-drag-active');
+    clearDropHighlights();
+    clearDragState();
+    activePointerDrag = null;
+  }
+
+  source.addEventListener('pointerup', endPointer, { passive: false });
+  source.addEventListener('pointercancel', endPointer, { passive: false });
+}
+
+document.addEventListener('click', event => {
+  if (Date.now() < suppressClickUntil) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}, true);
 
 function handleCellClick(row, col) {
   if (state.placingTeacher) {

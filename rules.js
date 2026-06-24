@@ -523,6 +523,7 @@ function renderList(listName, container) {
     card.title = 'Per Drag & Drop in eine andere Liste ziehen.';
     card.addEventListener('dragstart', event => startRuleDrag(event, rule.id, listName));
     card.addEventListener('dragend', clearRuleDrag);
+    bindRulePointerDrag(card, rule.id, listName);
     container.appendChild(card);
   });
 }
@@ -534,6 +535,7 @@ function bindEvents() {
     startRuleDrag(event, current.id, 'current');
   });
   currentRuleCard.addEventListener('dragend', clearRuleDrag);
+  bindRulePointerDrag(currentRuleCard, () => getCurrentRule()?.id || null, 'current');
 
   document.querySelectorAll('.rule-dropzone').forEach(zone => {
     zone.addEventListener('dragover', event => {
