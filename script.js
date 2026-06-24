@@ -567,7 +567,7 @@ function createRoomObjectElement(object) {
     el.classList.remove('dragging-trash');
     clearDragState();
   });
-  bindPointerDrag(el, { type: 'trash', objectId: object.id });
+  bindStep1TrashPointerDrag(el, object);
   return el;
 }
 
@@ -1010,6 +1010,153 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
     document.addEventListener('pointerup', endPointer, { passive: false, capture: true });
     document.addEventListener('pointercancel', endPointer, { passive: false, capture: true });
     document.addEventListener('lostpointercapture', endPointer, { passive: false, capture: true });
+  }, { passive: false });
+}
+
+
+let step1TrashPointerDrag = null;
+
+function removeStep1TrashGhosts() {
+  document.querySelectorAll('.touch-drag-ghost-trash, .step1-trash-ghost').forEach(item => item.remove());
+}
+
+function createStep1TrashGhost(source) {
+  removeStep1TrashGhosts();
+  const ghost = document.createElement('div');
+  ghost.className = 'touch-drag-ghost touch-drag-ghost-trash step1-trash-ghost';
+  const rect = source.getBoundingClientRect();
+  const size = Math.max(56, Math.min(96, Math.max(rect.width, rect.height)));
+  ghost.style.width = `${size}px`;
+  ghost.style.height = `${size}px`;
+  ghost.innerHTML = source.innerHTML;
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+function moveStep1TrashGhost(x, y) {
+  if (step1TrashPointerDrag?.ghost) {
+    step1TrashPointerDrag.ghost.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+  }
+}
+
+function step1ElementFromPointWithoutTrashGhost(x, y) {
+  const ghost = step1TrashPointerDrag?.ghost;
+  if (ghost) ghost.style.display = 'none';
+  const el = document.elementFromPoint(x, y);
+  if (ghost) ghost.style.display = '';
+  return el;
+}
+
+function findStep1TrashBinNear(x, y, radius = 120) {
+  let best = null;
+  let bestDistance = Infinity;
+  document.querySelectorAll('.room-object-bin, .room-object-broom').forEach(element => {
+    const rect = element.getBoundingClientRect();
+    const clampedX = Math.max(rect.left, Math.min(x, rect.right));
+    const clampedY = Math.max(rect.top, Math.min(y, rect.bottom));
+    const distance = Math.hypot(x - clampedX, y - clampedY);
+    if (distance <= radius && distance < bestDistance) {
+      best = element;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
+function getStep1TrashDropTarget(x, y) {
+  const points = [[x, y], [x, y - 12], [x, y + 12], [x - 14, y], [x + 14, y], [x, y - 32], [x, y + 32]];
+  for (const [px, py] of points) {
+    const el = step1ElementFromPointWithoutTrashGhost(px, py);
+    const bin = el?.closest?.('.room-object-bin, .room-object-broom');
+    if (bin) return bin;
+  }
+  return findStep1TrashBinNear(x, y);
+}
+
+function clearStep1TrashHighlights() {
+  document.querySelectorAll('.room-object-bin.trash-drop-ready, .room-object-broom.trash-drop-ready, .touch-drop-target').forEach(el => {
+    el.classList.remove('trash-drop-ready', 'touch-drop-target');
+  });
+}
+
+function highlightStep1TrashDrop(x, y) {
+  clearStep1TrashHighlights();
+  const target = getStep1TrashDropTarget(x, y);
+  if (target) target.classList.add('trash-drop-ready', 'touch-drop-target');
+}
+
+function finishStep1TrashPointerDrag(shouldDrop = true) {
+  if (!step1TrashPointerDrag) return;
+  const drag = step1TrashPointerDrag;
+  const target = shouldDrop ? getStep1TrashDropTarget(drag.x, drag.y) : null;
+  if (target) {
+    const trash = (state.objects?.trash || []).find(item => item.id === drag.objectId && !item.removed);
+    if (trash) {
+      trash.removed = true;
+      clearResults();
+      showTemporaryHint('Müll entsorgt: Der Störreiz im Raum wurde reduziert.');
+      renderGrid();
+    }
+  }
+  drag.ghost?.remove();
+  drag.source?.classList.remove('touch-drag-source', 'dragging-trash');
+  document.body.classList.remove('touch-drag-active', 'touch-drag-trash-active');
+  clearStep1TrashHighlights();
+  clearDragState();
+  step1TrashPointerDrag = null;
+}
+
+function bindStep1TrashPointerDrag(source, object) {
+  if (!source || source.dataset.step1TrashPointerBound === '1') return;
+  source.dataset.step1TrashPointerBound = '1';
+  source.style.touchAction = 'none';
+  source.addEventListener('pointerdown', event => {
+    if (!isTouchLayoutActive()) return;
+    if (event.button !== undefined && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    finishStep1TrashPointerDrag(false);
+    removeStep1TrashGhosts();
+    clearDropHighlights();
+    clearStep1TrashHighlights();
+    step1TrashPointerDrag = {
+      pointerId: event.pointerId,
+      objectId: object.id,
+      source,
+      ghost: createStep1TrashGhost(source),
+      x: event.clientX,
+      y: event.clientY
+    };
+    setPointerPayload({ type: 'trash', objectId: object.id });
+    source.classList.add('touch-drag-source', 'dragging-trash');
+    document.body.classList.add('touch-drag-active', 'touch-drag-trash-active');
+    moveStep1TrashGhost(event.clientX, event.clientY);
+    highlightStep1TrashDrop(event.clientX, event.clientY);
+
+    const move = moveEvent => {
+      if (!step1TrashPointerDrag || step1TrashPointerDrag.pointerId !== moveEvent.pointerId) return;
+      moveEvent.preventDefault();
+      moveEvent.stopPropagation();
+      step1TrashPointerDrag.x = moveEvent.clientX;
+      step1TrashPointerDrag.y = moveEvent.clientY;
+      moveStep1TrashGhost(moveEvent.clientX, moveEvent.clientY);
+      highlightStep1TrashDrop(moveEvent.clientX, moveEvent.clientY);
+    };
+    const end = endEvent => {
+      if (!step1TrashPointerDrag || step1TrashPointerDrag.pointerId !== endEvent.pointerId) return;
+      endEvent.preventDefault();
+      endEvent.stopPropagation();
+      suppressClickUntil = Date.now() + 350;
+      finishStep1TrashPointerDrag(endEvent.type === 'pointerup');
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', end, true);
+      document.removeEventListener('pointercancel', end, true);
+    };
+
+    document.addEventListener('pointermove', move, { passive: false, capture: true });
+    document.addEventListener('pointerup', end, { passive: false, capture: true });
+    document.addEventListener('pointercancel', end, { passive: false, capture: true });
   }, { passive: false });
 }
 

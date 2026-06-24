@@ -11065,7 +11065,7 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
   .scenarios-page .branch-room-card {
     box-sizing: border-box !important;
     width: min(100%, calc(100dvw - 16px)) !important;
-    max-width: calc(100dvw - 16px) !important;
+    max-width: calc(100dvw - 32px) !important;
     margin-left: auto !important;
     margin-right: auto !important;
     overflow-x: hidden !important;
@@ -11140,7 +11140,7 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
 
   .rules-page .rules-shell-v4,
   .rules-page .compact-rules-main {
-    max-width: calc(100dvw - 16px) !important;
+    max-width: calc(100dvw - 32px) !important;
     overflow-x: hidden !important;
   }
 
@@ -11464,9 +11464,9 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
   }
   .step1-page .classroom-grid {
     --grid-gap: 4px !important;
-    --cell-size: clamp(54px, min(calc((100dvw - 44px) / 10), calc((100dvh - 335px) / 9)), 78px) !important;
+    --cell-size: clamp(48px, min(calc((100dvw - 86px) / 10), calc((100dvh - 390px) / 9)), 70px) !important;
     width: calc((10 * var(--cell-size)) + (9 * var(--grid-gap)) + 12px) !important;
-    max-width: calc(100dvw - 16px) !important;
+    max-width: calc(100dvw - 32px) !important;
     padding: 6px !important;
     box-sizing: border-box !important;
     margin-left: auto !important;
@@ -11477,7 +11477,7 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
   .step1-page .step1-side-column,
   .step1-page .embedded-students {
     width: min(100%, calc((10 * var(--cell-size, 64px)) + (9 * var(--grid-gap, 4px)) + 12px)) !important;
-    max-width: calc(100dvw - 16px) !important;
+    max-width: calc(100dvw - 32px) !important;
     margin-left: auto !important;
     margin-right: auto !important;
     height: auto !important;
@@ -11498,11 +11498,11 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
   .step1-page .compact-student-palette {
     display: grid !important;
     grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    grid-template-rows: repeat(2, 74px) !important;
+    grid-template-rows: repeat(2, 78px) !important;
     grid-auto-flow: row !important;
     grid-auto-columns: initial !important;
     gap: 7px !important;
-    max-height: 156px !important;
+    max-height: 166px !important;
     overflow: visible !important;
     padding: 0 !important;
   }
@@ -11510,8 +11510,8 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
     display: grid !important;
     grid-template-columns: 42px minmax(0, 1fr) !important;
     align-items: center !important;
-    height: 74px !important;
-    min-height: 74px !important;
+    height: 78px !important;
+    min-height: 78px !important;
     padding: 6px !important;
     gap: 6px !important;
     touch-action: none !important;
@@ -11565,4 +11565,18 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
     opacity: 0.96 !important;
     z-index: 99999 !important;
   }
+}
+
+/* Version 51: Schritt-1 Müll-Drag stabilisiert und mobiles Raster leicht verkleinert */
+
+body.touch-drag-trash-active .room-object-bin,
+body.touch-drag-trash-active .room-object-broom {
+  transition: none !important;
+  animation: none !important;
+  will-change: transform;
+}
+.step1-trash-ghost .trash-visual-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
 }
