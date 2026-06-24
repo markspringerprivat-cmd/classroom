@@ -11594,13 +11594,24 @@ body.live-trash-drag-active .branch-bin-drop-cell.trash-drop-ready {
   transform: scale(1.3) !important;
   animation: none !important;
 }
-.branch-object-trash,
-.branch-trash-img {
+.branch-object-trash {
   touch-action: none !important;
+  -webkit-user-drag: element !important;
+  -webkit-touch-callout: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.branch-trash-img {
+  pointer-events: none !important;
   -webkit-user-drag: none !important;
   -webkit-touch-callout: none !important;
   user-select: none !important;
   -webkit-user-select: none !important;
+}
+
+body.touch-drag-active .branch-object-trash {
+  -webkit-user-drag: none !important;
 }
 .live-trash-ghost {
   pointer-events: none !important;

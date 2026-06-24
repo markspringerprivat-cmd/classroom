@@ -1041,6 +1041,10 @@ const game = {
 
 const liveTrashDragState = { objectId: null };
 
+function isLiveTrashDragActive() {
+  return Boolean(liveTrashPointerDrag || liveTrashDragState.objectId);
+}
+
 const PROBLEM_SPAWN_DELAY_MIN_MS = 2000;
 const PROBLEM_SPAWN_DELAY_MAX_MS = 3000;
 
@@ -1103,7 +1107,6 @@ function attachTrashDropTarget(el) {
     if (!canAcceptTrashDrop(event)) return;
     event.preventDefault();
     event.stopPropagation();
-    source.style.webkitUserDrag = 'none';
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     el.classList.add('trash-drop-ready');
   });
@@ -1650,7 +1653,7 @@ function tickLesson() {
   game.lessonLeft = Math.max(0, game.lessonLeft - 0.25);
   updateLessonTimer();
   checkIncidentTimeouts();
-  if (liveTrashPointerDrag) {
+  if (isLiveTrashDragActive()) {
     renderIncidents();
   } else if (game.activeIncidents.length) {
     renderBranchGame();
@@ -2429,7 +2432,7 @@ function hasAvailableApproachCue(incident, reservedKeys = currentApproachCueKeys
 
 function renderBranchGame() {
   if (!branchGrid) return;
-  if (liveTrashPointerDrag) return;
+  if (isLiveTrashDragActive()) return;
   const rows = context.stepData?.rows || 9;
   const cols = context.stepData?.cols || 10;
   branchGrid.style.setProperty('--branch-cols', cols);
@@ -2513,6 +2516,7 @@ function renderBranchGame() {
           obj.title = 'Ziehe dieses Müllbild in den Mülleimer unten rechts.';
           obj.addEventListener('dragstart', event => {
             event.stopPropagation();
+            cleanupLiveTrashGhosts();
             liveTrashDragState.objectId = object.id;
             if (event.dataTransfer) {
               event.dataTransfer.effectAllowed = 'move';
