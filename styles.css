@@ -8016,3 +8016,148 @@ body.rules-page {
     max-height: none;
   }
 }
+
+/* ===== Version 35: stabile Tischdarstellung + funktionsfähige Wirkvorschau ===== */
+.grid-cell > .desk,
+.desk,
+.frozen-desk,
+.branch-desk {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  z-index: 2;
+}
+
+.desk-core {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+  transform: rotate(var(--desk-rotation, 0deg));
+  transform-origin: center center;
+  transition: transform 0.18s ease;
+}
+
+.desk-label,
+.desk-seat-label {
+  display: none !important;
+}
+
+.desk-content {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.empty-seat {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  place-items: center;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.08;
+  text-align: center;
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.desk.has-student .desk-content {
+  padding: 2px;
+}
+
+.desk.has-student .student-chip-photo {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.desk.has-student .student-chip-avatar-wrap {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.desk.has-student .student-chip-avatar {
+  max-width: 96%;
+  max-height: 96%;
+  object-fit: contain;
+  display: block;
+}
+
+.student-effect-preview-panel {
+  flex: 0 0 auto;
+  min-height: 250px;
+  overflow: hidden;
+}
+
+.student-effect-preview {
+  width: 100%;
+  min-height: 220px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.student-effect-grid {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 4px;
+  width: min(100%, 248px);
+  max-width: 248px;
+  margin: 0 auto;
+}
+
+.student-effect-cell {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.45);
+  overflow: hidden;
+}
+
+.student-effect-cell-desk {
+  display: grid;
+  place-items: center;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(30, 41, 59, 0.74);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+}
+
+.student-effect-center-avatar {
+  width: 82%;
+  height: 82%;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 2px solid rgba(191, 219, 254, 0.72);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(2,6,23,0.24);
+}
+
+.student-effect-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.student-effect-grid-empty .student-effect-cell {
+  opacity: 0.85;
+}
