@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spiel-Link teilen | Klassenverwaltungsspiel</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body.share-page {
+      min-height: 100dvh;
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 34rem),
+        linear-gradient(135deg, #07111f 0%, #101a31 52%, #0b1222 100%);
+      color: #f8fafc;
+      display: grid;
+      place-items: center;
+      padding: clamp(16px, 4vw, 40px);
+    }
+
+    .share-shell {
+      width: min(980px, 100%);
+      display: grid;
+      gap: 18px;
+    }
+
+    .share-card {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(15, 23, 42, 0.86);
+      border-radius: 28px;
+      box-shadow: 0 28px 90px rgba(2, 6, 23, 0.42);
+      padding: clamp(20px, 4vw, 34px);
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
+      gap: clamp(18px, 4vw, 34px);
+      align-items: center;
+    }
+
+    .share-copy h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+    }
+
+    .share-copy p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: clamp(1rem, 2.2vw, 1.2rem);
+      line-height: 1.55;
+    }
+
+    .share-url-box {
+      margin-top: 22px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(96, 165, 250, 0.36);
+      background: rgba(15, 23, 42, 0.74);
+      color: #dbeafe;
+      overflow-wrap: anywhere;
+      font-weight: 800;
+      font-size: 0.98rem;
+    }
+
+    .share-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .share-actions button,
+    .share-actions a {
+      border: 0;
+      appearance: none;
+      text-decoration: none;
+      cursor: pointer;
+      border-radius: 16px;
+      padding: 13px 16px;
+      font-weight: 900;
+      color: #f8fafc;
+      background: rgba(30, 41, 59, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    .share-actions .main-action {
+      background: linear-gradient(135deg, #2563eb, #38bdf8);
+      border-color: rgba(147, 197, 253, 0.55);
+    }
+
+    .share-actions .open-action {
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      border-color: rgba(187, 247, 208, 0.42);
+    }
+
+    .qr-panel {
+      justify-self: center;
+      width: min(100%, 300px);
+      display: grid;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .qr-frame {
+      background: #fff;
+      border-radius: 24px;
+      padding: 16px;
+      box-shadow: 0 18px 38px rgba(2, 6, 23, 0.45);
+    }
+
+    .qr-frame img {
+      display: block;
+      width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+    }
+
+    .qr-panel small {
+      color: #94a3b8;
+      line-height: 1.35;
+    }
+
+    .status-line {
+      min-height: 1.3em;
+      margin-top: 12px;
+      color: #86efac;
+      font-weight: 800;
+    }
+
+    .fallback-card {
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.58);
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }
+
+    .fallback-card strong { color: #f8fafc; }
+
+    @media (max-width: 760px) {
+      .share-card {
+        grid-template-columns: 1fr;
+        border-radius: 22px;
+      }
+      .qr-panel { width: min(260px, 100%); }
+      .share-actions { display: grid; }
+      .share-actions button,
+      .share-actions a { width: 100%; text-align: center; }
+    }
+  </style>
+</head>
+<body class="share-page">
+  <main class="share-shell" aria-label="Spiel-Link teilen">
+    <section class="share-card">
+      <div class="share-copy">
+        <p class="eyebrow">Klassenverwaltungsspiel</p>
+        <h1>Link auf Laptop oder Tablet öffnen</h1>
+        <p>Scanne den QR-Code mit dem Handy und teile den Spiel-Link direkt an dein Zielgerät. Das Spiel ist für Laptop oder iPad optimiert.</p>
+
+        <div id="gameUrlBox" class="share-url-box" aria-label="Spiel-Link">https://markspringerprivat-cmd.github.io/classroom/index.html</div>
+
+        <div class="share-actions" aria-label="Aktionen zum Teilen">
+          <button type="button" id="copyBtn" class="main-action">Link kopieren</button>
+          <button type="button" id="shareBtn">Link teilen</button>
+          <a id="mailBtn" href="#">Per E-Mail senden</a>
+          <a class="open-action" href="index.html">Spiel auf diesem Gerät öffnen</a>
+        </div>
+        <div id="statusLine" class="status-line" role="status" aria-live="polite"></div>
+      </div>
+
+      <aside class="qr-panel" aria-label="QR-Code zur Weitergabeseite">
+        <div class="qr-frame">
+          <img src="assets/qr/qr-zwischenseite.png" alt="QR-Code zur Link-Teilen-Seite" />
+        </div>
+        <small>Dieser QR-Code führt auf diese Weitergabeseite. Von hier aus kann der Spiel-Link kopiert oder geteilt werden.</small>
+      </aside>
+    </section>
+
+    <section class="fallback-card">
+      <strong>Backup:</strong> Wenn das Teilen nicht automatisch funktioniert, kopiere den Link und füge ihn am Laptop in den Browser ein oder sende ihn über Mail, AirDrop, Quick Share, Teams oder WhatsApp Web.
+    </section>
+  </main>
+
+  <script>
+    const gameUrl = 'https://markspringerprivat-cmd.github.io/classroom/index.html';
+    const statusLine = document.getElementById('statusLine');
+    const copyBtn = document.getElementById('copyBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const mailBtn = document.getElementById('mailBtn');
+
+    function setStatus(message) {
+      statusLine.textContent = message;
+      window.clearTimeout(setStatus.timeoutId);
+      setStatus.timeoutId = window.setTimeout(() => { statusLine.textContent = ''; }, 3500);
+    }
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(gameUrl);
+        setStatus('Link kopiert.');
+      } catch (error) {
+        const box = document.getElementById('gameUrlBox');
+        const range = document.createRange();
+        range.selectNodeContents(box);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        setStatus('Link markieren und kopieren.');
+      }
+    });
+
+    shareBtn.addEventListener('click', async () => {
+      const shareData = {
+        title: 'Klassenverwaltungsspiel',
+        text: 'Öffne das Klassenverwaltungsspiel auf Laptop oder Tablet:',
+        url: gameUrl
+      };
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+          setStatus('Teilen geöffnet.');
+        } catch (error) {
+          setStatus('Teilen wurde abgebrochen.');
+        }
+      } else {
+        await navigator.clipboard.writeText(gameUrl).catch(() => {});
+        setStatus('Teilen wird nicht unterstützt. Link wurde kopiert.');
+      }
+    });
+
+    mailBtn.href = `mailto:?subject=${encodeURIComponent('Klassenverwaltungsspiel')}&body=${encodeURIComponent('Hier ist der Link zum Klassenverwaltungsspiel:\n\n' + gameUrl)}`;
+  </script>
+</body>
+</html>
