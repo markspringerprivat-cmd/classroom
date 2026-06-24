@@ -980,52 +980,46 @@ function getVectorForDirection(dir) {
   return { dr: 0, dc: 1 };
 }
 
+function getTeacherVisionRadius() {
+  if (state.teacher.mode === 'moving') return 4;
+  if (state.teacher.mode === 'deskSitting') return 3;
+  return 6;
+}
+
+function getFacingVector(dir = state.teacher.dir) {
+  return getVectorForDirection(dir);
+}
+
 function getCandidateVisionCells() {
   const { row, col, dir, mode } = state.teacher;
+  const radius = getTeacherVisionRadius();
+  const facing = getFacingVector(dir);
   const cells = [];
 
-  if (mode === 'moving') {
-    // Bewegend im Raum: linearer Präsenzkorridor mit schnellem Abfall nach außen.
-    const depth = 5;
-    for (let step = 1; step <= depth; step++) {
-      for (let offset = -1; offset <= 1; offset++) {
-        const baseStrength = offset === 0
-          ? Math.max(1, 6 - step)
-          : Math.max(1, 4 - step);
-        if (baseStrength < 1) continue;
-        const pos = offsetCell(row, col, dir, step, offset);
-        if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
-      }
-    }
-    return cells;
-  }
+  for (let targetRow = 0; targetRow < ROWS; targetRow++) {
+    for (let targetCol = 0; targetCol < COLS; targetCol++) {
+      if (targetRow === row && targetCol === col) continue;
+      const deltaRow = targetRow - row;
+      const deltaCol = targetCol - col;
+      const distance = Math.max(Math.abs(deltaRow), Math.abs(deltaCol));
+      if (distance < 1 || distance > radius) continue;
 
-  if (mode === 'deskSitting') {
-    const depth = 2;
-    for (let step = 1; step <= depth; step++) {
-      const spread = Math.max(0, step - 1);
-      for (let offset = -spread; offset <= spread; offset++) {
-        const baseStrength = Math.max(1, 5 - (step - 1) - Math.floor(Math.abs(offset) / 2));
-        const pos = offsetCell(row, col, dir, step, offset);
-        if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
-      }
-    }
-    return cells;
-  }
+      const projection = deltaRow * facing.dr + deltaCol * facing.dc;
+      const behindTeacher = projection < 0;
+      const zone = Math.min(6, behindTeacher ? distance + 2 : distance);
+      const baseStrength = Math.max(1, 7 - zone);
 
-  // Frontale Lehrkraft-Präsenz: seitliche Nahfelder plus fünf aufgefächerte Sichtstufen.
-  // Stufe 0: direkt links/rechts neben der Lehrkraft. Danach 3, 5, 7 und 9 Felder nach vorne.
-  [-1, 1].forEach(offset => {
-    const pos = offsetCell(row, col, dir, 0, offset);
-    if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step: 0, offset, baseStrength: 5 });
-  });
-  for (let step = 1; step <= 4; step++) {
-    const spread = step;
-    for (let offset = -spread; offset <= spread; offset++) {
-      const sideLoss = Math.floor(Math.abs(offset) / 2);
-      const baseStrength = Math.max(1, 6 - step - sideLoss);
-      const pos = offsetCell(row, col, dir, step, offset);
-      if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
+      // Merke zusätzlich Ring und Halbseite, damit die spätere Bewertung nachvollziehbar bleibt.
+      cells.push({
+        row: targetRow,
+        col: targetCol,
+        distance,
+        projection,
+        zone,
+        behindTeacher,
+        baseStrength,
+        mode
+      });
     }
   }
   return cells;
@@ -1042,45 +1036,61 @@ function insideGrid(row, col) {
   return row >= 0 && row < ROWS && col >= 0 && col < COLS;
 }
 
+function gcd(a, b) {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x || 1;
+}
+
+function getReducedDirection(deltaRow, deltaCol) {
+  if (!deltaRow && !deltaCol) return null;
+  const divisor = gcd(deltaRow, deltaCol);
+  return { dr: deltaRow / divisor, dc: deltaCol / divisor, steps: divisor };
+}
+
+function countStudentsBlockingSight(row, col) {
+  const { row: teacherRow, col: teacherCol } = state.teacher;
+  const targetDirection = getReducedDirection(row - teacherRow, col - teacherCol);
+  if (!targetDirection) return 0;
+
+  let blockers = 0;
+  Object.entries(state.assignments).forEach(([deskId, studentId]) => {
+    const desk = state.desks.find(item => item.id === deskId);
+    if (!desk || !studentId) return;
+
+    const blockerDirection = getReducedDirection(desk.row - teacherRow, desk.col - teacherCol);
+    if (!blockerDirection) return;
+    if (blockerDirection.steps >= targetDirection.steps) return;
+    if (blockerDirection.dr !== targetDirection.dr || blockerDirection.dc !== targetDirection.dc) return;
+
+    blockers += 1;
+  });
+  return blockers;
+}
+
 function getVisionMap() {
   const map = new Map();
   const candidates = getCandidateVisionCells();
+
   candidates.forEach(candidate => {
-    const obstacleInfo = countVisionObstaclesBefore(candidate);
-    // Tische schwächen den Sichtstrahl ab. Müll hebt das Sichtfeld an dieser Stelle und dahinter komplett auf.
-    if (obstacleInfo.trashBlocked) return;
-    const strength = Math.max(0, candidate.baseStrength - obstacleInfo.deskBlockers * 2);
+    const studentBlockers = countStudentsBlockingSight(candidate.row, candidate.col);
+    const strength = Math.max(0, candidate.baseStrength - studentBlockers);
     if (strength <= 0) return;
-    const level = Math.max(1, Math.min(5, 6 - strength)); // level 1 = dunkel/stark, level 5 = sehr schwach
+
+    const level = Math.max(1, Math.min(5, 7 - strength)); // level 1 = dunkel/stark, level 5 = sehr schwach
     const key = cellKey(candidate.row, candidate.col);
     const existing = map.get(key);
     if (!existing || strength > existing.strength) {
-      map.set(key, { ...candidate, blockers: obstacleInfo.deskBlockers, strength, level });
+      map.set(key, { ...candidate, blockers: studentBlockers, strength, level });
     }
   });
+
   return map;
-}
-
-function countVisionObstaclesBefore(candidate) {
-  let deskBlockers = 0;
-  let trashBlocked = false;
-  const { row, col, dir } = state.teacher;
-  for (let step = 1; step <= candidate.step; step++) {
-    const scaledOffset = Math.round(candidate.offset * (step / candidate.step));
-    const pos = offsetCell(row, col, dir, step, scaledOffset);
-    if (!insideGrid(pos.row, pos.col)) continue;
-
-    const object = getRoomObjectAt(pos.row, pos.col);
-    if (object?.type === 'trash') {
-      trashBlocked = true;
-      break;
-    }
-
-    if (step < candidate.step && getDeskAt(pos.row, pos.col)) {
-      deskBlockers += 1;
-    }
-  }
-  return { deskBlockers, trashBlocked };
 }
 
 function getVisionStrengthAt(row, col) {
@@ -1383,13 +1393,13 @@ function evaluateRiskStudentVision() {
       addFeedback(result.feedback, 'good', +1, `${student.name} sitzt noch in einem wirksamen Sichtbereich.`, 'Die Sicht ist nicht maximal, aber ausreichend für frühe Präsenzsignale.');
     } else if (strength === 2) {
       result.weaklyVisibleRiskStudents.push(record);
-      result.hooks.push('weak-vision-through-desk-blocking');
-      addFeedback(result.feedback, 'warning', 0, `${student.name} sitzt nur in einer schwachen Sichtzone.`, 'Die Lehrkraft sieht den Platz noch, aber Tische und Distanz schwächen die Präventionswirkung.');
+      result.hooks.push('weak-vision-through-shadowing');
+      addFeedback(result.feedback, 'warning', 0, `${student.name} sitzt nur in einer schwachen Sichtzone.`, 'Der Platz liegt noch im Beobachtungsradius, wird aber durch Distanz oder davor sitzende Schüler*innen abgeschwächt.');
     } else if (strength === 1) {
       result.delta -= 1;
       result.weaklyVisibleRiskStudents.push(record);
-      result.hooks.push('weak-vision-through-desk-blocking');
-      addFeedback(result.feedback, 'warning', -1, `${student.name} sitzt in einer sehr schwachen Sichtzone.`, 'Bei verdeckten Störungen wäre hier spätere Nachsteuerung wahrscheinlich.');
+      result.hooks.push('weak-vision-through-shadowing');
+      addFeedback(result.feedback, 'warning', -1, `${student.name} sitzt in einer sehr schwachen Sichtzone.`, 'Hier kommt Präsenz nur noch abgeschwächt an; verdeckte Störungen würden wahrscheinlich spät auffallen.');
     } else {
       result.delta -= 2;
       result.blindRiskStudents.push(record);
@@ -1498,7 +1508,7 @@ function evaluateBackRowRisks() {
 }
 
 function evaluateTeacherMode() {
-  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftpositionierung wurde berücksichtigt.', detail: 'Entscheidend ist hier vor allem die Blickrichtung: Der grüne Sichtfächer zeigt, welche Plätze schnell wahrgenommen werden.' } };
+  return { delta: 0, hooks: ['teacher-front-led'], feedback: { type: 'good', delta: 0, text: 'Lehrkraftpositionierung wurde berücksichtigt.', detail: 'Entscheidend ist die Blickrichtung: Vor der Lehrkraft beginnen starke Beobachtungsringe, hinter ihr starten die Zonen bewusst abgeschwächt.' } };
 }
 
 
@@ -1721,7 +1731,7 @@ function showStep1GameOverModal() {
   if (outcomeEyebrow) outcomeEyebrow.textContent = 'Game over';
   if (outcomeTitle) outcomeTitle.textContent = 'Die Klasse ist gekippt.';
   if (outcomeText) outcomeText.textContent = 'Die Unterrichtsstabilität ist bereits in der Vorbereitung auf 0 gefallen.';
-  if (outcomeAdvice) outcomeAdvice.textContent = 'Achte beim nächsten Mal besonders auf kurze freie Laufwege, sichtbare Risikoschüler*innen, sinnvoll platzierte Tische und eine klare Blickrichtung der Lehrkraft.';
+  if (outcomeAdvice) outcomeAdvice.textContent = 'Achte beim nächsten Mal besonders auf kurze freie Laufwege, sichtbare Risikoschüler*innen, eine gute Blickrichtung der Lehrkraft und darauf, dass kritische Plätze möglichst in den starken vorderen Beobachtungsringen liegen.';
   if (outcomeHighscore) outcomeHighscore.textContent = String(finalScore);
   if (outcomeBreakdown) outcomeBreakdown.textContent = 'Vorbereitung: Stabilitätswert × 500 Punkte.';
   if (outcomeModal) {
@@ -1835,8 +1845,8 @@ const tutorialSlides = [
   },
   {
     title: 'Lehrkraft und Sichtbereich',
-    text: 'Die Lehrkraft kann frei im Raum platziert werden. Der Sichtbereich fächert sich in Blickrichtung nach vorne auf.',
-    bullets: ['Dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Tische schwächen dahinterliegende Felder ab', 'Lehrkraft anklicken: Blickrichtung ändern', 'Störanfällige Schüler*innen sollten möglichst im wirksamen Sichtfeld sitzen'],
+    text: 'Die Lehrkraft kann frei im Raum platziert werden. Der Sichtbereich arbeitet jetzt mit konzentrischen Beobachtungsringen um die Lehrkraft herum.',
+    bullets: ['Vorne starten die Ringe bei Stufe 1, hinter der Lehrkraft erst abgeschwächt ab Stufe 3', 'Dunkles Grün bedeutet starke Sicht- und Präsenzwirkung', 'Sitzende Schüler*innen schwächen nur die Felder direkt hinter sich auf derselben Linie ab', 'Lehrkraft anklicken: Blickrichtung ändern'],
     visual: 'teacher'
   },
   {
