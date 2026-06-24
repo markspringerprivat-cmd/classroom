@@ -11002,3 +11002,175 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
     font-size: 0.78rem !important;
   }
 }
+
+
+/* ===== Version 48: iPad/mobile break-point centering + direct-touch DnD ===== */
+.touch-drag-active,
+.touch-drag-active * {
+  cursor: grabbing !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.touch-drag-ghost,
+.rule-touch-drag-ghost {
+  pointer-events: none !important;
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 50000 !important;
+  opacity: 0.92 !important;
+  filter: drop-shadow(0 14px 24px rgba(2, 6, 23, 0.32));
+}
+
+.grid-cell .room-object-trash,
+.grid-cell .trash-visual-img,
+.room-object-bin,
+.room-object-broom,
+.student-card,
+.room-desk-shell,
+.teacher-in-room,
+.current-rule-card,
+.rule-item,
+.rule-dropzone {
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.room-object-trash {
+  min-width: 38px !important;
+  min-height: 38px !important;
+}
+
+.room-object-bin,
+.room-object-broom {
+  min-width: 42px !important;
+  min-height: 42px !important;
+}
+
+@media (orientation: portrait) and (min-width: 700px) and (max-width: 1180px), (max-width: 760px) {
+  html,
+  body {
+    overflow-x: hidden !important;
+  }
+
+  .step1-page .app-shell,
+  .step1-page .workspace,
+  .step1-page .room-wrap,
+  .rules-page .rules-shell-v4,
+  .scenarios-page .phase3-shell,
+  .scenarios-page .phase3-main-stage,
+  .scenarios-page .branch-room-card {
+    box-sizing: border-box !important;
+    width: min(100%, calc(100dvw - 16px)) !important;
+    max-width: calc(100dvw - 16px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .step1-page .room-wrap {
+    padding: 4px !important;
+  }
+
+  .step1-page .play-area,
+  .step1-page .play-stage,
+  .scenarios-page .branch-room-card,
+  .scenarios-page .branch-stage-frame {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: grid !important;
+    justify-items: center !important;
+    align-items: start !important;
+    overflow: hidden !important;
+  }
+
+  .step1-page .classroom-grid {
+    --grid-gap: 4px !important;
+    --cell-size: clamp(48px, calc((100dvw - 68px) / 10), 68px) !important;
+    box-sizing: border-box !important;
+    width: calc((10 * var(--cell-size)) + (9 * var(--grid-gap)) + 12px) !important;
+    max-width: calc(100dvw - 18px) !important;
+    justify-self: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 6px !important;
+  }
+
+  .step1-page .step1-side-column,
+  .step1-page .embedded-students {
+    width: min(100%, calc((10 * var(--cell-size, 58px)) + (9 * var(--grid-gap, 4px)) + 12px)) !important;
+    max-width: calc(100dvw - 18px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .step1-page .compact-student-palette {
+    grid-auto-columns: minmax(136px, 20vw) !important;
+    max-height: 74px !important;
+  }
+
+  .step1-page .student-card {
+    min-height: 60px !important;
+    height: 60px !important;
+    padding: 4px 5px !important;
+  }
+
+  .step1-page .student-card-avatar-wrap {
+    width: 35px !important;
+    height: 35px !important;
+    flex-basis: 35px !important;
+  }
+
+  .step1-page .student-card-avatar {
+    max-width: 35px !important;
+    max-height: 35px !important;
+  }
+
+  .step1-page .student-name {
+    font-size: 0.64rem !important;
+  }
+
+  .step1-page .student-note {
+    font-size: 0.53rem !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .rules-page .rules-shell-v4,
+  .rules-page .compact-rules-main {
+    max-width: calc(100dvw - 16px) !important;
+    overflow-x: hidden !important;
+  }
+
+  .rules-page .rule-lists {
+    width: 100% !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .rules-page .rule-dropzone {
+    max-height: min(250px, 26dvh) !important;
+    overflow-y: auto !important;
+  }
+
+  .rules-page .rule-touch-drop-target,
+  .rules-page .rule-dropzone.drop-hover,
+  .step1-page .touch-drop-target,
+  .step1-page .trash-drop-ready {
+    outline: 3px solid rgba(37, 99, 235, 0.72) !important;
+    outline-offset: -3px !important;
+  }
+
+  .scenarios-page .branch-classroom-grid {
+    --branch-gap: 3px !important;
+    --branch-cell: clamp(43px, calc((100dvw - 64px) / 10), 66px) !important;
+    box-sizing: border-box !important;
+    width: calc((10 * var(--branch-cell)) + (9 * var(--branch-gap)) + 12px) !important;
+    max-width: calc(100dvw - 18px) !important;
+    justify-self: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 6px !important;
+  }
+}

@@ -538,13 +538,40 @@ function clearRuleDropHighlights() {
   });
 }
 
-function getRuleDropTarget(x, y) {
+function elementFromPointWithoutRuleGhost(x, y) {
   const ghost = activeRulePointerDrag?.ghost;
   if (ghost) ghost.style.display = 'none';
   const el = document.elementFromPoint(x, y);
   if (ghost) ghost.style.display = '';
-  const zone = el?.closest?.('.rule-dropzone');
-  const listCard = el?.closest?.('.rule-list-card[data-list]');
+  return el;
+}
+
+function findNearbyRuleDropzone(x, y, radius = 42) {
+  const zones = Array.from(document.querySelectorAll('.rule-dropzone, .rule-list-card[data-list]'));
+  let best = null;
+  let bestDistance = Infinity;
+  zones.forEach(zone => {
+    const rect = zone.getBoundingClientRect();
+    const clampedX = Math.max(rect.left, Math.min(x, rect.right));
+    const clampedY = Math.max(rect.top, Math.min(y, rect.bottom));
+    const distance = Math.hypot(x - clampedX, y - clampedY);
+    if (distance <= radius && distance < bestDistance) {
+      best = zone;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
+function getRuleDropTarget(x, y) {
+  const points = [[x, y], [x, y - 24], [x, y + 24], [x - 18, y], [x + 18, y]];
+  let el = null;
+  for (const [px, py] of points) {
+    el = elementFromPointWithoutRuleGhost(px, py);
+    if (el?.closest?.('.rule-dropzone, .rule-list-card[data-list]')) break;
+  }
+  const zone = el?.closest?.('.rule-dropzone') || findNearbyRuleDropzone(x, y);
+  const listCard = el?.closest?.('.rule-list-card[data-list]') || zone?.closest?.('.rule-list-card[data-list]');
   const list = zone?.dataset?.list || listCard?.dataset?.list || null;
   return { el, zone: zone || listCard, list };
 }
@@ -573,32 +600,27 @@ function bindRulePointerDrag(source, ruleIdOrGetter, sourceName = 'current') {
       source,
       ruleId,
       sourceName,
-      started: false,
+      started: true,
       startX: event.clientX,
       startY: event.clientY,
       lastX: event.clientX,
       lastY: event.clientY,
-      ghost: null
+      ghost: createRuleDragGhost(source)
     };
+    source.classList.add('touch-drag-source');
+    document.body.classList.add('touch-drag-active');
+    moveRuleDragGhost(activeRulePointerDrag.ghost, event.clientX, event.clientY);
+    highlightRuleDropTarget(event.clientX, event.clientY);
     try { source.setPointerCapture(event.pointerId); } catch (error) {}
   }, { passive: false });
 
   source.addEventListener('pointermove', event => {
     if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== event.pointerId) return;
-    const distance = Math.hypot(event.clientX - activeRulePointerDrag.startX, event.clientY - activeRulePointerDrag.startY);
-    if (!activeRulePointerDrag.started && distance >= 1) {
-      activeRulePointerDrag.started = true;
-      activeRulePointerDrag.ghost = createRuleDragGhost(activeRulePointerDrag.source);
-      activeRulePointerDrag.source.classList.add('touch-drag-source');
-      document.body.classList.add('touch-drag-active');
-    }
-    if (activeRulePointerDrag.started) {
-      event.preventDefault();
-      activeRulePointerDrag.lastX = event.clientX;
-      activeRulePointerDrag.lastY = event.clientY;
-      moveRuleDragGhost(activeRulePointerDrag.ghost, event.clientX, event.clientY);
-      highlightRuleDropTarget(event.clientX, event.clientY);
-    }
+    event.preventDefault();
+    activeRulePointerDrag.lastX = event.clientX;
+    activeRulePointerDrag.lastY = event.clientY;
+    moveRuleDragGhost(activeRulePointerDrag.ghost, event.clientX, event.clientY);
+    highlightRuleDropTarget(event.clientX, event.clientY);
   }, { passive: false });
 
   function endRulePointer(event) {

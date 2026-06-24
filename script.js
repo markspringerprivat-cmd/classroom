@@ -838,14 +838,47 @@ function clearDropHighlights() {
   });
 }
 
-function getTouchDropTarget(x, y) {
+function elementFromPointWithoutGhost(x, y) {
   const ghost = activePointerDrag?.ghost;
   if (ghost) ghost.style.display = 'none';
   const el = document.elementFromPoint(x, y);
   if (ghost) ghost.style.display = '';
-  const bin = el?.closest?.('.room-object-bin, .room-object-broom');
+  return el;
+}
+
+function findNearbyElement(selector, x, y, radius = 38) {
+  const elements = Array.from(document.querySelectorAll(selector));
+  let best = null;
+  let bestDistance = Infinity;
+  elements.forEach(element => {
+    const rect = element.getBoundingClientRect();
+    const clampedX = Math.max(rect.left, Math.min(x, rect.right));
+    const clampedY = Math.max(rect.top, Math.min(y, rect.bottom));
+    const distance = Math.hypot(x - clampedX, y - clampedY);
+    if (distance <= radius && distance < bestDistance) {
+      best = element;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
+function getTouchDropTarget(x, y) {
+  const points = [
+    [x, y],
+    [x, y - 18],
+    [x, y - 34],
+    [x, y + 18]
+  ];
+  let el = null;
+  for (const [px, py] of points) {
+    el = elementFromPointWithoutGhost(px, py);
+    if (el?.closest?.('.grid-cell, .room-object-bin, .room-object-broom, .room-desk-shell, .desk')) break;
+  }
+  const nearbyBin = activePointerDrag?.payload?.type === 'trash' ? findNearbyElement('.room-object-bin, .room-object-broom', x, y, 52) : null;
+  const bin = el?.closest?.('.room-object-bin, .room-object-broom') || nearbyBin;
   const desk = el?.closest?.('.room-desk-shell, .desk');
-  const cell = el?.closest?.('.grid-cell');
+  const cell = el?.closest?.('.grid-cell') || (bin ? bin.closest('.grid-cell') : null);
   return { el, bin, desk, cell };
 }
 
@@ -905,39 +938,32 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
       pointerId: event.pointerId,
       source,
       payload,
-      started: false,
+      started: true,
       startX: event.clientX,
       startY: event.clientY,
       lastX: event.clientX,
       lastY: event.clientY,
-      ghost: null
+      ghost: createDragGhost(source, payload)
     };
     setPointerPayload(payload);
     if (payload.type === 'student' && payload.studentId) {
       state.previewStudentId = payload.studentId;
       renderStudentEffectPreview();
     }
+    source.classList.add('touch-drag-source');
+    document.body.classList.add('touch-drag-active');
+    moveDragGhost(activePointerDrag.ghost, event.clientX, event.clientY);
+    highlightTouchTarget(event.clientX, event.clientY);
     try { source.setPointerCapture(event.pointerId); } catch (error) {}
   }, { passive: false });
 
   source.addEventListener('pointermove', event => {
     if (!activePointerDrag || activePointerDrag.pointerId !== event.pointerId) return;
-    const dx = event.clientX - activePointerDrag.startX;
-    const dy = event.clientY - activePointerDrag.startY;
-    const distance = Math.hypot(dx, dy);
-    if (!activePointerDrag.started && distance >= 1) {
-      activePointerDrag.started = true;
-      activePointerDrag.ghost = createDragGhost(activePointerDrag.source, activePointerDrag.payload);
-      activePointerDrag.source.classList.add('touch-drag-source');
-      document.body.classList.add('touch-drag-active');
-    }
-    if (activePointerDrag.started) {
-      event.preventDefault();
-      activePointerDrag.lastX = event.clientX;
-      activePointerDrag.lastY = event.clientY;
-      moveDragGhost(activePointerDrag.ghost, event.clientX, event.clientY);
-      highlightTouchTarget(event.clientX, event.clientY);
-    }
+    event.preventDefault();
+    activePointerDrag.lastX = event.clientX;
+    activePointerDrag.lastY = event.clientY;
+    moveDragGhost(activePointerDrag.ghost, event.clientX, event.clientY);
+    highlightTouchTarget(event.clientX, event.clientY);
   }, { passive: false });
 
   function endPointer(event) {
