@@ -1,5 +1,7 @@
 (() => {
-  const STORAGE_KEY = 'classroomGame.fullscreenPromptDismissed';
+  const DISMISS_KEY = 'classroomGame.fullscreenPromptDismissed';
+  const ACTIVE_KEY = 'classroomGame.ipadGameModeActive';
+
   const isProbablyIPad = () => {
     const ua = navigator.userAgent || '';
     const platform = navigator.platform || '';
@@ -29,6 +31,18 @@
     return Promise.resolve();
   };
 
+  const storageGet = key => {
+    try { return sessionStorage.getItem(key); } catch (error) { return null; }
+  };
+
+  const storageSet = (key, value) => {
+    try { sessionStorage.setItem(key, value); } catch (error) {}
+  };
+
+  const storageRemove = key => {
+    try { sessionStorage.removeItem(key); } catch (error) {}
+  };
+
   function pageLabel() {
     if (document.body.classList.contains('step1-page')) return 'Klassenraum vorbereiten';
     if (document.body.classList.contains('rules-page')) return 'Klassenregeln aufstellen';
@@ -36,9 +50,13 @@
     return 'Klassenverwaltungsspiel';
   }
 
-  function applyGameMode(active) {
+  function applyGameMode(active, persist = true) {
     document.documentElement.classList.toggle('ipad-game-mode', active);
     document.body.classList.toggle('ipad-game-mode', active);
+    if (persist) {
+      if (active) storageSet(ACTIVE_KEY, '1');
+      else storageRemove(ACTIVE_KEY);
+    }
     const exitBtn = document.getElementById('fullscreenExitBtn');
     if (exitBtn) exitBtn.hidden = !active;
     window.dispatchEvent(new Event('resize'));
@@ -86,20 +104,13 @@
       </article>`;
     document.body.appendChild(overlay);
 
-    const startBtn = overlay.querySelector('#fullscreenStartBtn');
-    const skipBtn = overlay.querySelector('#fullscreenSkipBtn');
-    startBtn?.addEventListener('click', async () => {
-      try {
-        await requestFullscreen();
-      } catch (error) {
-        // Safari/iPad kann je nach Umgebung echte Fullscreen-API verweigern.
-        // Dann wird zumindest der interne Spielmodus aktiviert.
-      }
+    overlay.querySelector('#fullscreenStartBtn')?.addEventListener('click', async () => {
+      try { await requestFullscreen(); } catch (error) {}
       closePrompt();
       applyGameMode(true);
     });
-    skipBtn?.addEventListener('click', () => {
-      try { sessionStorage.setItem(STORAGE_KEY, '1'); } catch (error) {}
+    overlay.querySelector('#fullscreenSkipBtn')?.addEventListener('click', () => {
+      storageSet(DISMISS_KEY, '1');
       closePrompt();
       applyGameMode(false);
     });
@@ -107,18 +118,22 @@
 
   function shouldPrompt() {
     if (!isProbablyIPad()) return false;
+    if (storageGet(ACTIVE_KEY) === '1') return false;
     if (document.body.classList.contains('landing-page')) return true;
-    try {
-      if (sessionStorage.getItem(STORAGE_KEY) === '1') return false;
-    } catch (error) {}
+    if (storageGet(DISMISS_KEY) === '1') return false;
     return true;
   }
 
-  document.addEventListener('fullscreenchange', () => applyGameMode(isFullscreen() || document.body.classList.contains('ipad-game-mode')));
-  document.addEventListener('webkitfullscreenchange', () => applyGameMode(isFullscreen() || document.body.classList.contains('ipad-game-mode')));
+  document.addEventListener('fullscreenchange', () => {
+    if (!isFullscreen() && storageGet(ACTIVE_KEY) !== '1') applyGameMode(false, false);
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    if (!isFullscreen() && storageGet(ACTIVE_KEY) !== '1') applyGameMode(false, false);
+  });
 
   document.addEventListener('DOMContentLoaded', () => {
     createExitButton();
+    if (isProbablyIPad() && storageGet(ACTIVE_KEY) === '1') applyGameMode(true, false);
     if (shouldPrompt()) window.setTimeout(createPrompt, 250);
   });
 })();
