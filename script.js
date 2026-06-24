@@ -226,6 +226,15 @@ const evaluationOutcomeTitle = document.getElementById('evaluationOutcomeTitle')
 const evaluationOutcomeMessage = document.getElementById('evaluationOutcomeMessage');
 const step2Btn = document.getElementById('step2Btn');
 const newAttemptBtn = document.getElementById('newAttemptBtn');
+const outcomeModal = document.getElementById('outcomeModal');
+const outcomeImage = document.getElementById('outcomeImage');
+const outcomeEyebrow = document.getElementById('outcomeEyebrow');
+const outcomeTitle = document.getElementById('outcomeTitle');
+const outcomeText = document.getElementById('outcomeText');
+const outcomeAdvice = document.getElementById('outcomeAdvice');
+const outcomeHighscore = document.getElementById('outcomeHighscore');
+const outcomeBreakdown = document.getElementById('outcomeBreakdown');
+const restartOutcomeBtn = document.getElementById('restartOutcomeBtn');
 const teacherDirectionPopover = document.getElementById('teacherDirectionPopover');
 const studentHoverCard = document.getElementById('studentHoverCard');
 const showTutorialBtn = document.getElementById('showTutorialBtn');
@@ -981,8 +990,8 @@ function getCandidateVisionCells() {
     for (let step = 1; step <= depth; step++) {
       for (let offset = -1; offset <= 1; offset++) {
         const baseStrength = offset === 0
-          ? Math.max(1, 5 - step)
-          : Math.max(1, 3 - step);
+          ? Math.max(1, 6 - step)
+          : Math.max(1, 4 - step);
         if (baseStrength < 1) continue;
         const pos = offsetCell(row, col, dir, step, offset);
         if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
@@ -991,13 +1000,30 @@ function getCandidateVisionCells() {
     return cells;
   }
 
-  const depth = mode === 'deskSitting' ? 2 : 4;
-  for (let step = 1; step <= depth; step++) {
-    const spread = mode === 'deskSitting' ? Math.max(0, step - 1) : step;
+  if (mode === 'deskSitting') {
+    const depth = 2;
+    for (let step = 1; step <= depth; step++) {
+      const spread = Math.max(0, step - 1);
+      for (let offset = -spread; offset <= spread; offset++) {
+        const baseStrength = Math.max(1, 5 - (step - 1) - Math.floor(Math.abs(offset) / 2));
+        const pos = offsetCell(row, col, dir, step, offset);
+        if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
+      }
+    }
+    return cells;
+  }
+
+  // Frontale Lehrkraft-Präsenz: seitliche Nahfelder plus fünf aufgefächerte Sichtstufen.
+  // Stufe 0: direkt links/rechts neben der Lehrkraft. Danach 3, 5, 7 und 9 Felder nach vorne.
+  [-1, 1].forEach(offset => {
+    const pos = offsetCell(row, col, dir, 0, offset);
+    if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step: 0, offset, baseStrength: 5 });
+  });
+  for (let step = 1; step <= 4; step++) {
+    const spread = step;
     for (let offset = -spread; offset <= spread; offset++) {
-      const distanceLoss = mode === 'deskSitting' ? step - 1 : Math.floor((step - 1) / 1.25);
       const sideLoss = Math.floor(Math.abs(offset) / 2);
-      const baseStrength = Math.max(1, 5 - distanceLoss - sideLoss);
+      const baseStrength = Math.max(1, 6 - step - sideLoss);
       const pos = offsetCell(row, col, dir, step, offset);
       if (insideGrid(pos.row, pos.col)) cells.push({ ...pos, step, offset, baseStrength });
     }
@@ -1066,9 +1092,10 @@ function isDeskEffectivelyInVision(desk) {
 }
 
 function visionGreenLevel(strength) {
-  if (strength >= 5) return 4;
-  if (strength >= 4) return 3;
-  if (strength >= 3) return 2;
+  if (strength >= 5) return 5;
+  if (strength >= 4) return 4;
+  if (strength >= 3) return 3;
+  if (strength >= 2) return 2;
   if (strength >= 1) return 1;
   return 0;
 }
@@ -1684,6 +1711,51 @@ function startEvaluationAnimation(feedback, rawScore) {
   advanceEvaluationStep(false);
 }
 
+
+function showStep1GameOverModal() {
+  const finalScore = Number(state.highscore || 0);
+  if (outcomeImage) {
+    outcomeImage.src = 'assets/outcomes/lose.png';
+    outcomeImage.alt = 'Game-over-Bild';
+  }
+  if (outcomeEyebrow) outcomeEyebrow.textContent = 'Game over';
+  if (outcomeTitle) outcomeTitle.textContent = 'Die Klasse ist gekippt.';
+  if (outcomeText) outcomeText.textContent = 'Die Unterrichtsstabilität ist bereits in der Vorbereitung auf 0 gefallen.';
+  if (outcomeAdvice) outcomeAdvice.textContent = 'Achte beim nächsten Mal besonders auf kurze freie Laufwege, sichtbare Risikoschüler*innen, sinnvoll platzierte Tische und eine klare Blickrichtung der Lehrkraft.';
+  if (outcomeHighscore) outcomeHighscore.textContent = String(finalScore);
+  if (outcomeBreakdown) outcomeBreakdown.textContent = 'Vorbereitung: Stabilitätswert × 500 Punkte.';
+  if (outcomeModal) {
+    outcomeModal.hidden = false;
+    outcomeModal.removeAttribute('hidden');
+    outcomeModal.classList.add('is-visible');
+    outcomeModal.setAttribute('data-result', 'lost');
+  }
+}
+
+function resetStep1Attempt() {
+  stopPreparationTimer();
+  gameStarted = false;
+  try {
+    localStorage.removeItem('classroomGame.step1');
+    localStorage.removeItem('classroomGame.step2.rulesDraft');
+    localStorage.removeItem('classroomGame.step2.rules');
+    localStorage.setItem('classroomGame.highscore', '0');
+  } catch (error) {
+    console.warn('LocalStorage konnte nicht geleert werden.', error);
+  }
+  if (outcomeModal) {
+    outcomeModal.hidden = true;
+    outcomeModal.setAttribute('hidden', '');
+    outcomeModal.classList.remove('is-visible');
+  }
+  if (evaluationOverlay) evaluationOverlay.hidden = true;
+  if (evaluationNextBtn) evaluationNextBtn.hidden = false;
+  if (step2Btn) step2Btn.hidden = false;
+  evaluationSession = null;
+  initLayout('rows', false);
+  openStartGate();
+}
+
 function showEvaluationOutcome(rawScore) {
   if (!evaluationActionArea) return;
   evaluationActionArea.hidden = false;
@@ -1699,6 +1771,7 @@ function showEvaluationOutcome(rawScore) {
       newAttemptBtn.hidden = false;
       newAttemptBtn.disabled = false;
     }
+    showStep1GameOverModal();
   } else {
     evaluationActionArea.classList.remove('game-over');
     if (evaluationOutcomeTitle) evaluationOutcomeTitle.textContent = 'Vorbereitung tragfähig';
@@ -2085,23 +2158,8 @@ function bindGlobalEvents() {
     stopPreparationTimer();
     if (saveStepStateForNextPage()) window.location.href = 'rules.html';
   });
-  if (newAttemptBtn) newAttemptBtn.addEventListener('click', () => {
-    stopPreparationTimer();
-    gameStarted = false;
-    try {
-      localStorage.removeItem('classroomGame.step1');
-      localStorage.removeItem('classroomGame.step2.rulesDraft');
-      localStorage.removeItem('classroomGame.step2.rules');
-    } catch (error) {
-      console.warn('LocalStorage konnte nicht geleert werden.', error);
-    }
-    if (evaluationOverlay) evaluationOverlay.hidden = true;
-    if (evaluationNextBtn) evaluationNextBtn.hidden = false;
-    if (step2Btn) step2Btn.hidden = false;
-    evaluationSession = null;
-    initLayout('rows', false);
-    openStartGate();
-  });
+  if (newAttemptBtn) newAttemptBtn.addEventListener('click', resetStep1Attempt);
+  if (restartOutcomeBtn) restartOutcomeBtn.addEventListener('click', resetStep1Attempt);
   document.addEventListener('click', event => {
     if (teacherDirectionPopover && !teacherDirectionPopover.hidden && !event.target.closest('.teacher-direction-popover') && !event.target.closest('.teacher-in-room')) {
       closeTeacherDirectionPopover();

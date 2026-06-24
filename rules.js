@@ -91,6 +91,15 @@ const rulesEvaluationScoreText = document.getElementById('rulesEvaluationScoreTe
 const rulesEvaluationNextBtn = document.getElementById('rulesEvaluationNextBtn');
 const rulesEvaluationHighscore = document.getElementById('rulesEvaluationHighscore');
 const rulesEvaluationHighscoreDelta = document.getElementById('rulesEvaluationHighscoreDelta');
+const outcomeModal = document.getElementById('outcomeModal');
+const outcomeImage = document.getElementById('outcomeImage');
+const outcomeEyebrow = document.getElementById('outcomeEyebrow');
+const outcomeTitle = document.getElementById('outcomeTitle');
+const outcomeText = document.getElementById('outcomeText');
+const outcomeAdvice = document.getElementById('outcomeAdvice');
+const outcomeHighscore = document.getElementById('outcomeHighscore');
+const outcomeBreakdown = document.getElementById('outcomeBreakdown');
+const restartOutcomeBtn = document.getElementById('restartOutcomeBtn');
 
 let pendingRulesData = null;
 let rulesEvaluationIndex = 0;
@@ -523,6 +532,7 @@ function bindEvents() {
   finishBtn.addEventListener('click', finishRules);
   backBtn.addEventListener('click', () => { window.location.href = 'step1.html'; });
   if (rulesEvaluationNextBtn) rulesEvaluationNextBtn.addEventListener('click', advanceRulesEvaluation);
+  if (restartOutcomeBtn) restartOutcomeBtn.addEventListener('click', restartRulesAttempt);
   if (rulesTutorialSkipBtn) {
     rulesTutorialSkipBtn.addEventListener('pointerdown', handleRulesTutorialDismiss, true);
     rulesTutorialSkipBtn.addEventListener('click', handleRulesTutorialDismiss, true);
@@ -789,6 +799,46 @@ function buildRulesData() {
   };
 }
 
+
+function showRulesGameOverModal(finalLives = 0, finalHighscore = readStoredHighscore()) {
+  if (rulesEvaluationOverlay) {
+    rulesEvaluationOverlay.hidden = true;
+    rulesEvaluationOverlay.setAttribute('hidden', '');
+  }
+  document.body.classList.remove('tutorial-open');
+  if (outcomeImage) {
+    outcomeImage.src = 'assets/outcomes/lose.png';
+    outcomeImage.alt = 'Game-over-Bild';
+  }
+  if (outcomeEyebrow) outcomeEyebrow.textContent = 'Game over';
+  if (outcomeTitle) outcomeTitle.textContent = 'Die Klasse ist gekippt.';
+  if (outcomeText) outcomeText.textContent = 'Die Unterrichtsstabilität ist durch die Regelauswahl auf 0 gefallen.';
+  if (outcomeAdvice) outcomeAdvice.textContent = 'Achte beim nächsten Mal darauf, Regeln mit konkreten Risikoprofilen der Klasse zu verbinden, riskante Regeln auszusortieren und neutrale Regeln nur dann zu wählen, wenn sie wirklich zur Situation passen.';
+  if (outcomeHighscore) outcomeHighscore.textContent = String(Number(finalHighscore) || 0);
+  if (outcomeBreakdown) outcomeBreakdown.textContent = `Regelauswertung beendet bei ${Math.max(0, finalLives)}/10 Unterrichtsstabilität.`;
+  if (outcomeModal) {
+    outcomeModal.hidden = false;
+    outcomeModal.removeAttribute('hidden');
+    outcomeModal.classList.add('is-visible');
+    outcomeModal.setAttribute('data-result', 'lost');
+  }
+}
+
+function restartRulesAttempt() {
+  if (outcomeModal) {
+    outcomeModal.hidden = true;
+    outcomeModal.setAttribute('hidden', '');
+    outcomeModal.classList.remove('is-visible');
+  }
+  try {
+    localStorage.removeItem('classroomGame.step2.rulesDraft');
+    localStorage.removeItem('classroomGame.step2.rules');
+  } catch (error) {
+    console.warn('Regel-Daten konnten nicht vollständig geleert werden.', error);
+  }
+  window.location.reload();
+}
+
 function finishRules() {
   pendingRulesData = buildRulesData();
   rulesEvaluationIndex = 0;
@@ -876,6 +926,9 @@ function renderRulesEvaluationStep() {
     }
   }
   if (rulesEvaluationNextBtn) rulesEvaluationNextBtn.textContent = rulesEvaluationIndex === count - 1 ? 'Weiter zu Schritt 3' : 'Nächste Regel';
+  if (currentLives <= 0) {
+    window.setTimeout(() => showRulesGameOverModal(currentLives, currentHighscore), 450);
+  }
 }
 
 function advanceRulesEvaluation() {
@@ -894,6 +947,10 @@ function completeRulesEvaluation() {
   try {
     localStorage.setItem('classroomGame.step2.rules', JSON.stringify(pendingRulesData));
     writeStoredHighscore(pendingRulesData?.evaluation?.finalHighscore ?? readStoredHighscore());
+    if ((pendingRulesData?.evaluation?.finalLives ?? 0) <= 0) {
+      showRulesGameOverModal(pendingRulesData.evaluation.finalLives, pendingRulesData.evaluation.finalHighscore);
+      return;
+    }
     if (rulesEvaluationOverlay) {
       rulesEvaluationOverlay.hidden = true;
       rulesEvaluationOverlay.setAttribute('hidden', '');

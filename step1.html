@@ -147,6 +147,28 @@
     </article>
   </div>
 
+
+  <section id="outcomeModal" class="branch-outcome-modal" hidden aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="outcomeTitle">
+    <div class="branch-modal-backdrop"></div>
+    <article class="branch-outcome-card">
+      <div class="outcome-image-frame">
+        <img id="outcomeImage" src="assets/outcomes/lose.png" alt="Game-over-Bild" />
+      </div>
+      <div class="outcome-copy">
+        <p id="outcomeEyebrow" class="eyebrow">Game over</p>
+        <h2 id="outcomeTitle">Die Klasse ist gekippt.</h2>
+        <p id="outcomeText">Die Unterrichtsstabilität ist auf 0 gefallen.</p>
+        <p id="outcomeAdvice" class="outcome-advice"></p>
+        <div class="outcome-score-box">
+          <span>Highscore</span>
+          <strong id="outcomeHighscore">0</strong>
+          <small id="outcomeBreakdown"></small>
+        </div>
+        <button type="button" id="restartOutcomeBtn" class="primary-btn">Neuer Versuch</button>
+      </div>
+    </article>
+  </section>
+
   <script src="script.js"></script>
 </body>
 </html>

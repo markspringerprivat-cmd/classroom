@@ -7539,3 +7539,55 @@ body.rules-page {
     height: 210px;
   }
 }
+
+/* ===== Version 30: transparenter Tischstil + erweiterter Sichtfächer ===== */
+.legend-desk {
+  background: transparent !important;
+  border: 2px solid rgba(255, 255, 255, 0.86) !important;
+}
+
+.grid-cell > .desk,
+.desk,
+.frozen-desk,
+.rules-left.rules-left-v4 .frozen-desk,
+.branch-desk {
+  background: rgba(15, 23, 42, 0.06) !important;
+  border: 2px solid rgba(255, 255, 255, 0.88) !important;
+  color: #f8fafc !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.18), 0 5px 12px rgba(2, 6, 23, 0.18) !important;
+}
+
+.desk-label,
+.desk-label span,
+.desk-label strong,
+.frozen-desk strong,
+.branch-desk strong,
+.branch-desk span {
+  color: #f8fafc !important;
+  text-shadow: 0 1px 3px rgba(2, 6, 23, 0.55);
+}
+
+.desk.has-student,
+.frozen-desk.has-student,
+.branch-desk.has-student {
+  background: rgba(15, 23, 42, 0.02) !important;
+}
+
+.desk.has-student .student-chip-photo,
+.frozen-desk.has-student .frozen-student-avatar,
+.branch-desk.has-student .branch-student-avatar {
+  background: transparent !important;
+}
+
+.branch-desk.incident-pulse {
+  background: rgba(15, 23, 42, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.90) !important;
+}
+
+.branch-desk .incident-countdown-number {
+  background: rgba(220, 38, 38, 0.74) !important;
+}
+
+.grid-cell.vision-5 {
+  background: var(--vision-5) !important;
+}
