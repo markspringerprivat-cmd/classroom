@@ -136,8 +136,12 @@ function clearAllClassroomData() {
 }
 
 function resetAppAndReload() {
+  if (window.ClassroomGameSession?.resetToFirstStep) {
+    window.ClassroomGameSession.resetToFirstStep(true);
+    return;
+  }
   clearAllClassroomData();
-  window.location.href = 'index.html';
+  window.location.href = 'step1.html?skipIntro=1';
 }
 
 
@@ -788,7 +792,7 @@ function updateRuleStabilityPreview() {
 function openRulesTutorialOnce() {
   if (!rulesTutorialOverlay) return;
   try {
-    if (sessionStorage.getItem('classroomGame.rulesTutorialSeen') === '1') {
+    if (localStorage.getItem('classroomGame.rulesTutorialSeen') === '1' || sessionStorage.getItem('classroomGame.rulesTutorialSeen') === '1') {
       closeRulesTutorial(false);
       return;
     }
@@ -816,6 +820,7 @@ function closeRulesTutorial(markSeen = true) {
   if (markSeen) {
     try {
       sessionStorage.setItem('classroomGame.rulesTutorialSeen', '1');
+      localStorage.setItem('classroomGame.rulesTutorialSeen', '1');
     } catch (error) {
       // ignore
     }
@@ -983,18 +988,11 @@ function showRulesGameOverModal(finalLives = 0, finalHighscore = readStoredHighs
 }
 
 function restartRulesAttempt() {
-  if (outcomeModal) {
-    outcomeModal.hidden = true;
-    outcomeModal.setAttribute('hidden', '');
-    outcomeModal.classList.remove('is-visible');
+  if (window.ClassroomGameSession?.resetToFirstStep) {
+    window.ClassroomGameSession.resetToFirstStep(false);
+    return;
   }
-  try {
-    localStorage.removeItem('classroomGame.step2.rulesDraft');
-    localStorage.removeItem('classroomGame.step2.rules');
-  } catch (error) {
-    console.warn('Regel-Daten konnten nicht vollständig geleert werden.', error);
-  }
-  window.location.reload();
+  window.location.href = 'step1.html?skipIntro=1';
 }
 
 function finishRules() {

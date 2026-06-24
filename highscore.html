@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Highscore-Liste | Classroom-Management-Spiel</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="highscore-page">
+  <main class="highscore-shell panel">
+    <div class="highscore-head">
+      <div>
+        <p class="eyebrow">Classroom Management</p>
+        <h1>Highscore-Liste</h1>
+      </div>
+      <a class="ghost-btn" href="index.html">Zur Startseite</a>
+    </div>
+    <div class="highscore-table-wrap">
+      <table class="highscore-table">
+        <thead><tr><th>Rang</th><th>Name</th><th>Punkte</th><th>Ergebnis</th><th>Datum</th></tr></thead>
+        <tbody id="highscoreRows"><tr><td colspan="5">Noch keine Einträge.</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+  <script src="profile.js"></script>
+  <script>
+    const rows = document.getElementById('highscoreRows');
+    const entries = window.ClassroomGameSession?.readEntries?.() || [];
+    rows.innerHTML = entries.length ? entries.map((entry, index) => {
+      const date = new Date(entry.at);
+      return `<tr><td>${index + 1}</td><td>${entry.playerName || 'Spieler*in'}</td><td><strong>${Number(entry.score)||0}</strong></td><td>${entry.result === 'won' ? 'Gewonnen' : entry.result === 'lost' ? 'Verloren' : 'Beendet'}</td><td>${Number.isNaN(date.getTime()) ? '–' : date.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}</td></tr>`;
+    }).join('') : '<tr><td colspan="5">Noch keine Einträge.</td></tr>';
+  </script>
+</body>
+</html>

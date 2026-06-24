@@ -370,8 +370,12 @@ function clearAllClassroomData() {
 }
 
 function resetAppAndReload() {
+  if (window.ClassroomGameSession?.resetToFirstStep) {
+    window.ClassroomGameSession.resetToFirstStep(true);
+    return;
+  }
   clearAllClassroomData();
-  window.location.href = 'index.html';
+  window.location.href = 'step1.html?skipIntro=1';
 }
 
 function installPageUtilities() {
@@ -820,8 +824,9 @@ function createDragGhost(source, payload) {
   const ghost = document.createElement('div');
   ghost.className = `touch-drag-ghost touch-drag-ghost-${payload.type || 'item'}`;
   const rect = source.getBoundingClientRect();
-  ghost.style.width = `${Math.max(42, Math.min(82, rect.width))}px`;
-  ghost.style.height = `${Math.max(42, Math.min(82, rect.height))}px`;
+  const isTrash = payload.type === 'trash';
+  ghost.style.width = `${Math.max(isTrash ? 54 : 42, Math.min(isTrash ? 96 : 82, rect.width))}px`;
+  ghost.style.height = `${Math.max(isTrash ? 54 : 42, Math.min(isTrash ? 96 : 82, rect.height))}px`;
   ghost.innerHTML = source.innerHTML;
   document.body.appendChild(ghost);
   return ghost;
@@ -866,19 +871,23 @@ function findNearbyElement(selector, x, y, radius = 38) {
 function getTouchDropTarget(x, y) {
   const points = [
     [x, y],
-    [x, y - 18],
-    [x, y - 34],
-    [x, y + 18]
+    [x, y - 8],
+    [x, y + 8],
+    [x - 12, y],
+    [x + 12, y],
+    [x, y - 24],
+    [x, y + 24]
   ];
   let el = null;
   for (const [px, py] of points) {
     el = elementFromPointWithoutGhost(px, py);
     if (el?.closest?.('.grid-cell, .room-object-bin, .room-object-broom, .room-desk-shell, .desk')) break;
   }
-  const nearbyBin = activePointerDrag?.payload?.type === 'trash' ? findNearbyElement('.room-object-bin, .room-object-broom', x, y, 52) : null;
+  const nearbyBin = activePointerDrag?.payload?.type === 'trash' ? findNearbyElement('.room-object-bin, .room-object-broom', x, y, 96) : null;
   const bin = el?.closest?.('.room-object-bin, .room-object-broom') || nearbyBin;
   const desk = el?.closest?.('.room-desk-shell, .desk');
-  const cell = el?.closest?.('.grid-cell') || (bin ? bin.closest('.grid-cell') : null);
+  const nearbyCell = !bin ? findNearbyElement('.grid-cell', x, y, activePointerDrag?.payload?.type === 'trash' ? 48 : 24) : null;
+  const cell = el?.closest?.('.grid-cell') || (bin ? bin.closest('.grid-cell') : null) || nearbyCell;
   return { el, bin, desk, cell };
 }
 
@@ -2450,6 +2459,7 @@ function openTutorial() {
 function closeTutorial(showGate = !gameStarted) {
   if (!tutorialOverlay) return;
   tutorialOverlay.hidden = true;
+  try { localStorage.setItem('classroomGame.tutorial.step1.seen', '1'); } catch (error) {}
   if (showGate) openStartGate();
   else document.body.classList.remove('tutorial-open');
 }

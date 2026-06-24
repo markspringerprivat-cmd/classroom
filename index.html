@@ -45,8 +45,11 @@
       <div class="landing-actions">
         <a class="primary-btn landing-start-btn" href="step1.html">Spiel jetzt starten</a>
         <a class="ghost-btn landing-share-btn" href="share.html">Link teilen</a>
+        <a class="ghost-btn" href="highscore.html">Highscore-Liste</a>
       </div>
     </section>
   </main>
+  <script src="profile.js"></script>
+  <script>document.querySelector('.landing-start-btn')?.addEventListener('click', () => window.ClassroomGameSession?.ensurePlayerName?.());</script>
 </body>
 </html>

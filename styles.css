@@ -11174,3 +11174,267 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
     padding: 6px !important;
   }
 }
+
+/* ===== Version 49: finaler Tablet-/iPad-Hochkant-Feinschliff, Highscore und stabiles Müll-DnD ===== */
+.highscore-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #17233a 0%, #08111f 62%, #08111f 100%);
+  color: #e5edf8;
+  padding: 24px;
+}
+.highscore-shell {
+  width: min(980px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 22px;
+}
+.highscore-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.highscore-head h1 { margin: 0; }
+.highscore-table-wrap { overflow-x: auto; }
+.highscore-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.highscore-table th,
+.highscore-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+.highscore-table th {
+  color: #bfdbfe;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.76rem;
+}
+.highscore-table tr:last-child td { border-bottom: 0; }
+.outcome-action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.outcome-action-row .primary-btn,
+.outcome-action-row .ghost-btn { text-decoration: none; }
+.room-object-bin.trash-drop-ready,
+.branch-object-bin.trash-drop-ready,
+.branch-cell.trash-drop-ready,
+.branch-bin-drop-cell.trash-drop-ready {
+  transform: none !important;
+  animation: none !important;
+  outline: 4px solid rgba(34, 197, 94, 0.78) !important;
+  outline-offset: -4px !important;
+  box-shadow: inset 0 0 0 2px rgba(187, 247, 208, 0.55), 0 0 0 5px rgba(34, 197, 94, 0.15) !important;
+}
+.touch-drag-ghost-trash,
+.live-trash-ghost {
+  background: rgba(2, 6, 23, 0.54) !important;
+  border-color: rgba(34, 197, 94, 0.72) !important;
+}
+@media (min-width: 700px) and (max-width: 1180px), (max-width: 760px) {
+  html, body { overflow-x: hidden !important; }
+  .step1-page .compact-topbar { display: none !important; }
+  .step1-page .app-shell.single-column,
+  .step1-page .workspace,
+  .step1-page .room-wrap {
+    width: min(100%, calc(100dvw - 12px)) !important;
+    max-width: calc(100dvw - 12px) !important;
+    margin: 0 auto !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .step1-page .controls.compact-controls {
+    width: min(100%, calc(100dvw - 12px)) !important;
+    max-width: calc(100dvw - 12px) !important;
+    margin: 2px auto 5px !important;
+    padding: 5px 6px !important;
+    min-height: 42px !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .step1-page .tablet-mobile-status {
+    display: flex !important;
+    gap: 5px !important;
+    min-width: 0 !important;
+  }
+  .step1-page .tablet-mobile-status span {
+    padding: 5px 7px !important;
+    font-size: 0.72rem !important;
+  }
+  .step1-page .tablet-mobile-status strong { font-size: 0.82rem !important; }
+  .step1-page .button-stack,
+  .step1-page .button-row { min-width: 0 !important; width: 100% !important; }
+  .step1-page .button-row {
+    justify-content: end !important;
+    display: grid !important;
+    grid-template-columns: minmax(120px, 1fr) auto auto !important;
+    gap: 5px !important;
+  }
+  .step1-page .button-row button {
+    min-height: 32px !important;
+    padding: 5px 8px !important;
+    font-size: 0.7rem !important;
+  }
+  .step1-page .room-wrap { padding: 3px !important; border-radius: 14px !important; }
+  .step1-page .play-area,
+  .step1-page .play-stage {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow: visible !important;
+  }
+  .step1-page .classroom-grid {
+    --grid-gap: 3px !important;
+    --cell-size: clamp(43px, min(calc((100dvw - 58px) / 10), calc((100dvh - 275px) / 9)), 60px) !important;
+    width: calc((10 * var(--cell-size)) + (9 * var(--grid-gap)) + 10px) !important;
+    max-width: calc(100dvw - 14px) !important;
+    box-sizing: border-box !important;
+    padding: 5px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    justify-self: center !important;
+    align-self: center !important;
+  }
+  .step1-page .step1-side-column,
+  .step1-page .embedded-students {
+    width: min(100%, calc((10 * var(--cell-size, 54px)) + (9 * var(--grid-gap, 3px)) + 10px)) !important;
+    max-width: calc(100dvw - 14px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .step1-page .embedded-students {
+    padding: 8px !important;
+    border-radius: 14px !important;
+  }
+  .step1-page .compact-student-palette {
+    grid-auto-columns: minmax(190px, 28vw) !important;
+    max-height: 112px !important;
+    padding: 2px 2px 9px !important;
+    gap: 7px !important;
+  }
+  .step1-page .student-card {
+    height: 94px !important;
+    min-height: 94px !important;
+    padding: 7px !important;
+    gap: 7px !important;
+  }
+  .step1-page .student-card-avatar-wrap {
+    width: 46px !important;
+    height: 46px !important;
+    flex: 0 0 46px !important;
+  }
+  .step1-page .student-card-avatar { max-width: 46px !important; max-height: 46px !important; }
+  .step1-page .student-name { font-size: 0.76rem !important; }
+  .step1-page .student-note {
+    font-size: 0.61rem !important;
+    line-height: 1.12 !important;
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+  }
+  .rules-page .rules-shell-v4,
+  .rules-page .compact-rules-main {
+    width: min(100%, calc(100dvw - 12px)) !important;
+    max-width: calc(100dvw - 12px) !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+  }
+  .rules-page .compact-rules-main {
+    min-height: calc(100dvh - 28px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+    padding: 8px !important;
+  }
+  .rules-page #backToRoomBtn { display: none !important; }
+  .rules-page .rule-deck-head { flex: 0 0 auto !important; }
+  .rules-page .current-rule-card { flex: 0 0 auto !important; }
+  .rules-page .rule-lists {
+    flex: 1 1 auto !important;
+    min-height: 360px !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .rules-page .rule-list-card {
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .rules-page .rule-dropzone {
+    flex: 1 1 auto !important;
+    min-height: 250px !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+  }
+  .rules-page .rules-status-bar-clean {
+    order: 3 !important;
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
+    padding: 4px 0 !important;
+  }
+  .rules-page .rules-mobile-student-summary {
+    order: 4 !important;
+    flex: 0 0 auto !important;
+    background: rgba(15, 23, 42, 0.94) !important;
+    border: 1px solid rgba(96, 165, 250, 0.28) !important;
+    color: #dbeafe !important;
+    padding: 8px !important;
+    border-radius: 16px !important;
+  }
+  .rules-page .rules-mobile-student-summary h3 { color: #eff6ff !important; }
+  .rules-page .rules-mobile-student-summary > p { color: #b6c6dc !important; }
+  .rules-page .rules-student-list-mobile {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, minmax(70px, auto)) !important;
+    grid-auto-flow: row !important;
+    overflow: hidden !important;
+    gap: 6px !important;
+    max-height: none !important;
+  }
+  .rules-page .rules-student-list-mobile .rules-student-card {
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+    gap: 5px !important;
+    min-height: 70px !important;
+    padding: 5px !important;
+    background: rgba(30, 41, 59, 0.92) !important;
+    border-color: rgba(148, 163, 184, 0.28) !important;
+    color: #e5edf8 !important;
+  }
+  .rules-page .rules-student-list-mobile .rules-student-avatar-wrap {
+    width: 34px !important;
+    height: 34px !important;
+    align-self: center !important;
+  }
+  .rules-page .rules-student-list-mobile img {
+    max-width: 34px !important;
+    max-height: 34px !important;
+    object-fit: contain !important;
+  }
+  .rules-page .rules-student-list-mobile .rules-student-copy strong {
+    font-size: 0.62rem !important;
+    line-height: 1.02 !important;
+    color: #f8fafc !important;
+  }
+  .rules-page .rules-student-list-mobile .rules-student-copy span,
+  .rules-page .rules-student-list-mobile .rules-student-copy small {
+    font-size: 0.52rem !important;
+    line-height: 1.05 !important;
+    color: #cbd5e1 !important;
+  }
+  .scenarios-page #restartLessonBtn { min-width: 92px !important; }
+}

@@ -215,8 +215,12 @@ function clearAllClassroomData() {
 }
 
 function resetAppAndReload() {
+  if (window.ClassroomGameSession?.resetToFirstStep) {
+    window.ClassroomGameSession.resetToFirstStep(true);
+    return;
+  }
   clearAllClassroomData();
-  window.location.href = 'index.html';
+  window.location.href = 'step1.html?skipIntro=1';
 }
 
 function installPageUtilities() {
@@ -1025,6 +1029,7 @@ const game = {
   finalHighscore: initialHighscore,
   finalBonusAdded: false,
   finishReason: null,
+  finalHighscoreSaved: false,
   scoreEvents: [],
   dynamicTrash: [],
   studentPositions: {},
@@ -1103,6 +1108,111 @@ function attachTrashDropTarget(el) {
   });
   el.addEventListener('dragleave', () => el.classList.remove('trash-drop-ready'));
   el.addEventListener('drop', event => handleTrashDrop(event, el));
+}
+
+let liveTrashPointerDrag = null;
+
+function isTouchDnDDevice() {
+  return (navigator.maxTouchPoints || 0) > 0;
+}
+
+function createLiveTrashGhost(source) {
+  const ghost = document.createElement('div');
+  ghost.className = 'touch-drag-ghost touch-drag-ghost-trash live-trash-ghost';
+  const rect = source.getBoundingClientRect();
+  ghost.style.width = `${Math.max(58, Math.min(96, rect.width))}px`;
+  ghost.style.height = `${Math.max(58, Math.min(96, rect.height))}px`;
+  ghost.innerHTML = source.innerHTML;
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+function moveLiveTrashGhost(x, y) {
+  if (liveTrashPointerDrag?.ghost) liveTrashPointerDrag.ghost.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+}
+
+function liveElementFromPoint(x, y) {
+  const ghost = liveTrashPointerDrag?.ghost;
+  if (ghost) ghost.style.display = 'none';
+  const el = document.elementFromPoint(x, y);
+  if (ghost) ghost.style.display = '';
+  return el;
+}
+
+function findLiveBinNear(x, y, radius = 110) {
+  let best = null;
+  let bestDistance = Infinity;
+  document.querySelectorAll('.branch-object-bin, .branch-bin-drop-cell').forEach(element => {
+    const rect = element.getBoundingClientRect();
+    const clampedX = Math.max(rect.left, Math.min(x, rect.right));
+    const clampedY = Math.max(rect.top, Math.min(y, rect.bottom));
+    const distance = Math.hypot(x - clampedX, y - clampedY);
+    if (distance <= radius && distance < bestDistance) { best = element; bestDistance = distance; }
+  });
+  return best;
+}
+
+function getLiveTrashDropTarget(x, y) {
+  const points = [[x,y],[x,y-10],[x,y+10],[x-12,y],[x+12,y],[x,y-28],[x,y+28]];
+  for (const [px, py] of points) {
+    const el = liveElementFromPoint(px, py);
+    const bin = el?.closest?.('.branch-object-bin, .branch-bin-drop-cell');
+    if (bin) return bin;
+  }
+  return findLiveBinNear(x, y);
+}
+
+function highlightLiveTrashDrop(x, y) {
+  document.querySelectorAll('.branch-object-bin.trash-drop-ready, .branch-bin-drop-cell.trash-drop-ready').forEach(el => el.classList.remove('trash-drop-ready'));
+  const target = getLiveTrashDropTarget(x, y);
+  if (target) target.classList.add('trash-drop-ready');
+}
+
+function bindLiveTrashPointerDrag(source, object) {
+  if (!source || source.dataset.liveTrashPointerBound === '1') return;
+  source.dataset.liveTrashPointerBound = '1';
+  source.style.touchAction = 'none';
+  source.addEventListener('pointerdown', event => {
+    if (!isTouchDnDDevice()) return;
+    if (event.button !== undefined && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    liveTrashDragState.objectId = object.id;
+    liveTrashPointerDrag = { pointerId: event.pointerId, objectId: object.id, source, ghost: createLiveTrashGhost(source), x: event.clientX, y: event.clientY };
+    source.classList.add('touch-drag-source');
+    document.body.classList.add('touch-drag-active');
+    moveLiveTrashGhost(event.clientX, event.clientY);
+    highlightLiveTrashDrop(event.clientX, event.clientY);
+    try { source.setPointerCapture(event.pointerId); } catch (error) {}
+  }, { passive: false });
+  source.addEventListener('pointermove', event => {
+    if (!liveTrashPointerDrag || liveTrashPointerDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    liveTrashPointerDrag.x = event.clientX;
+    liveTrashPointerDrag.y = event.clientY;
+    moveLiveTrashGhost(event.clientX, event.clientY);
+    highlightLiveTrashDrop(event.clientX, event.clientY);
+  }, { passive: false });
+  function end(event) {
+    if (!liveTrashPointerDrag || liveTrashPointerDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const target = getLiveTrashDropTarget(liveTrashPointerDrag.x, liveTrashPointerDrag.y);
+    if (target) {
+      const trash = (game.dynamicTrash || []).find(item => item.id === liveTrashPointerDrag.objectId && !item.removed)
+        || (context.stepData?.objects?.trash || []).find(item => item.id === liveTrashPointerDrag.objectId && !item.removed);
+      if (trash) clearTrashIncidentAt(trash.row, trash.col);
+    }
+    liveTrashPointerDrag.ghost?.remove();
+    liveTrashPointerDrag.source?.classList.remove('touch-drag-source');
+    document.body.classList.remove('touch-drag-active');
+    document.querySelectorAll('.branch-object-bin.trash-drop-ready, .branch-bin-drop-cell.trash-drop-ready').forEach(el => el.classList.remove('trash-drop-ready'));
+    liveTrashDragState.objectId = null;
+    liveTrashPointerDrag = null;
+  }
+  source.addEventListener('pointerup', end, { passive: false });
+  source.addEventListener('pointercancel', end, { passive: false });
 }
 
 const branchTutorialSlides = [
@@ -1199,19 +1309,22 @@ function updateControlButtons() {
     pauseLessonBtn.disabled = !game.started || game.finished || game.scenarioOpen || game.tutorialOpen;
     pauseLessonBtn.textContent = game.manualPause ? 'Fortsetzen' : 'Pausieren';
   }
+  if (restartLessonBtn) restartLessonBtn.textContent = 'Zurücksetzen';
 }
 
 function markPhase3TutorialSeen() {
-  try { sessionStorage.setItem('classroomGame.phase3TutorialSeen', '1'); } catch (error) {}
+  try {
+    sessionStorage.setItem('classroomGame.phase3TutorialSeen', '1');
+    localStorage.setItem('classroomGame.phase3TutorialSeen', '1');
+  } catch (error) {}
 }
 
 function wasPhase3TutorialSeen() {
-  try { return sessionStorage.getItem('classroomGame.phase3TutorialSeen') === '1'; } catch (error) { return false; }
+  try { return localStorage.getItem('classroomGame.phase3TutorialSeen') === '1' || sessionStorage.getItem('classroomGame.phase3TutorialSeen') === '1'; } catch (error) { return false; }
 }
 
 function restartCurrentPhase() {
-  markPhase3TutorialSeen();
-  window.location.reload();
+  window.ClassroomGameSession?.resetToFirstStep?.(false);
 }
 
 function syncPhase3PanelHeights() {
@@ -1392,7 +1505,7 @@ function bindEvents() {
   if (closeScenarioBtn) closeScenarioBtn.addEventListener('click', () => scenarioDrawer.hidden = true);
   if (startLessonBtn) startLessonBtn.addEventListener('click', startLesson);
   if (pauseLessonBtn) pauseLessonBtn.addEventListener('click', toggleLessonPause);
-  if (restartLessonBtn) restartLessonBtn.addEventListener('click', restartCurrentPhase);
+  if (restartLessonBtn) restartLessonBtn.addEventListener('click', () => window.ClassroomGameSession?.resetToFirstStep?.(true));
   if (continueScenarioBtn) continueScenarioBtn.addEventListener('click', closeScenarioModal);
   if (restartOutcomeBtn) restartOutcomeBtn.addEventListener('click', restartCurrentPhase);
   if (branchTutorialSkipBtn) branchTutorialSkipBtn.addEventListener('click', closeBranchTutorial);
@@ -1456,6 +1569,7 @@ function startLesson() {
   game.finalHighscore = initialHighscore;
   game.finalBonusAdded = false;
   game.finishReason = null;
+  game.finalHighscoreSaved = false;
   game.scoreEvents = [];
   game.nextIncidentAt = Date.now() + scaledDelay(3000, 5000, MIN_STUDENT_EVENT_DELAY_MS);
   game.nextTrashAt = Date.now() + scaledDelay(6500, 10000, MIN_TRASH_EVENT_DELAY_MS);
@@ -1534,6 +1648,10 @@ function finishLesson(reason = 'time') {
   }
   game.finalHighscore = scoreBeforeLifeBonus + game.lifeBonus;
   game.highscoreBase = game.finalHighscore;
+  if (!game.finalHighscoreSaved) {
+    game.finalHighscoreSaved = true;
+    window.ClassroomGameSession?.saveFinalHighscore?.(game.finalHighscore, lost ? 'lost' : 'won');
+  }
 
   renderBranchGame();
   renderIncidents();
@@ -2349,6 +2467,7 @@ function renderBranchGame() {
             obj.classList.remove('dragging-trash');
             liveTrashDragState.objectId = null;
           });
+          bindLiveTrashPointerDrag(obj, object);
         }
         cell.appendChild(obj);
       }
@@ -2852,7 +2971,7 @@ function showOutcomeModal(result) {
   }
   if (outcomeHighscore) outcomeHighscore.textContent = String(finalScore);
   if (outcomeBreakdown) outcomeBreakdown.textContent = `Interventionen/Reaktionen: ${finalScore - game.lifeBonus} · Stabilitätsbonus: ${game.lifeBonus} (${game.score} × ${SCORE_PER_LIFE})`;
-  if (restartOutcomeBtn) restartOutcomeBtn.textContent = won ? 'Nochmal spielen' : 'Neuer Versuch';
+  if (restartOutcomeBtn) restartOutcomeBtn.textContent = 'Zurück zu Schritt 1';
   if (outcomeModal) {
     outcomeModal.hidden = false;
     outcomeModal.removeAttribute('hidden');
