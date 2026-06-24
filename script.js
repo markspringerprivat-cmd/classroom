@@ -551,7 +551,7 @@ function createRoomObjectElement(object) {
     return el;
   }
 
-  el.draggable = true;
+  el.draggable = !isTouchLayoutActive();
   el.innerHTML = trashImageMarkup(object, 'trash-visual-img', 'Müll im Klassenraum');
   el.title = 'Müll: Ziehe dieses Objekt in den Mülleimer unten rechts.';
   el.addEventListener('click', event => {
@@ -821,12 +821,13 @@ function setPointerPayload(payload = {}) {
 }
 
 function createDragGhost(source, payload) {
+  document.querySelectorAll('.touch-drag-ghost').forEach(item => item.remove());
   const ghost = document.createElement('div');
   ghost.className = `touch-drag-ghost touch-drag-ghost-${payload.type || 'item'}`;
   const rect = source.getBoundingClientRect();
   const isTrash = payload.type === 'trash';
-  ghost.style.width = `${Math.max(isTrash ? 54 : 42, Math.min(isTrash ? 96 : 82, rect.width))}px`;
-  ghost.style.height = `${Math.max(isTrash ? 54 : 42, Math.min(isTrash ? 96 : 82, rect.height))}px`;
+  ghost.style.width = `${Math.max(isTrash ? 60 : 42, Math.min(isTrash ? 104 : 82, rect.width))}px`;
+  ghost.style.height = `${Math.max(isTrash ? 60 : 42, Math.min(isTrash ? 104 : 82, rect.height))}px`;
   ghost.innerHTML = source.innerHTML;
   document.body.appendChild(ghost);
   return ghost;
@@ -942,7 +943,14 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
     if (event.target.closest('.remove-student-btn, button, a, input, textarea, select')) return;
     const payload = typeof payloadFactory === 'function' ? payloadFactory(event) : payloadFactory;
     if (!payload?.type) return;
+
     event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+
+    if (activePointerDrag?.ghost) activePointerDrag.ghost.remove();
+    clearDropHighlights();
+
     activePointerDrag = {
       pointerId: event.pointerId,
       source,
@@ -954,45 +962,55 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
       lastY: event.clientY,
       ghost: createDragGhost(source, payload)
     };
+
     setPointerPayload(payload);
     if (payload.type === 'student' && payload.studentId) {
       state.previewStudentId = payload.studentId;
       renderStudentEffectPreview();
     }
+
     source.classList.add('touch-drag-source');
     document.body.classList.add('touch-drag-active');
+    if (payload.type === 'trash') document.body.classList.add('touch-drag-trash-active');
     moveDragGhost(activePointerDrag.ghost, event.clientX, event.clientY);
     highlightTouchTarget(event.clientX, event.clientY);
+
     try { source.setPointerCapture(event.pointerId); } catch (error) {}
-  }, { passive: false });
 
-  source.addEventListener('pointermove', event => {
-    if (!activePointerDrag || activePointerDrag.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    activePointerDrag.lastX = event.clientX;
-    activePointerDrag.lastY = event.clientY;
-    moveDragGhost(activePointerDrag.ghost, event.clientX, event.clientY);
-    highlightTouchTarget(event.clientX, event.clientY);
-  }, { passive: false });
+    const movePointer = moveEvent => {
+      if (!activePointerDrag || activePointerDrag.pointerId !== moveEvent.pointerId) return;
+      moveEvent.preventDefault();
+      moveEvent.stopPropagation();
+      activePointerDrag.lastX = moveEvent.clientX;
+      activePointerDrag.lastY = moveEvent.clientY;
+      moveDragGhost(activePointerDrag.ghost, moveEvent.clientX, moveEvent.clientY);
+      highlightTouchTarget(moveEvent.clientX, moveEvent.clientY);
+    };
 
-  function endPointer(event) {
-    if (!activePointerDrag || activePointerDrag.pointerId !== event.pointerId) return;
-    const wasStarted = activePointerDrag.started;
-    if (wasStarted) {
-      event.preventDefault();
+    const endPointer = endEvent => {
+      if (!activePointerDrag || activePointerDrag.pointerId !== endEvent.pointerId) return;
+      endEvent.preventDefault();
+      endEvent.stopPropagation();
       suppressClickUntil = Date.now() + 450;
       finishTouchDrop(activePointerDrag.lastX, activePointerDrag.lastY);
-    }
-    activePointerDrag.ghost?.remove();
-    activePointerDrag.source.classList.remove('touch-drag-source');
-    document.body.classList.remove('touch-drag-active');
-    clearDropHighlights();
-    clearDragState();
-    activePointerDrag = null;
-  }
+      activePointerDrag.ghost?.remove();
+      activePointerDrag.source?.classList.remove('touch-drag-source');
+      document.body.classList.remove('touch-drag-active', 'touch-drag-trash-active');
+      clearDropHighlights();
+      clearDragState();
+      try { source.releasePointerCapture(endEvent.pointerId); } catch (error) {}
+      activePointerDrag = null;
+      document.removeEventListener('pointermove', movePointer, true);
+      document.removeEventListener('pointerup', endPointer, true);
+      document.removeEventListener('pointercancel', endPointer, true);
+      document.removeEventListener('lostpointercapture', endPointer, true);
+    };
 
-  source.addEventListener('pointerup', endPointer, { passive: false });
-  source.addEventListener('pointercancel', endPointer, { passive: false });
+    document.addEventListener('pointermove', movePointer, { passive: false, capture: true });
+    document.addEventListener('pointerup', endPointer, { passive: false, capture: true });
+    document.addEventListener('pointercancel', endPointer, { passive: false, capture: true });
+    document.addEventListener('lostpointercapture', endPointer, { passive: false, capture: true });
+  }, { passive: false });
 }
 
 document.addEventListener('click', event => {
