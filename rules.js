@@ -486,7 +486,7 @@ function renderList(listName, container) {
     card.draggable = true;
     card.dataset.ruleId = rule.id;
     card.dataset.source = listName;
-    card.innerHTML = `<span class="rule-item-text">${rule.text}</span><span class="rule-mini-hint">${ruleDisplayHint(rule)}</span>`;
+    card.innerHTML = `<span class="rule-item-text">${rule.text}</span>`;
     card.title = 'Per Drag & Drop in eine andere Liste ziehen.';
     card.addEventListener('dragstart', event => startRuleDrag(event, rule.id, listName));
     card.addEventListener('dragend', clearRuleDrag);
