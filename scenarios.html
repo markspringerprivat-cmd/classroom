@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interaktive Phase · Schritt 3 | Classroom-Management-Spiel</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="scenarios-page branching-page">
+  <header class="topbar compact-topbar branching-topbar phase3-topbar">
+    <div class="phase3-header-copy">
+      <p class="eyebrow">Interaktive Phase · Schritt 3</p>
+      <h1>Unterrichtsstunde steuern</h1>
+      <p class="subtitle">Reagiere auf Störungen im laufenden Unterricht. Klicke ein erreichbares Feld an; die Lehrkraft läuft automatisch dorthin.</p>
+    </div>
+    <div class="scenario-top-actions phase3-actions">
+      <div class="lesson-clock" aria-live="polite">
+        <span>Unterrichtszeit</span>
+        <strong id="lessonTimer">05:00</strong>
+      </div>
+      <button type="button" id="startLessonBtn" class="primary-btn">Unterricht starten</button>
+      <button type="button" id="pauseLessonBtn" class="ghost-btn" disabled>Pausieren</button>
+      <button type="button" id="restartLessonBtn" class="ghost-btn">Neustart</button>
+    </div>
+  </header>
+
+  <main class="branch-shell phase3-shell">
+    <aside class="branch-hud panel branch-left-panel phase3-left-panel" aria-label="Lehrkraft, Unterrichtsstabilität und Highscore">
+      <section class="teacher-mood-card teacher-image-only" aria-label="Lehrkraftbild">
+        <div class="teacher-mood-frame">
+          <img id="teacherMoodImage" src="assets/teachers/teacher_8-10.png" alt="Lehrkraftbild" />
+        </div>
+      </section>
+
+      <section class="branch-life-card phase3-stability-card" aria-label="Unterrichtsstabilität">
+        <div id="branchLifeSegments" class="branch-life-segments" aria-label="Unterrichtsstabilität"></div>
+      </section>
+
+      <section class="scoreboard-card" aria-label="Aktueller Highscore">
+        <h2>Highscore</h2>
+        <div class="scoreboard-current">
+          <span>Aktuell</span>
+          <strong id="currentHighscore">0</strong>
+        </div>
+      </section>
+
+      <section class="score-events-card score-events-card--plain" aria-label="Letzte Ereignisse">
+        <div id="scoreEventList" class="score-event-list">
+          <p class="hint">Noch keine Ereignisse.</p>
+        </div>
+      </section>
+    </aside>
+
+    <section class="branch-room-panel panel phase3-room-panel" aria-label="Klassenzimmer im Unterrichtsverlauf">
+      <div class="branch-room-head phase3-room-head">
+        <div>
+          <h2>Unterrichtsstunde</h2>
+          <p id="teacherStatus" class="hint">Klicke nach dem Start ein freies Feld an. Die Lehrkraft läuft automatisch den kürzesten freien Weg.</p>
+        </div>
+      </div>
+      <div id="branchClassroomGrid" class="branch-classroom-grid" aria-label="Spielbrett Unterrichtsverlauf"></div>
+    </section>
+
+    <aside class="branch-log-panel panel branch-right-panel phase3-right-panel" aria-label="Ereignisanzeige">
+      <div class="phase3-help-head">
+        <h2>Wer braucht Hilfe?</h2>
+      </div>
+      <div id="branchEventCards" class="branch-event-cards">
+        <p class="hint">Noch keine Ereigniskarte aktiv.</p>
+      </div>
+      <div class="section-title-row branch-history-head phase3-history-head">
+        <h2>Ereignishistorie</h2>
+      </div>
+      <div id="branchLog" class="branch-log"></div>
+    </aside>
+  </main>
+
+  <section class="panel scenario-student-panel branch-context-students" aria-label="Schülerkontext">
+    <div class="section-title-row">
+      <h2>Schülerkontext</h2>
+      <span class="pill">aus Sitzplan übernommen</span>
+    </div>
+    <ul id="studentContextList" class="scenario-student-list"></ul>
+  </section>
+
+  <section id="scenarioDrawer" class="scenario-drawer" hidden aria-label="Szenario-Katalog">
+    <div class="scenario-drawer-backdrop"></div>
+    <div class="scenario-drawer-panel">
+      <div class="scenario-drawer-head">
+        <div>
+          <p class="eyebrow">Katalog / Prüfansicht</p>
+          <h2>40 dynamische Szenarien</h2>
+          <p>Die Szenarien werden mit Variablen aus Sitzplan, Schülerprofilen, Klassenregeln und Auswertung befüllt.</p>
+        </div>
+        <div class="scenario-drawer-actions">
+          <span id="scenarioCount" class="pill">40 Szenarien</span>
+          <button type="button" id="closeScenarioBtn" class="ghost-btn">Schließen</button>
+        </div>
+      </div>
+      <div id="scenarioList" class="scenario-list"></div>
+    </div>
+  </section>
+
+  <section id="scenarioModal" class="branch-modal" hidden aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="scenarioModalTitle">
+    <div class="branch-modal-backdrop"></div>
+    <article class="branch-modal-card">
+      <div class="branch-modal-head">
+        <div>
+          <p id="scenarioModalArea" class="eyebrow">Kooperative Verhaltensmodifikation</p>
+          <h2 id="scenarioModalTitle">Szenario</h2>
+        </div>
+        <div class="answer-countdown">
+          <span>Antwortzeit</span>
+          <strong id="answerTimer">20</strong>
+        </div>
+      </div>
+      <p id="scenarioModalScene" class="branch-scene-text"></p>
+      <div id="scenarioAnswerList" class="branch-answer-list"></div>
+      <div id="scenarioResultBox" class="scenario-result-box" hidden></div>
+      <button type="button" id="continueScenarioBtn" class="primary-btn" hidden>Weiter im Unterricht</button>
+    </article>
+  </section>
+
+  <section id="outcomeModal" class="branch-outcome-modal" hidden aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="outcomeTitle">
+    <div class="branch-modal-backdrop"></div>
+    <article class="branch-outcome-card">
+      <div class="outcome-image-frame">
+        <img id="outcomeImage" src="assets/outcomes/win.png" alt="Ergebnisbild" />
+      </div>
+      <div class="outcome-copy">
+        <p id="outcomeEyebrow" class="eyebrow">Auswertung</p>
+        <h2 id="outcomeTitle">Unterricht beendet</h2>
+        <p id="outcomeText"></p>
+        <p id="outcomeAdvice" class="outcome-advice"></p>
+        <div class="outcome-score-box">
+          <span>Highscore</span>
+          <strong id="outcomeHighscore">0</strong>
+          <small id="outcomeBreakdown"></small>
+        </div>
+        <button type="button" id="restartOutcomeBtn" class="primary-btn">Neuer Versuch</button>
+      </div>
+    </article>
+  </section>
+
+  <section id="branchTutorialOverlay" class="tutorial-overlay" aria-live="polite" aria-modal="true" role="dialog" aria-labelledby="branchTutorialTitle">
+    <div class="tutorial-backdrop"></div>
+    <article class="tutorial-book" role="document">
+      <div class="tutorial-topline">
+        <span id="branchTutorialProgress" class="tutorial-progress-pill">1/7</span>
+        <button type="button" id="branchTutorialSkipBtn" class="tutorial-skip">Überspringen</button>
+      </div>
+      <div class="tutorial-viewport">
+        <section id="branchTutorialSlide" class="tutorial-slide-card tutorial-slide-card--phase3">
+          <div id="branchTutorialVisual" class="tutorial-visual tutorial-visual--phase3" aria-hidden="true"></div>
+          <div class="tutorial-content">
+            <p class="eyebrow">Spielerklärung</p>
+            <h2 id="branchTutorialTitle">Kurzer Überblick</h2>
+            <p id="branchTutorialText">In dieser Phase sicherst du den laufenden Unterricht: du bewegst die Lehrkraft, fängst Störungen ab und hältst die Unterrichtsstabilität hoch.</p>
+            <ul id="branchTutorialList" class="tutorial-list"></ul>
+          </div>
+        </section>
+      </div>
+      <div class="tutorial-controls">
+        <button type="button" id="branchTutorialPrevBtn" class="ghost-btn">Zurück</button>
+        <div id="branchTutorialDots" class="tutorial-dots" aria-label="Fortschritt der Spielerklärung"></div>
+        <button type="button" id="branchTutorialNextBtn" class="primary-btn">Weiter</button>
+      </div>
+    </article>
+  </section>
+
+  <script src="scenarios.js"></script>
+</body>
+</html>
