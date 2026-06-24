@@ -10637,3 +10637,368 @@ body.ipad-game-mode.scenarios-page .branch-event-cards {
     display: none !important;
   }
 }
+
+
+/* Version 47: iPad-/Tablet-Hochkant Feinschliff und zugänglicher Touch-Drag */
+.rule-touch-drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 30000;
+  pointer-events: none;
+  opacity: 0.94;
+  transform: translate3d(-9999px, -9999px, 0);
+  border-radius: 14px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+  background: rgba(15, 23, 42, 0.96);
+}
+
+.rule-touch-drop-target {
+  outline: 3px solid rgba(96, 165, 250, 0.88) !important;
+  outline-offset: -3px !important;
+  background: rgba(59, 130, 246, 0.13) !important;
+}
+
+.rules-mobile-student-summary {
+  display: none;
+}
+
+.rule-drag-instruction {
+  margin: 4px 0 0;
+  color: #475569;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+@media (orientation: portrait) and (min-width: 700px) and (max-width: 1180px), (max-width: 760px) {
+  .step1-page .student-effect-preview-panel {
+    display: none !important;
+  }
+
+  .step1-page .compact-topbar {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 10px !important;
+    min-height: 0 !important;
+  }
+
+  .step1-page .compact-topbar > div:first-child,
+  .rules-page .rules-topbar,
+  .scenarios-page .phase3-header-copy {
+    display: none !important;
+  }
+
+  .step1-page .prep-timer-mobile-top,
+  .step1-page .global-highscore-card {
+    width: auto !important;
+    min-width: 116px !important;
+    min-height: 44px !important;
+    padding: 7px 10px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+  }
+
+  .step1-page .prep-timer-mobile-top strong,
+  .step1-page .global-highscore-card strong {
+    font-size: 1.15rem !important;
+    line-height: 1 !important;
+  }
+
+  .step1-page .room-header.centered-room-header {
+    display: none !important;
+  }
+
+  .step1-page .controls.compact-controls {
+    width: min(100% - 12px, 980px) !important;
+    padding: 6px !important;
+    margin: 0 auto 6px !important;
+  }
+
+  .step1-page #prepStepBtn {
+    display: none !important;
+  }
+
+  .step1-page .button-row {
+    gap: 6px !important;
+  }
+
+  .step1-page .button-row button {
+    min-height: 36px !important;
+    padding: 7px 10px !important;
+    font-size: 0.82rem !important;
+  }
+
+  .step1-page .play-area {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .step1-page .play-stage {
+    width: 100% !important;
+    display: grid !important;
+    justify-items: center !important;
+  }
+
+  .step1-page .classroom-grid {
+    --cell-size: clamp(54px, min(calc((100vw - 30px) / 10), calc((100dvh - 250px) / 9)), 78px) !important;
+    --grid-gap: 4px !important;
+    padding: 6px !important;
+  }
+
+  .step1-page .step1-side-column {
+    width: min(100% - 12px, 980px) !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .step1-page .embedded-students {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    padding: 7px !important;
+    overflow: hidden !important;
+  }
+
+  .step1-page .embedded-students .section-title-row {
+    margin-bottom: 5px !important;
+  }
+
+  .step1-page .embedded-students .section-title-row h2 {
+    font-size: 0.85rem !important;
+  }
+
+  .step1-page .compact-student-palette {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(150px, 22vw) !important;
+    grid-template-columns: none !important;
+    max-height: 86px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 6px !important;
+    padding-bottom: 5px !important;
+    scroll-snap-type: x proximity !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .step1-page .student-card {
+    min-height: 70px !important;
+    height: 70px !important;
+    padding: 5px 6px !important;
+    gap: 6px !important;
+    border-radius: 12px !important;
+    scroll-snap-align: start;
+  }
+
+  .step1-page .student-card-avatar-wrap {
+    width: 42px !important;
+    height: 42px !important;
+    flex: 0 0 42px !important;
+  }
+
+  .step1-page .student-card-avatar {
+    max-width: 41px !important;
+    max-height: 41px !important;
+  }
+
+  .step1-page .student-name {
+    font-size: 0.7rem !important;
+    line-height: 1.04 !important;
+  }
+
+  .step1-page .student-note {
+    font-size: 0.58rem !important;
+    line-height: 1.08 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden !important;
+  }
+
+  .rules-page .rules-shell-v4 {
+    width: min(100% - 12px, 980px) !important;
+    margin: 4px auto !important;
+    display: block !important;
+  }
+
+  .rules-page .rules-left-v4 {
+    display: none !important;
+  }
+
+  .rules-page .compact-rules-main {
+    padding: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+  }
+
+  .rules-page .rule-deck-head {
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 6px !important;
+    align-items: center !important;
+  }
+
+  .rules-page .rule-deck-head .eyebrow {
+    display: block !important;
+    font-size: 0.7rem !important;
+    margin: 0 !important;
+  }
+
+  .rules-page .rule-deck-head h2 {
+    font-size: 1rem !important;
+    margin: 0 !important;
+  }
+
+  .rules-page .rule-drag-instruction {
+    display: block !important;
+    font-size: 0.75rem !important;
+    line-height: 1.1 !important;
+    color: #1d4ed8 !important;
+  }
+
+  .rules-page .rules-head-actions {
+    gap: 6px !important;
+  }
+
+  .rules-page .rules-head-actions .ghost-btn,
+  .rules-page .global-highscore-card {
+    min-height: 34px !important;
+    padding: 6px 8px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .rules-page .current-rule-card {
+    padding: 9px !important;
+    border-radius: 14px !important;
+    min-height: 74px !important;
+  }
+
+  .rules-page .current-rule-card h3 {
+    font-size: 0.92rem !important;
+    line-height: 1.14 !important;
+    margin: 2px 0 !important;
+  }
+
+  .rules-page .current-rule-card p,
+  .rules-page .current-rule-card .rule-kicker {
+    font-size: 0.72rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .rules-page .rule-lists {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    min-height: 0 !important;
+  }
+
+  .rules-page .rule-list-card {
+    min-height: 0 !important;
+    padding: 7px !important;
+    border-radius: 14px !important;
+  }
+
+  .rules-page .rule-list-head h3 {
+    font-size: 0.78rem !important;
+  }
+
+  .rules-page .rule-list-card .hint {
+    display: none !important;
+  }
+
+  .rules-page .rule-dropzone {
+    min-height: 150px !important;
+    max-height: 255px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 5px !important;
+  }
+
+  .rules-page .rule-item {
+    padding: 6px !important;
+    margin-bottom: 5px !important;
+    border-radius: 10px !important;
+  }
+
+  .rules-page .rule-item-text {
+    font-size: 0.68rem !important;
+    line-height: 1.12 !important;
+  }
+
+  .rules-page .rules-mobile-student-summary {
+    display: block !important;
+    padding: 7px !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(148, 163, 184, 0.34);
+  }
+
+  .rules-page .rules-mobile-student-summary h3 {
+    margin: 0 0 2px !important;
+    font-size: 0.82rem !important;
+  }
+
+  .rules-page .rules-mobile-student-summary > p {
+    margin: 0 0 5px !important;
+    font-size: 0.68rem !important;
+    color: #475569;
+  }
+
+  .rules-page .rules-student-list-mobile {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(170px, 25vw) !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 6px !important;
+    max-height: 88px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rules-page .rules-student-list-mobile .rules-student-card {
+    min-height: 72px !important;
+    padding: 5px !important;
+    gap: 6px !important;
+  }
+
+  .rules-page .rules-student-list-mobile .rules-student-avatar-wrap {
+    width: 38px !important;
+    height: 38px !important;
+    flex: 0 0 38px !important;
+  }
+
+  .rules-page .rules-student-list-mobile .rules-student-copy strong {
+    font-size: 0.68rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .rules-page .rules-student-list-mobile .rules-student-copy span,
+  .rules-page .rules-student-list-mobile .rules-student-copy small {
+    font-size: 0.58rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .rules-page .rules-status-bar-clean {
+    padding: 6px !important;
+    gap: 6px !important;
+  }
+
+  .rules-page .rules-status {
+    font-size: 0.7rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .rules-page #finishRulesBtn {
+    min-height: 36px !important;
+    padding: 7px 12px !important;
+    font-size: 0.78rem !important;
+  }
+}

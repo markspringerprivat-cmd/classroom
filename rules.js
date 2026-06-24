@@ -56,6 +56,7 @@ const ruleState = {
 
 const frozenGrid = document.getElementById('frozenGrid');
 const studentList = document.getElementById('rulesStudentList');
+const mobileStudentList = document.getElementById('mobileRulesStudentList');
 const prepScorePill = document.getElementById('prepScorePill');
 const chosenValue = document.getElementById('rulesChosenValue');
 const progressText = document.getElementById('ruleDeckProgress');
@@ -441,20 +442,24 @@ function teacherArrow(dir) {
 }
 
 function renderStudents() {
-  studentList.innerHTML = '';
+  const containers = [studentList, mobileStudentList].filter(Boolean);
+  containers.forEach(container => { container.innerHTML = ''; });
   (step1Data.students || fallbackStudents).forEach(student => {
-    const item = document.createElement('article');
-    item.className = 'rules-student-card';
     const deskId = Object.entries(step1Data.assignments || {}).find(([, sid]) => sid === student.id)?.[0] || null;
     const desk = deskId ? (step1Data.desks || []).find(d => d.id === deskId) : null;
-    item.innerHTML = `
+    const markup = `
       <div class="rules-student-avatar-wrap">${studentAvatarMarkup(student, 'rules-student-avatar')}</div>
       <div class="rules-student-copy">
         <strong>${student.name} (${student.age})</strong>
         <span>${student.note}</span>
         <small>${desk ? `Platz: Reihe ${desk.row + 1}, Feld ${desk.col + 1}` : 'nicht platziert'}</small>
       </div>`;
-    studentList.appendChild(item);
+    containers.forEach(container => {
+      const item = document.createElement('article');
+      item.className = 'rules-student-card';
+      item.innerHTML = markup;
+      container.appendChild(item);
+    });
   });
 }
 
@@ -508,6 +513,114 @@ function getCurrentRule() {
 function getAssignedRuleIds() {
   return [...ruleState.lists.accepted, ...ruleState.lists.pending, ...ruleState.lists.rejected];
 }
+
+
+let activeRulePointerDrag = null;
+
+function createRuleDragGhost(source) {
+  const ghost = document.createElement('div');
+  ghost.className = 'rule-touch-drag-ghost';
+  const rect = source.getBoundingClientRect();
+  ghost.style.width = `${Math.max(180, Math.min(320, rect.width))}px`;
+  ghost.innerHTML = source.innerHTML;
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+function moveRuleDragGhost(ghost, x, y) {
+  if (!ghost) return;
+  ghost.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+}
+
+function clearRuleDropHighlights() {
+  document.querySelectorAll('.rule-touch-drop-target, .rule-dropzone.drop-hover').forEach(el => {
+    el.classList.remove('rule-touch-drop-target', 'drop-hover');
+  });
+}
+
+function getRuleDropTarget(x, y) {
+  const ghost = activeRulePointerDrag?.ghost;
+  if (ghost) ghost.style.display = 'none';
+  const el = document.elementFromPoint(x, y);
+  if (ghost) ghost.style.display = '';
+  const zone = el?.closest?.('.rule-dropzone');
+  const listCard = el?.closest?.('.rule-list-card[data-list]');
+  const list = zone?.dataset?.list || listCard?.dataset?.list || null;
+  return { el, zone: zone || listCard, list };
+}
+
+function highlightRuleDropTarget(x, y) {
+  clearRuleDropHighlights();
+  const target = getRuleDropTarget(x, y);
+  if (target.zone && target.list) target.zone.classList.add('rule-touch-drop-target', 'drop-hover');
+}
+
+function bindRulePointerDrag(source, ruleIdOrGetter, sourceName = 'current') {
+  if (!source || source.dataset.rulePointerBound === '1') return;
+  source.dataset.rulePointerBound = '1';
+  source.style.touchAction = 'none';
+
+  source.addEventListener('pointerdown', event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (event.target.closest('button, a, input, textarea, select')) return;
+    const ruleId = typeof ruleIdOrGetter === 'function' ? ruleIdOrGetter() : ruleIdOrGetter;
+    if (!isValidRuleId(ruleId)) return;
+    event.preventDefault();
+    ruleState.dragRuleId = ruleId;
+    ruleState.dragSource = sourceName;
+    activeRulePointerDrag = {
+      pointerId: event.pointerId,
+      source,
+      ruleId,
+      sourceName,
+      started: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      ghost: null
+    };
+    try { source.setPointerCapture(event.pointerId); } catch (error) {}
+  }, { passive: false });
+
+  source.addEventListener('pointermove', event => {
+    if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== event.pointerId) return;
+    const distance = Math.hypot(event.clientX - activeRulePointerDrag.startX, event.clientY - activeRulePointerDrag.startY);
+    if (!activeRulePointerDrag.started && distance >= 1) {
+      activeRulePointerDrag.started = true;
+      activeRulePointerDrag.ghost = createRuleDragGhost(activeRulePointerDrag.source);
+      activeRulePointerDrag.source.classList.add('touch-drag-source');
+      document.body.classList.add('touch-drag-active');
+    }
+    if (activeRulePointerDrag.started) {
+      event.preventDefault();
+      activeRulePointerDrag.lastX = event.clientX;
+      activeRulePointerDrag.lastY = event.clientY;
+      moveRuleDragGhost(activeRulePointerDrag.ghost, event.clientX, event.clientY);
+      highlightRuleDropTarget(event.clientX, event.clientY);
+    }
+  }, { passive: false });
+
+  function endRulePointer(event) {
+    if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== event.pointerId) return;
+    const wasStarted = activeRulePointerDrag.started;
+    if (wasStarted) {
+      event.preventDefault();
+      const target = getRuleDropTarget(activeRulePointerDrag.lastX, activeRulePointerDrag.lastY);
+      if (target.list) moveRule(activeRulePointerDrag.ruleId, target.list);
+    }
+    activeRulePointerDrag?.ghost?.remove();
+    activeRulePointerDrag?.source?.classList.remove('touch-drag-source');
+    document.body.classList.remove('touch-drag-active');
+    clearRuleDropHighlights();
+    clearRuleDrag();
+    activeRulePointerDrag = null;
+  }
+
+  source.addEventListener('pointerup', endRulePointer, { passive: false });
+  source.addEventListener('pointercancel', endRulePointer, { passive: false });
+}
+
 
 function renderList(listName, container) {
   container.innerHTML = '';

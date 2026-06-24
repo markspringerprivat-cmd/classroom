@@ -424,6 +424,7 @@ function render() {
   updateCounter();
   updateEvaluateButton();
   syncStep1SidebarLayout();
+  syncMobilePrepTimerPlacement();
 }
 
 function renderGrid() {
@@ -899,6 +900,7 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
     if (event.target.closest('.remove-student-btn, button, a, input, textarea, select')) return;
     const payload = typeof payloadFactory === 'function' ? payloadFactory(event) : payloadFactory;
     if (!payload?.type) return;
+    event.preventDefault();
     activePointerDrag = {
       pointerId: event.pointerId,
       source,
@@ -923,7 +925,7 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
     const dx = event.clientX - activePointerDrag.startX;
     const dy = event.clientY - activePointerDrag.startY;
     const distance = Math.hypot(dx, dy);
-    if (!activePointerDrag.started && distance >= 3) {
+    if (!activePointerDrag.started && distance >= 1) {
       activePointerDrag.started = true;
       activePointerDrag.ghost = createDragGhost(activePointerDrag.source, activePointerDrag.payload);
       activePointerDrag.source.classList.add('touch-drag-source');
@@ -2598,6 +2600,34 @@ function syncStep1SidebarLayout() {
   });
 }
 
+
+function syncMobilePrepTimerPlacement() {
+  if (!prepTimerValue) return;
+  const timerPanel = document.querySelector('.prep-timer-panel');
+  const header = document.querySelector('.step1-page .compact-topbar');
+  const studentsBox = document.querySelector('.step1-page .embedded-students');
+  const highscoreCard = document.querySelector('.step1-page .global-highscore-card');
+  if (!timerPanel || !header || !studentsBox) return;
+  let placeholder = document.getElementById('prepTimerMobilePlaceholder');
+  if (!placeholder) {
+    placeholder = document.createElement('span');
+    placeholder.id = 'prepTimerMobilePlaceholder';
+    placeholder.hidden = true;
+    timerPanel.parentNode?.insertBefore(placeholder, timerPanel);
+  }
+  const mobilePortrait = window.matchMedia('(orientation: portrait) and (min-width: 700px) and (max-width: 1180px)').matches || window.matchMedia('(max-width: 760px)').matches;
+  if (mobilePortrait) {
+    timerPanel.classList.add('prep-timer-mobile-top');
+    if (highscoreCard && highscoreCard.parentNode === header) header.insertBefore(timerPanel, highscoreCard);
+    else header.appendChild(timerPanel);
+  } else {
+    timerPanel.classList.remove('prep-timer-mobile-top');
+    if (placeholder.parentNode) placeholder.parentNode.insertBefore(timerPanel, placeholder.nextSibling);
+    else studentsBox.insertBefore(timerPanel, studentsBox.firstChild);
+  }
+}
+
+
 function bindTutorialEvents() {
   if (showTutorialBtn) showTutorialBtn.addEventListener('click', () => { if (startGateOverlay && !startGateOverlay.hidden) closeStartGate(); openTutorial(); });
   if (tutorialSkipBtn) tutorialSkipBtn.addEventListener('click', () => closeTutorial(true));
@@ -2678,13 +2708,20 @@ function bindGlobalEvents() {
       closeTeacherDirectionPopover();
     }
   });
+  evaluateBtn.addEventListener('pointerup', event => {
+    if (!isTouchLayoutActive() || evaluateBtn.disabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClickUntil = Date.now() + 450;
+    evaluatePreparation();
+  }, { passive: false });
   evaluateBtn.addEventListener('click', evaluatePreparation);
   resetBtn.addEventListener('click', resetAppAndReload);
   document.addEventListener('dragend', clearDragState);
   document.addEventListener('drop', () => clearDragState());
-  window.addEventListener('resize', syncStep1SidebarLayout);
-  window.addEventListener('orientationchange', syncStep1SidebarLayout);
-  window.addEventListener('load', syncStep1SidebarLayout);
+  window.addEventListener('resize', () => { syncStep1SidebarLayout(); syncMobilePrepTimerPlacement(); });
+  window.addEventListener('orientationchange', () => { syncStep1SidebarLayout(); syncMobilePrepTimerPlacement(); });
+  window.addEventListener('load', () => { syncStep1SidebarLayout(); syncMobilePrepTimerPlacement(); });
 }
 
 installPageUtilities();
@@ -2697,5 +2734,6 @@ if (typeof ResizeObserver !== 'undefined') {
 }
 initLayout('rows');
 syncStep1SidebarLayout();
+syncMobilePrepTimerPlacement();
 if (startGateOverlay) startGateOverlay.hidden = true;
 openTutorial();
