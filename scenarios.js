@@ -1103,6 +1103,7 @@ function attachTrashDropTarget(el) {
     if (!canAcceptTrashDrop(event)) return;
     event.preventDefault();
     event.stopPropagation();
+    source.style.webkitUserDrag = 'none';
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     el.classList.add('trash-drop-ready');
   });
@@ -1114,6 +1115,10 @@ let liveTrashPointerDrag = null;
 
 function isTouchDnDDevice() {
   return (navigator.maxTouchPoints || 0) > 0;
+}
+
+function isTouchPointerEvent(event) {
+  return event?.pointerType === 'touch' || event?.pointerType === 'pen' || (!event?.pointerType && isTouchDnDDevice());
 }
 
 function cleanupLiveTrashGhosts() {
@@ -1179,12 +1184,13 @@ function bindLiveTrashPointerDrag(source, object) {
   if (!source || source.dataset.liveTrashPointerBound === '1') return;
   source.dataset.liveTrashPointerBound = '1';
   source.style.touchAction = 'none';
-  source.style.webkitUserDrag = 'none';
+  source.style.webkitUserDrag = 'auto';
   source.addEventListener('pointerdown', event => {
-    if (!isTouchDnDDevice()) return;
+    if (!isTouchPointerEvent(event)) return;
     if (event.button !== undefined && event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    source.style.webkitUserDrag = 'none';
 
     if (liveTrashPointerDrag?.cancel) liveTrashPointerDrag.cancel();
     cleanupLiveTrashGhosts();
@@ -2500,9 +2506,9 @@ function renderBranchGame() {
           obj.addEventListener('dragleave', () => obj.classList.remove('trash-drop-ready'));
           obj.addEventListener('drop', event => handleTrashDrop(event, obj));
         } else {
-          obj.draggable = !isTouchDnDDevice();
+          obj.draggable = true;
           obj.style.touchAction = 'none';
-          obj.style.webkitUserDrag = 'none';
+          obj.style.webkitUserDrag = 'auto';
           obj.innerHTML = trashImageMarkup(object, 'trash-visual-img branch-trash-img', 'Müll im Klassenraum');
           obj.title = 'Ziehe dieses Müllbild in den Mülleimer unten rechts.';
           obj.addEventListener('dragstart', event => {

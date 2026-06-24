@@ -586,17 +586,24 @@ function highlightRuleDropTarget(x, y) {
   if (target.zone && target.list) target.zone.classList.add('rule-touch-drop-target', 'drop-hover');
 }
 
+function isTouchPointerEvent(event) {
+  return event?.pointerType === 'touch' || event?.pointerType === 'pen' || (!event?.pointerType && (navigator.maxTouchPoints || 0) > 0);
+}
+
 function bindRulePointerDrag(source, ruleIdOrGetter, sourceName = 'current') {
   if (!source || source.dataset.rulePointerBound === '1') return;
   source.dataset.rulePointerBound = '1';
   source.style.touchAction = 'none';
 
   source.addEventListener('pointerdown', event => {
+    if (!isTouchPointerEvent(event)) return;
     if (event.button !== undefined && event.button !== 0) return;
     if (event.target.closest('button, a, input, textarea, select')) return;
     const ruleId = typeof ruleIdOrGetter === 'function' ? ruleIdOrGetter() : ruleIdOrGetter;
     if (!isValidRuleId(ruleId)) return;
     event.preventDefault();
+    event.stopPropagation();
+
     ruleState.dragRuleId = ruleId;
     ruleState.dragSource = sourceName;
     activeRulePointerDrag = {
@@ -615,36 +622,53 @@ function bindRulePointerDrag(source, ruleIdOrGetter, sourceName = 'current') {
     document.body.classList.add('touch-drag-active');
     moveRuleDragGhost(activeRulePointerDrag.ghost, event.clientX, event.clientY);
     highlightRuleDropTarget(event.clientX, event.clientY);
-    try { source.setPointerCapture(event.pointerId); } catch (error) {}
-  }, { passive: false });
 
-  source.addEventListener('pointermove', event => {
-    if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    activeRulePointerDrag.lastX = event.clientX;
-    activeRulePointerDrag.lastY = event.clientY;
-    moveRuleDragGhost(activeRulePointerDrag.ghost, event.clientX, event.clientY);
-    highlightRuleDropTarget(event.clientX, event.clientY);
-  }, { passive: false });
+    const moveRulePointer = moveEvent => {
+      if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== moveEvent.pointerId) return;
+      moveEvent.preventDefault();
+      moveEvent.stopPropagation();
+      activeRulePointerDrag.lastX = moveEvent.clientX;
+      activeRulePointerDrag.lastY = moveEvent.clientY;
+      moveRuleDragGhost(activeRulePointerDrag.ghost, moveEvent.clientX, moveEvent.clientY);
+      highlightRuleDropTarget(moveEvent.clientX, moveEvent.clientY);
+    };
 
-  function endRulePointer(event) {
-    if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== event.pointerId) return;
-    const wasStarted = activeRulePointerDrag.started;
-    if (wasStarted) {
-      event.preventDefault();
+    const endRulePointer = endEvent => {
+      if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== endEvent.pointerId) return;
+      endEvent.preventDefault();
+      endEvent.stopPropagation();
       const target = getRuleDropTarget(activeRulePointerDrag.lastX, activeRulePointerDrag.lastY);
       if (target.list) moveRule(activeRulePointerDrag.ruleId, target.list);
-    }
-    activeRulePointerDrag?.ghost?.remove();
-    activeRulePointerDrag?.source?.classList.remove('touch-drag-source');
-    document.body.classList.remove('touch-drag-active');
-    clearRuleDropHighlights();
-    clearRuleDrag();
-    activeRulePointerDrag = null;
-  }
+      activeRulePointerDrag?.ghost?.remove();
+      activeRulePointerDrag?.source?.classList.remove('touch-drag-source');
+      document.body.classList.remove('touch-drag-active');
+      clearRuleDropHighlights();
+      clearRuleDrag();
+      activeRulePointerDrag = null;
+      document.removeEventListener('pointermove', moveRulePointer, true);
+      document.removeEventListener('pointerup', endRulePointer, true);
+      document.removeEventListener('pointercancel', cancelRulePointer, true);
+    };
 
-  source.addEventListener('pointerup', endRulePointer, { passive: false });
-  source.addEventListener('pointercancel', endRulePointer, { passive: false });
+    const cancelRulePointer = cancelEvent => {
+      if (!activeRulePointerDrag || activeRulePointerDrag.pointerId !== cancelEvent.pointerId) return;
+      cancelEvent.preventDefault();
+      cancelEvent.stopPropagation();
+      activeRulePointerDrag?.ghost?.remove();
+      activeRulePointerDrag?.source?.classList.remove('touch-drag-source');
+      document.body.classList.remove('touch-drag-active');
+      clearRuleDropHighlights();
+      clearRuleDrag();
+      activeRulePointerDrag = null;
+      document.removeEventListener('pointermove', moveRulePointer, true);
+      document.removeEventListener('pointerup', endRulePointer, true);
+      document.removeEventListener('pointercancel', cancelRulePointer, true);
+    };
+
+    document.addEventListener('pointermove', moveRulePointer, { passive: false, capture: true });
+    document.addEventListener('pointerup', endRulePointer, { passive: false, capture: true });
+    document.addEventListener('pointercancel', cancelRulePointer, { passive: false, capture: true });
+  }, { passive: false });
 }
 
 

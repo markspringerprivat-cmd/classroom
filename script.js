@@ -551,7 +551,7 @@ function createRoomObjectElement(object) {
     return el;
   }
 
-  el.draggable = !isTouchLayoutActive();
+  el.draggable = true;
   el.innerHTML = trashImageMarkup(object, 'trash-visual-img', 'Müll im Klassenraum');
   el.title = 'Müll: Ziehe dieses Objekt in den Mülleimer unten rechts.';
   el.addEventListener('click', event => {
@@ -813,6 +813,10 @@ function isTouchLayoutActive() {
   return document.body.classList.contains('ipad-game-mode') || (navigator.maxTouchPoints || 0) > 0;
 }
 
+function isTouchPointerEvent(event) {
+  return event?.pointerType === 'touch' || event?.pointerType === 'pen' || (!event?.pointerType && isTouchLayoutActive());
+}
+
 function setPointerPayload(payload = {}) {
   dragState.type = payload.type || null;
   dragState.studentId = payload.studentId || null;
@@ -938,7 +942,7 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
   source.style.touchAction = options.touchAction || 'none';
 
   source.addEventListener('pointerdown', event => {
-    if (!isTouchLayoutActive()) return;
+    if (!isTouchPointerEvent(event)) return;
     if (event.button !== undefined && event.button !== 0) return;
     if (event.target.closest('.remove-student-btn, button, a, input, textarea, select')) return;
     const payload = typeof payloadFactory === 'function' ? payloadFactory(event) : payloadFactory;
@@ -975,7 +979,6 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
     moveDragGhost(activePointerDrag.ghost, event.clientX, event.clientY);
     highlightTouchTarget(event.clientX, event.clientY);
 
-    try { source.setPointerCapture(event.pointerId); } catch (error) {}
 
     const movePointer = moveEvent => {
       if (!activePointerDrag || activePointerDrag.pointerId !== moveEvent.pointerId) return;
@@ -998,18 +1001,15 @@ function bindPointerDrag(source, payloadFactory, options = {}) {
       document.body.classList.remove('touch-drag-active', 'touch-drag-trash-active');
       clearDropHighlights();
       clearDragState();
-      try { source.releasePointerCapture(endEvent.pointerId); } catch (error) {}
       activePointerDrag = null;
       document.removeEventListener('pointermove', movePointer, true);
       document.removeEventListener('pointerup', endPointer, true);
       document.removeEventListener('pointercancel', endPointer, true);
-      document.removeEventListener('lostpointercapture', endPointer, true);
     };
 
     document.addEventListener('pointermove', movePointer, { passive: false, capture: true });
     document.addEventListener('pointerup', endPointer, { passive: false, capture: true });
     document.addEventListener('pointercancel', endPointer, { passive: false, capture: true });
-    document.addEventListener('lostpointercapture', endPointer, { passive: false, capture: true });
   }, { passive: false });
 }
 
@@ -1111,7 +1111,7 @@ function bindStep1TrashPointerDrag(source, object) {
   source.dataset.step1TrashPointerBound = '1';
   source.style.touchAction = 'none';
   source.addEventListener('pointerdown', event => {
-    if (!isTouchLayoutActive()) return;
+    if (!isTouchPointerEvent(event)) return;
     if (event.button !== undefined && event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
