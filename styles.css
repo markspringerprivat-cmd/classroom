@@ -8158,20 +8158,23 @@ body.rules-page {
 }
 
 .step1-page .step1-side-column {
-  align-self: stretch !important;
-  display: flex !important;
-  flex-direction: column !important;
+  align-self: start !important;
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) 172px !important;
   width: 340px;
   flex: 0 0 340px;
   max-height: none !important;
+  min-height: 0 !important;
+  gap: 12px !important;
 }
 
 .step1-page .step1-side-column .embedded-students {
-  flex: 1 1 auto !important;
   min-height: 0 !important;
+  height: 100% !important;
   margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
+  overflow: hidden !important;
 }
 
 .step1-page .step1-side-column .compact-student-palette {
@@ -8179,10 +8182,11 @@ body.rules-page {
   min-height: 0 !important;
   max-height: none !important;
   overflow-y: auto !important;
+  padding-right: 6px !important;
 }
 
 .step1-page .student-effect-preview-panel {
-  flex: 0 0 172px !important;
+  align-self: end !important;
   min-height: 172px !important;
   max-height: 172px !important;
   padding: 12px !important;
@@ -8202,9 +8206,29 @@ body.rules-page {
   grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
   gap: 5px !important;
-  width: min(100%, 142px) !important;
-  max-width: 142px !important;
+  width: min(100%, 156px) !important;
+  max-width: 156px !important;
   margin: 0 auto !important;
+}
+
+.step1-page .compact-student-palette::-webkit-scrollbar {
+  width: 10px;
+}
+
+.step1-page .compact-student-palette::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 999px;
+}
+
+.step1-page .compact-student-palette::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.95), rgba(59, 130, 246, 0.74));
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.45);
+}
+
+.step1-page .compact-student-palette {
+  scrollbar-color: rgba(96, 165, 250, 0.95) rgba(15, 23, 42, 0.45);
+  scrollbar-width: thin;
 }
 
 .step1-page .student-effect-cell {
@@ -9575,12 +9599,14 @@ body.ipad-game-mode.step1-page .step1-side-column {
 
 body.ipad-game-mode.step1-page .embedded-students {
   min-height: 0 !important;
+  height: 100% !important;
   overflow: hidden !important;
   padding: 8px !important;
 }
 
 body.ipad-game-mode.step1-page .compact-student-palette {
   min-height: 0 !important;
+  flex: 1 1 auto !important;
   overflow-y: auto !important;
   gap: 6px !important;
   padding-right: 3px !important;

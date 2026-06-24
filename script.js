@@ -88,6 +88,7 @@ let activePointerDrag = null;
 let suppressClickUntil = 0;
 
 const DESK_DIRECTIONS = ['up', 'right', 'down', 'left'];
+const NEGATIVE_EFFECT_BONUS = 2;
 
 function normalizeDeskDirection(value = 'up') {
   return DESK_DIRECTIONS.includes(value) ? value : 'up';
@@ -310,6 +311,9 @@ const tutorialNextBtn = document.getElementById('tutorialNextBtn');
 const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
 const startGateOverlay = document.getElementById('startGateOverlay');
 const startGameBtn = document.getElementById('startGameBtn');
+const playStageEl = document.querySelector('.step1-page .play-stage');
+const step1SideColumnEl = document.querySelector('.step1-page .step1-side-column');
+const studentPreviewPanelEl = document.querySelector('.step1-page .student-effect-preview-panel');
 let tutorialIndex = 0;
 let gameStarted = false;
 let preparationTimerId = null;
@@ -416,6 +420,7 @@ function render() {
   renderStudentEffectPreview();
   updateCounter();
   updateEvaluateButton();
+  syncStep1SidebarLayout();
 }
 
 function renderGrid() {
@@ -1408,6 +1413,28 @@ function addAtVector(raw, desk, vector, distance, type, value, source) {
   addInfluence(raw, desk.row + vector.dr * distance, desk.col + vector.dc * distance, type, value, source);
 }
 
+function getBoostedRiskValue(value = 0) {
+  return Math.max(0, Number(value) + NEGATIVE_EFFECT_BONUS);
+}
+
+function addStudentRiskInfluence(raw, row, col, value, source = '') {
+  addInfluence(raw, row, col, 'red', getBoostedRiskValue(value), source);
+}
+
+function addStudentRiskAtVector(raw, desk, vector, distance, value, source = '') {
+  addStudentRiskInfluence(raw, desk.row + vector.dr * distance, desk.col + vector.dc * distance, value, source);
+}
+
+function addStudentRiskAround(raw, desk, value, source = '', includeCenter = false) {
+  if (includeCenter) addStudentRiskInfluence(raw, desk.row, desk.col, value, `${source}: eigenes Feld`);
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      addStudentRiskInfluence(raw, desk.row + dr, desk.col + dc, value, source);
+    }
+  }
+}
+
 function addAround(raw, desk, type, value, source, includeCenter = false) {
   if (includeCenter) addInfluence(raw, desk.row, desk.col, type, value, `${source}: eigenes Feld`);
   for (let dr = -1; dr <= 1; dr++) {
@@ -1460,8 +1487,8 @@ function addStudentSpecificInfluence(raw, desk, student, options = {}) {
   switch (student.id) {
     case 'julius': {
       if (preview) {
-        addAtVector(raw, desk, left, 1, 'red', 4, 'Julius: rot, wenn direkt seitlich ein Junge sitzt');
-        addAtVector(raw, desk, right, 1, 'red', 4, 'Julius: rot, wenn direkt seitlich ein Junge sitzt');
+        addStudentRiskAtVector(raw, desk, left, 1, 4, 'Julius: rot, wenn direkt seitlich ein Junge sitzt');
+        addStudentRiskAtVector(raw, desk, right, 1, 4, 'Julius: rot, wenn direkt seitlich ein Junge sitzt');
         break;
       }
       const sidePositions = [
@@ -1472,15 +1499,15 @@ function addStudentSpecificInfluence(raw, desk, student, options = {}) {
         const otherDesk = state.desks.find(item => item.id !== desk.id && item.row === pos.row && item.col === pos.col);
         const otherStudent = otherDesk ? getStudent(state.assignments[otherDesk.id]) : null;
         if (isMaleStudent(otherStudent)) {
-          addInfluence(raw, desk.row, desk.col, 'red', 4, `${student.name}: Konflikt mit ${otherStudent.name}`);
-          addInfluence(raw, otherDesk.row, otherDesk.col, 'red', 4, `${otherStudent.name}: Konflikt mit ${student.name}`);
+          addStudentRiskInfluence(raw, desk.row, desk.col, 4, `${student.name}: Konflikt mit ${otherStudent.name}`);
+          addStudentRiskInfluence(raw, otherDesk.row, otherDesk.col, 4, `${otherStudent.name}: Konflikt mit ${student.name}`);
         }
       });
       break;
     }
     case 'petra':
-      addAtVector(raw, desk, left, 1, 'red', 3, 'Petra: Ablenkung links');
-      addAtVector(raw, desk, right, 1, 'red', 3, 'Petra: Ablenkung rechts');
+      addStudentRiskAtVector(raw, desk, left, 1, 3, 'Petra: Ablenkung links');
+      addStudentRiskAtVector(raw, desk, right, 1, 3, 'Petra: Ablenkung rechts');
       break;
     case 'mehmet':
       addAtVector(raw, desk, left, 1, 'green', 3, 'Mehmet: stabilisiert links');
@@ -1490,12 +1517,12 @@ function addStudentSpecificInfluence(raw, desk, student, options = {}) {
     case 'lina': {
       const badNeighbor = preview ? true : hasAdjacentDisruptive(desk);
       const goodNeighbor = preview ? false : hasAdjacentHelper(desk);
-      if (badNeighbor) addAround(raw, desk, 'red', 3, 'Lina: empfindlich auf störendes Umfeld', true);
+      if (badNeighbor) addStudentRiskAround(raw, desk, 3, 'Lina: empfindlich auf störendes Umfeld', true);
       else if (goodNeighbor) addAround(raw, desk, 'green', 3, 'Lina: ruhiges Umfeld stabilisiert', true);
       break;
     }
     case 'ben':
-      addAround(raw, desk, 'red', 3, 'Ben: testet Grenzen im Umfeld', true);
+      addStudentRiskAround(raw, desk, 3, 'Ben: testet Grenzen im Umfeld', true);
       break;
     case 'sara':
       addAtVector(raw, desk, left, 1, 'green', 2, 'Sara: hilft links');
@@ -1503,20 +1530,20 @@ function addStudentSpecificInfluence(raw, desk, student, options = {}) {
       break;
     case 'tom':
       for (let distance = 1; distance <= 5; distance++) {
-        addAtVector(raw, desk, front, distance, 'red', 7 - distance, `Tom: Zwischenrufe nach vorne, Stufe ${7 - distance}`);
+        addStudentRiskAtVector(raw, desk, front, distance, 7 - distance, `Tom: Zwischenrufe nach vorne, Stufe ${7 - distance}`);
       }
       break;
     case 'emily': {
       const strongTeacherRing = getVisionStrengthAt(desk.row, desk.col) >= 6;
       const supported = hasAdjacentHelper(desk);
-      if (preview || (!strongTeacherRing && !supported)) addInfluence(raw, desk.row, desk.col, 'red', 3, 'Emily: braucht klare Orientierung');
+      if (preview || (!strongTeacherRing && !supported)) addStudentRiskInfluence(raw, desk.row, desk.col, 3, 'Emily: braucht klare Orientierung');
       if (!preview && (strongTeacherRing || supported)) addInfluence(raw, desk.row, desk.col, 'green', 3, 'Emily: Orientierung durch Nähe oder Hilfe');
       break;
     }
     case 'niklas': {
       const distance = Math.max(Math.abs(desk.row - state.teacher.row), Math.abs(desk.col - state.teacher.col));
       const redValue = preview ? 4 : Math.max(0, Math.min(6, distance - 1));
-      if (redValue > 0 && (preview || distance > 3)) addInfluence(raw, desk.row, desk.col, 'red', redValue, `Niklas: Handy-/Off-Task-Risiko bei Distanz ${distance}`);
+      if (redValue > 0 && (preview || distance > 3)) addStudentRiskInfluence(raw, desk.row, desk.col, redValue, `Niklas: Handy-/Off-Task-Risiko bei Distanz ${distance}`);
       break;
     }
     case 'amira':
@@ -2512,6 +2539,25 @@ function closeStartGate() {
   startPreparationTimer();
 }
 
+function syncStep1SidebarLayout() {
+  if (!playStageEl || !step1SideColumnEl || !studentPreviewPanelEl || !document.body.classList.contains('step1-page')) return;
+  window.requestAnimationFrame(() => {
+    const playStageRect = playStageEl.getBoundingClientRect();
+    if (!playStageRect.height) return;
+    const previewHeight = studentPreviewPanelEl.getBoundingClientRect().height || studentPreviewPanelEl.offsetHeight || 0;
+    const computed = window.getComputedStyle(step1SideColumnEl);
+    const rowGap = parseFloat(computed.rowGap || computed.gap || '0') || 0;
+    step1SideColumnEl.style.height = `${Math.round(playStageRect.height)}px`;
+    step1SideColumnEl.style.maxHeight = `${Math.round(playStageRect.height)}px`;
+    const embeddedStudents = step1SideColumnEl.querySelector('.embedded-students');
+    if (embeddedStudents && previewHeight) {
+      const remaining = Math.max(160, Math.round(playStageRect.height - previewHeight - rowGap));
+      embeddedStudents.style.minHeight = '0px';
+      embeddedStudents.style.maxHeight = `${remaining}px`;
+    }
+  });
+}
+
 function bindTutorialEvents() {
   if (showTutorialBtn) showTutorialBtn.addEventListener('click', () => { if (startGateOverlay && !startGateOverlay.hidden) closeStartGate(); openTutorial(); });
   if (tutorialSkipBtn) tutorialSkipBtn.addEventListener('click', () => closeTutorial(true));
@@ -2596,11 +2642,14 @@ function bindGlobalEvents() {
   resetBtn.addEventListener('click', resetAppAndReload);
   document.addEventListener('dragend', clearDragState);
   document.addEventListener('drop', () => clearDragState());
+  window.addEventListener('resize', syncStep1SidebarLayout);
+  window.addEventListener('orientationchange', syncStep1SidebarLayout);
 }
 
 installPageUtilities();
 bindGlobalEvents();
 bindTutorialEvents();
 initLayout('rows');
+syncStep1SidebarLayout();
 if (startGateOverlay) startGateOverlay.hidden = true;
 openTutorial();
