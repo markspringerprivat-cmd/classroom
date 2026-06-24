@@ -176,6 +176,29 @@ function studentAvatarMarkup(student, className = 'student-avatar', altSuffix = 
   return src ? `<img class="${className}" src="${src}" alt="${alt}" />` : `<span class="${className} avatar-fallback">${(student?.name || '?').charAt(0)}</span>`;
 }
 
+const DESK_DIRECTIONS = ['up', 'right', 'down', 'left'];
+function normalizeDeskDirection(value = 'up') {
+  return DESK_DIRECTIONS.includes(value) ? value : 'up';
+}
+function getDeskDirection(desk = {}) {
+  if (desk.dir) return normalizeDeskDirection(desk.dir);
+  if (typeof desk.rotation === 'number') {
+    const index = ((Math.round(desk.rotation / 90) % 4) + 4) % 4;
+    return DESK_DIRECTIONS[index];
+  }
+  if (desk.orientation === 'vertical') return 'right';
+  return 'up';
+}
+function getDeskRotation(desk = {}) {
+  return ({ up: 0, right: 90, down: 180, left: 270 })[getDeskDirection(desk)] || 0;
+}
+function frozenDeskMarkup(desk = {}, student = null) {
+  const content = student
+    ? `<div class="desk-student-wrap">${studentAvatarMarkup(student, 'frozen-student-avatar', ' am Tisch')}</div>`
+    : '<div class="desk-free-label">frei</div>';
+  return `<div class="desk-visual ${student ? 'desk-visual-occupied' : 'desk-visual-empty'}" style="--desk-rotation:${getDeskRotation(desk)}deg;"><span class="desk-direction-badge" aria-hidden="true">↑</span><div class="desk-content">${content}</div></div>`;
+}
+
 const trashAssetPool = ['assets/trash/paper.png', 'assets/trash/banana.png', 'assets/trash/apple.png'];
 
 function pickRandomTrashAsset() {
@@ -388,9 +411,8 @@ function renderFrozenGrid() {
         const deskEl = document.createElement('div');
         const studentId = step1Data.assignments?.[desk.id];
         const student = studentId ? getStudent(studentId) : null;
-        const direction = getDeskDirection(desk);
-        deskEl.className = `frozen-desk desk-${direction === 'left' || direction === 'right' ? 'vertical' : 'horizontal'}${student ? ' has-student' : ''}`;
-        deskEl.innerHTML = deskMarkup(desk, student);
+        deskEl.className = `frozen-desk${student ? ' has-student' : ''}`;
+        deskEl.innerHTML = frozenDeskMarkup(desk, student);
         cell.appendChild(deskEl);
       }
       const object = getRoomObjectAt(row, col);
@@ -416,34 +438,6 @@ function renderFrozenGrid() {
 
 function teacherArrow(dir) {
   return ({ up: 'L↑', down: 'L↓', left: 'L←', right: 'L→' })[dir] || 'L';
-}
-
-const DESK_DIRECTIONS = ['up', 'right', 'down', 'left'];
-function normalizeDeskDirection(value = 'down') {
-  return DESK_DIRECTIONS.includes(value) ? value : 'down';
-}
-function getDeskDirection(desk = {}) {
-  if (desk.dir) return normalizeDeskDirection(desk.dir);
-  if (typeof desk.rotation === 'number') {
-    const index = ((Math.round(desk.rotation / 90) % 4) + 4) % 4;
-    return DESK_DIRECTIONS[index];
-  }
-  if (desk.orientation === 'vertical') return 'right';
-  return 'down';
-}
-function getDeskRotation(desk = {}) {
-  return ({ up: 0, right: 90, down: 180, left: 270 })[getDeskDirection(desk)] || 0;
-}
-function deskMarkup(desk = {}, student = null) {
-  return `
-    <div class="desk-core" style="--desk-rotation:${getDeskRotation(desk)}deg;">
-      <span class="desk-direction-badge" aria-hidden="true">↑</span>
-      <div class="desk-label"><span>Tisch</span></div>
-      <div class="desk-content ${student ? 'desk-content-occupied' : 'desk-content-empty'}">
-        ${student ? `<div class="student-chip student-chip-photo"><div class="student-chip-avatar-wrap">${studentAvatarMarkup(student, 'frozen-student-avatar', ' am Tisch')}</div></div>` : '<div class="empty-seat">freier Platz</div>'}
-      </div>
-      <span class="desk-seat-label">${student ? escapeHtml(student.name) : 'freier Platz'}</span>
-    </div>`;
 }
 
 function renderStudents() {
